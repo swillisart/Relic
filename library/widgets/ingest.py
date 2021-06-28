@@ -181,7 +181,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         done = self.new_asset_item_model.rowCount()
         collected = self.collect_item_model.rowCount()
         if isinstance(value, int):
-            self.todo = value
+            self.todo = (value + 1)
         collect_msg = 'Files Collected : {}/{}'.format(collected, self.todo)
         self.collectedLabel.setText(collect_msg)
         assets_msg = 'New Assets : {}/{}'.format(done, self.todo)

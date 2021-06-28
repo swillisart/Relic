@@ -184,6 +184,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.linkFilterBox.textChanged.connect(self.links_view.filterAll)
         self.actionPortal.toggled.connect(self.hideDocks)
         self.actionIngest.triggered.connect(self.beginIngest)
+        self.actionDocumentation.triggered.connect(self.showDocumentation)
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
         self.assets_view.selmod.selectionChanged.connect(self.loadAssetData)
@@ -199,6 +200,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.documentationDock.setTitleBarWidget(self.documentationDockTitle)
         self.documentationDock.hide()
         self.documentationDock.setAutoFillBackground(True)
+
+    @Slot()
+    def showDocumentation(self):
+        self.documentationTextBrowser.setMarkdown(raw_md)
+        wat = DialogOverlay(self, self.documentationDock)
 
     @Slot()
     def searchPage(self, text):
@@ -221,8 +227,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.category_manager.blockSignals(True)
         DialogOverlay(self, ingest, modal=False)
 
-        #self.documentationTextBrowser.setMarkdown(raw_md)
-        #wat = DialogOverlay(self, self.documentationDock)
 
     @Slot()
     def onIngestClosed(self, dock):
@@ -332,7 +336,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def toggleAdminMode(self, toggle):
         #TODO: query the databse for permissions level
-        print(relic_preferences.edit_mode)
         relic_preferences.edit_mode = int(toggle)
 
 

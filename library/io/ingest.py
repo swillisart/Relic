@@ -4,6 +4,8 @@ import time
 from functools import partial
 import glob
 import libraw
+import ctypes
+import subprocess
 import numpy as np
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
@@ -24,6 +26,24 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QWidget)
 from sequencePath import sequencePath as Path
 
+CREATE_NO_WINDOW = 0x08000000
+
+
+def getMovInfo(fpath):
+    """
+    Gets Duration, Resolution and Framerate of supplied quicktime.
+
+    Returns
+    -------
+    list (duration, resolution, framerate)
+
+    EXAMPLE:
+        >>> getMovInfo('dev/test.mov')
+        >>> ['5.292', '912x899', '24']
+    """
+    cmd = 'exiftool -s3 -Duration# -ImageSize -VideoFrameRate "{}"'.format(fpath)
+    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW).decode("utf-8").split('\r\n')
+    return output[:3]
 
 def generatePreviews(img_buf, path):
     """Makes Proxy & Icon previews from an OpenImageIO image buffer"""
@@ -60,6 +80,22 @@ def generatePreviews(img_buf, path):
     icon_buf.write(str(icon_path))
     proxy_buf.write(str(proxy_path))
     return icon_path
+
+
+def assetFromStill(spec, icon_path, in_img_path):
+    icon = QPixmap.fromImage(QImage(str(icon_path)))
+    res = '{}x{}x{}'.format(spec.width, spec.height, spec.nchannels)
+    asset = temp_asset(
+        name=in_img_path.name,
+        category=0,
+        type=0,
+        duration=0,
+        resolution=res,
+        path=in_img_path,
+        icon=icon,
+    )
+    return asset
+
 
 class ConversionRouter(QObject):
 
@@ -115,7 +151,9 @@ class ConversionRouter(QObject):
                 img.checkSequence()
                 if img.sequence_path:
                     sequences.append(img.name)
-                img_function = partial(getattr(self, func), img, out_img_path)
+                    img_function = partial(getattr(self, 'processSEQ'), img, out_img_path)
+                else:
+                    img_function = partial(getattr(self, func), img, out_img_path)
                 conversion_functions.append(img_function)
 
         if conversion_functions:
@@ -125,31 +163,32 @@ class ConversionRouter(QObject):
                     asset = func()
                     self.progress.emit(asset)
                 except Exception as exerr:
-                    #log.error(exerr)
-                    self.error.emit(exerr)
+                    log.error(exerr)
+                    #self.error.emit(exerr)
 
     @staticmethod
     @logFunction('Making preview from (MOV)')
-    def processMOV(in_img_path, movie_path):
-        return None
-        '''Creates Images / Video from (Quicktime)'''
+    def processMOV(in_img_path, out_img_path):
+        duration, res, rate = getMovInfo(in_img_path)
+        duration = float(duration)
+        framerate = float(rate)
+        pts = (((duration * framerate) * 24) / 100) / 24
+        width, height = res.split('x')
 
-        icon_out = output_path / 'unsorted{}_icon.jpg'.format(in_img_path)
-        preview_out = output_path / 'unsorted{}_icon.mp4'.format(in_img_path)
-        proxy_out = output_path / 'unsorted{}_proxy.mp4'.format(in_img_path)
+        icon_path = out_img_path.suffixed('_icon', ext='.jpg')
         cmd = [
             "ffmpeg",
             "-loglevel", "error",
             "-y",
-            "-i", str(movie_path),
+            "-i", str(in_img_path),
             "-pix_fmt", "yuv422p",
             "-vcodec", "h264",
-            "-crf", "28",
-            "-preset", "slower",
+            "-crf", "26",
+            "-preset", "medium",
             "-tune", "fastdecode",
             "-movflags", "+faststart",
             "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-            str(proxy_out),
+            str(out_img_path.suffixed('_proxy', ext='.mp4')),
             "-r", "24",
             "-vf", "setpts=PTS/{},scale=w=256:h=144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2".format(pts),
             "-an",  # Flag to not try linking audio file
@@ -157,27 +196,25 @@ class ConversionRouter(QObject):
             "-vcodec", "h264",
             "-tune", "fastdecode",
             "-movflags", "+faststart",
-            str(preview_out),
+            str(out_img_path.suffixed('_icon', ext='.mp4')),
             "-vf", "select=gte(n\,1),scale=w=256:h=144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2",
             "-vframes", "1",
-            str(icon_out),
+            str(icon_path),
         ]
-        subprocess.call(cmd, stdout=DEVNULL)
-        icon_img = QImage(str(icon_out)).scaled(
-            72, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        icon_pixmap = QPixmap.fromImage(icon_img)
-        out_icon = QIcon()
-        out_icon.addPixmap(icon_pixmap, QIcon.Normal)
-        out_icon.addPixmap(icon_pixmap, QIcon.Selected)
-        return out_icon
+        subprocess.call(cmd, stdout=subprocess.DEVNULL)
+
+        spec = oiio.ImageSpec(int(width), int(height), 3, oiio.UINT8)
+        asset = assetFromStill(spec, icon_path, in_img_path)
+        asset.duration = duration
+        asset.framerate = framerate
+
+        return asset
 
     @staticmethod
     @logFunction('Making preview from (SEQ)')
-    def processSEQ(path, proxy_path, icon_path):
-        return None
-        frames = sorted(glob.glob(str(path)))
+    def processSEQ(in_img_path, out_img_path):
+        frames = sorted(glob.glob(str(in_img_path.sequence_path)))
         framelength = len(frames)
-        frame_data = []
         a_input = oiio.ImageInput.open(frames[0])
         spec = a_input.spec()
         a_input.close()
@@ -196,82 +233,84 @@ class ConversionRouter(QObject):
             "-an",  # Flag to not try linking audio file
             "-pix_fmt", "yuv422p",
             "-vcodec", "h264",
-            "-crf", "30",
+            "-crf", "26",
             "-preset", "medium",
             "-tune", "fastdecode",
             "-movflags", "+faststart",
             "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-            str(proxy_path),
-            "-vf", "setpts=PTS/{},scale=w=256:h=144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2".format(pts),
+            str(out_img_path.suffixed('_proxy', ext='.mp4')),
+            "-vf", "setpts=PTS/{p},scale=w={w}:h={h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2".format(
+                p=pts, w=256, h=144),
+            "-an",  # Flag to not try linking audio file
             "-vcodec", "h264",
             "-movflags", "+faststart",
-            str(icon_path.parents(0) / (icon_path.name + '.mp4'))
+            str(out_img_path.suffixed('_icon', ext='.mp4'))
         ]
 
         pipe = subprocess.PIPE
-        pr = subprocess.Popen(
-            command, stdout=DEVNULL, stdin=pipe
-        )
+        pr = subprocess.Popen(command, stdout=subprocess.DEVNULL, stdin=pipe)
 
         i = 0
-        while True:
-            if not frames: break
+        while frames:
             frame = frames.pop(0)
             i += 1
             buf = oiio.ImageBuf(str(frame))
             spec = buf.spec()
             r = spec.roi
-            if spec.nchannels >= 4:
-                roi = oiio.ROI(r.xbegin, r.xend, r.ybegin, r.yend, 0, 1, 0, 4)
-                alpha = True
-            else:
-                alpha = False
-
-                roi = oiio.ROI(r.xbegin, r.xend, r.ybegin, r.yend, 0, 1, 0, 3)
+            rgb_roi = oiio.ROI(r.xbegin, r.xend, r.ybegin, r.yend, 0, 1, 0, 3)
 
             buf = oiio.ImageBufAlgo.colorconvert(buf, "Linear", "sRGB")
-            data = buf.get_pixels(format=oiio.UINT8, roi=roi)
 
-            # Write Icon
+            # Write Icon from center of range
             if i == int(framelength / 2):
-                generatePreviewsFile(frame, icon_path, gammaCorrect=True)
+                icon_path = generatePreviews(buf, out_img_path)
 
-            if alpha:
-                data = data[:, :, :-1]
+            data = buf.get_pixels(format=oiio.UINT8, roi=rgb_roi)
+
             pr.stdin.write(data.tobytes())
             pr.stdin.flush()
 
         pr.stdin.close()
-        return ('{}x{}'.format(spec.width, spec.height), framelength/24)
+        asset = assetFromStill(spec, icon_path, in_img_path)
+        asset.duration = framelength/24
+        return asset
 
     @staticmethod
     @logFunction('Making preview from (HDR)')
-    def processHDR(in_img_path, image_path):
-        return None
-        image = oiio.ImageBuf(str(image_path))
-        spec = image.spec()
+    def processHDR(in_img_path, out_img_path):
+        imgbuf = oiio.ImageBuf(str(in_img_path))
+        if imgbuf.has_error:
+            raise Exception
+        spec = imgbuf.spec()
         formatted = oiio.ImageBuf(
             oiio.ImageSpec(spec.width, spec.height, 3, oiio.UINT8)
         )
-        oiio.ImageBufAlgo.pow(formatted, image, (0.454, 0.454, 0.454))
-        icon = generatePreviews(in_img_path, formatted)
-        return icon
+        oiio.ImageBufAlgo.pow(formatted, imgbuf, (0.454, 0.454, 0.454))
+        icon_path = generatePreviews(formatted, out_img_path)
+        asset = assetFromStill(spec, icon_path, in_img_path)
+        return asset
 
     @staticmethod
     @logFunction('Making preview from (RAW)')
     def processRAW(in_img_path, out_img_path):
-        return None
-        # For neat image if installed
-        #subprocess.call('E:/OneDrive/Apps/Neat Image v8 Standalone/NeatImageCL.exe "{}" -sp -ow -e -b=M -s='.format(tif_path), stdout=DEVNULL)
-        proc = LibRaw()
+        neat_image_cmd = [
+            'E:/OneDrive/Apps/Neat Image v8 Standalone/NeatImageCL.exe', '"{}"',
+            '-sp',
+            '-ow',
+            '-e',
+            '-b=M',
+            '-s=',
+        ]
+        #subprocess.call(neat_image_cmd, stdout=subprocess.DEVNULL)
+        proc = libraw.LibRaw()
 
         # Read RAW data
         proc.open_file(str(in_img_path))
         proc.unpack()
 
         # Set libraw parameters
-        proc.set_output_color(c_int(6))
-        proc.set_no_auto_bright(c_int(1))
+        proc.set_output_color(ctypes.c_int(6))
+        proc.set_no_auto_bright(ctypes.c_int(1))
 
         proc.dcraw_process()
 
@@ -283,15 +322,25 @@ class ConversionRouter(QObject):
         spec = oiio.ImageSpec(size.w, size.h, size.channels, oiio.HALF)
         buf = oiio.ImageBuf(spec)
         buf.set_pixels(spec.roi, img_data)
-        #img_pixels = buf.get_pixels(oiio.FLOAT)
-        #img_pixels.reshape(size.w * size.h, size.channels)
-        #aces_pixels = (flat_img @ libraw.ACESCG_MATRIX)
-        #aces_pixels.reshape([size.h, size.w, size.channels])
-        #buf.set_pixels(spec.roi, aces_pixels)
+        ACESCG_MATRIX = (
+            1.4514393161,  -0.0765537734, 0.0083161484, 0,
+            -0.2365107469,  1.1762296998, -0.0060324498, 0,
+            -0.2149285693, -0.0996759264,  0.9977163014, 0,
+            0,         0,         0,       1
+        )
+        buf = oiio.ImageBufAlgo.colormatrixtransform(buf, ACESCG_MATRIX)
+
         out_img_path.ext = '.exr' # Raw is always converted to exr.
         buf.write(str(out_img_path))
 
-        return #self.processHDR(in_img_path, exr_path)
+        formatted = oiio.ImageBuf(
+            oiio.ImageSpec(spec.width, spec.height, 3, oiio.UINT8)
+        )
+        oiio.ImageBufAlgo.pow(formatted, buf, (0.454, 0.454, 0.454))
+        icon_path = generatePreviews(formatted, out_img_path)
+        asset = assetFromStill(spec, icon_path, in_img_path)
+
+        return asset
 
     @staticmethod
     @logFunction('Making preview from (LDR)')
@@ -302,17 +351,7 @@ class ConversionRouter(QObject):
             raise Exception
         spec = imgbuf.spec()
         icon_path = generatePreviews(imgbuf, out_img_path)
-        icon = QPixmap.fromImage(QImage(str(icon_path)))
-        res = '{}x{}x{}'.format(spec.width, spec.height, spec.nchannels)
-        asset = temp_asset(
-            name=in_img_path.name,
-            category=0,
-            type=0,
-            duration=0,
-            resolution=res,
-            path=in_img_path,
-            icon=icon,
-        )
+        asset = assetFromStill(spec, icon_path, in_img_path)
         return asset
 
 
@@ -378,16 +417,9 @@ class IngestionThread(QThread):
                 out_icon = out_path.suffixed('_icon', ext='.jpg')
 
                 files_map[in_icon] = out_icon
-        
+                #in_path.checkSequence()
                 if in_path.sequence_path or in_path.ext in MOVIE_EXT:
-                    if in_path.sequence_path: # Map all sequences frames for copy
-                        for seq_file in glob.glob(in_path.sequence_path):
-                            frame = Path(seq_file).frame
-                            in_path.frame = frame
-                            out_path.frame = frame
-                            files_map[in_path] = out_path
-                    else: # Map Movie for copy
-                        files_map[in_path] = out_path
+                    files_map[in_path] = out_path
                     in_proxy = temp_path.suffixed('_proxy', ext='.mp4')
                     out_proxy = out_path.suffixed('_proxy', ext='.mp4')
 
@@ -401,9 +433,17 @@ class IngestionThread(QThread):
                     in_proxy = temp_path.suffixed('_proxy', ext='.jpg')
                     out_proxy = out_path.suffixed('_proxy', ext='.jpg')
 
+                #print(files_map)
                 files_map[in_proxy] = out_proxy
                 for src, dst in files_map.items():
-                    src.copyTo(dst)
+                    if src.sequence_path:
+                        for seq_file in glob.glob(src.sequence_path):
+                            frame = Path(seq_file).frame
+                            src.frame = frame
+                            dst.frame = frame
+                            src.copyTo(dst)
+                    else:
+                        src.copyTo(dst)
                 item.filehash = out_path.parents(0).hash
                 item.filesize = out_path.parents(0).size
                 # Clear the Id to allow for database creation

@@ -14,7 +14,7 @@ from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             Signal, Slot, QPoint)
 from PySide6.QtGui import (QColor, QIcon, QRegularExpressionValidator,
                            QStandardItemModel, Qt, QCursor, QAction)
-from PySide6.QtWidgets import (QAbstractItemView, QListView,
+from PySide6.QtWidgets import (QAbstractItemView, QListView, QMessageBox,
                                QStyledItemDelegate, QTreeView, QWidget, QMenu)
 
 
@@ -121,7 +121,6 @@ class subcategoryTreeView(QTreeView):
 
         self.drag_item = None
         self.counts = {}
-        self.deselect_it = None
         # Actions
         self.actionCreate = QAction('Create New', self)
         self.actionCreate.triggered.connect(self.listViewNewMode)
@@ -130,23 +129,16 @@ class subcategoryTreeView(QTreeView):
         self.actionDelete = QAction('Remove Selected', self)
         self.actionDelete.triggered.connect(self.removeSubcategory)
 
-
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
+        pop = index in self.selectedIndexes()
+        super(subcategoryTreeView, self).mousePressEvent(event)
         if not index.isValid():
             self.selection_model.clearSelection()
 
-        if index in self.selectedIndexes() and event.buttons() == Qt.LeftButton:
-            self.deselect_it = index
-        super(subcategoryTreeView, self).mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        index = self.indexAt(event.pos())
-        if index == self.deselect_it:
-            self.deselect_it = None
+        if pop and event.buttons() == Qt.LeftButton:
             self.selection_model.select(index, QItemSelectionModel.Deselect)
             self.update()
-        super(subcategoryTreeView, self).mouseReleaseEvent(event)
 
     def resizeToSel(self):
         self.resizeColumnToContents(0)
@@ -229,7 +221,7 @@ class subcategoryTreeView(QTreeView):
 
         if selection:
             item = self.indexToItem(selection[0])
-            new_item.link = item.id
+            new_item.link = (self.category.id, item.id)
             new_item.create()
             new_item.count = 0
             tree_item = polymorphicItem(fields=new_item)
@@ -262,8 +254,13 @@ class subcategoryTreeView(QTreeView):
         selection = self.selectedIndexes()
 
         msg = 'Removing this Subcategory will remove all descendent subcategories as well.'
-        #confirm = centralWidget.message(parent=self, message=msg, title='Are you Sure?', check=1)
-        #if not selection or not confirm: return
+        message = QMessageBox(QMessageBox.Warning, 'Are you sure?', msg,
+                QMessageBox.NoButton, self)
+        message.addButton('Yes', QMessageBox.AcceptRole)
+        message.addButton('Cancel', QMessageBox.RejectRole)
+
+        if message.exec_() == QMessageBox.RejectRole:
+            return
 
         ids = []
 
@@ -480,7 +477,7 @@ class CategoryManager(QObject):
         self.selected_subcategories = {}
         self.all_categories = []
 
-    def createCategories(self, categories):
+    def assembleCategories(self, categories):
         self.clearAllModels()
         for category in categories:
 
@@ -507,7 +504,11 @@ class CategoryManager(QObject):
             self.selected_subcategories[sender.category.id] = []
             self.onSelection.emit(self.selected_subcategories)
         else:
-            self.onSelection.emit(self.selected_subcategories.pop(sender.category.id))
+            try:
+                selected = self.selected_subcategories.pop(sender.category.id)
+                self.onSelection.emit(selected)
+            except KeyError:
+                pass
 
     @Slot()
     def getAllSelectedItems(self, selection):
@@ -570,6 +571,16 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         super(ExpandableTab, self).mousePressEvent(event)
         if self.HeaderFrame.underMouse():
             self.toggleState()
+
+    def expandState(self):
+        self.state = True
+        self.checkButton.setChecked(True)
+        self.ContentFrame.setVisible(True)
+
+    def collapseState(self):
+        self.state = False
+        self.checkButton.setChecked(False)
+        self.ContentFrame.setVisible(False)
 
     def toggleState(self):
         self.state = not self.state

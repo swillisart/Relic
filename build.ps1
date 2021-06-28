@@ -4,3 +4,5 @@
 .\Scripts\pyside6-uic.exe .\library\ui\expandableTabs.ui -o .\library\ui\expandableTabs.py
 .\Scripts\pyside6-uic.exe .\library\ui\asset_delegate.ui -o .\library\ui\asset_delegate.py
 .\Scripts\pyside6-uic.exe .\library\ui\list_view_filtered.ui -o .\library\ui\list_view_filtered.py
+.\Scripts\pyside6-uic.exe .\library\ui\ingestion.ui -o .\library\ui\ingestion.py
+.\Scripts\pyside6-uic.exe .\library\ui\compact_delegate.ui -o .\library\ui\compact_delegate.py

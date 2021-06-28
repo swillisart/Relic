@@ -4,6 +4,8 @@ import time
 import numpy as np
 from library.objectmodels import (allCategories, alusers, polymorphicItem,
                                   relationships, subcategory, tags)
+from library.config import relic_preferences
+
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
 from PySide6.QtCore import QRect, QSize, Signal, Slot
 from PySide6.QtGui import QCursor, QIcon, QPainter, QStandardItemModel, Qt
@@ -39,7 +41,8 @@ class metadataFormView(QFrame):
             try:
                 meta_constructor = globals()[label+'Widget']
                 meta_widget = meta_constructor(self)
-                meta_widget.setValue(value)
+                if value:
+                    meta_widget.setValue(value)
                 if isinstance(value, list):
                     label_text = '{} : {} '.format(label.capitalize(), len(value))
                 else:
@@ -286,11 +289,11 @@ class metadataRelationView(QListView):
 
     def _createContextMenus(self, value):
         context_menu = QMenu(self)
-        #if config.getPermission():
-        new_action = context_menu.addAction("Add New")
-        new_action.triggered.connect(self.relationalDataLinks.show)
-        remove_action = context_menu.addAction("Remove Selected")
-        remove_action.triggered.connect(self.removeSelectedItems)
+        if int(relic_preferences.edit_mode):
+            new_action = context_menu.addAction("Add New")
+            new_action.triggered.connect(self.relationalDataLinks.show)
+            remove_action = context_menu.addAction("Remove Selected")
+            remove_action.triggered.connect(self.removeSelectedItems)
 
         context_menu.exec(QCursor.pos())
 
@@ -506,18 +509,23 @@ class filesizeWidget(baseLabel):
 
 
 class filehashWidget(baseLabel):
-    def __init__(self, *args, **kwargs):
-        super(filehashWidget, self).__init__(*args, **kwargs)
+    pass
 
 
 class proxyWidget(baseLabel):
-    def __init__(self, *args, **kwargs):
-        super(proxyWidget, self).__init__(*args, **kwargs)
+    pass
 
 
 class dependenciesWidget(baseLabel):
-    def __init__(self, *args, **kwargs):
-        super(dependenciesWidget, self).__init__(*args, **kwargs)
+    pass
+
+
+class idWidget(baseLabel):
+    pass
+
+
+class linksWidget(baseLabel):
+    pass
 
 
 class pathWidget(baseLabel):
@@ -531,7 +539,6 @@ class categoryWidget(QComboBox):
 
     def __init__(self, *args, **kwargs):
         super(categoryWidget, self).__init__(*args, **kwargs)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setIconSize(QSize(20, 20))
         for x in allCategories.__slots__:
             icon = QIcon(':/resources/icons/{}.svg'.format(x.lower()))

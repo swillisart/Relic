@@ -121,10 +121,8 @@ class LinkViewWidget(QWidget):
             type_count = self.asset_type_counter.get(asset.type) or 0
             self.asset_type_counter[asset.type] = type_count + 1
 
-            # Fetch icons
-            path = asset.path.parents(0) / (asset.path.name + '_icon.jpg')
-            rc = 'retrieveIcon/{}'.format(path)
-            db.accessor.doStream(rc, asset.id)
+            asset_obj = asset.data(polymorphicItem.Object)
+            asset_obj.fetchIcon()
 
         for index, tab in enumerate(self.all_tabs):
             count = self.asset_type_counter.get(index+1) or 0

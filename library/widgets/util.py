@@ -1,10 +1,13 @@
 import re
+from functools import partial
 
 from library.ui.list_view_filtered import Ui_ListViewFiltered
+from library.widgets.assets import polymorphicItem
+
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
                             QObject, QPoint, QRect, QRegularExpression, QSize,
                             QSortFilterProxyModel, Qt, QTextStream, Signal,
-                            Slot)
+                            Slot, QPropertyAnimation, Property)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
                            QIcon, QPainter, QPixmap,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
@@ -13,7 +16,9 @@ from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QDockWidget, QFrame, QLabel, QLineEdit,
                                QListView, QMenu, QScrollArea,
-                               QStyledItemDelegate, QTreeView, QWidget)
+                               QStyledItemDelegate, QTreeView, QVBoxLayout,
+                               QWidget, QLayout, QDialog)
+
 
 def updateWidgetProperty(widget, attribute, value):
     widget.setProperty(attribute, value)
@@ -165,14 +170,14 @@ class FocusFilter(QObject):
             return False
 
 
-class ListViewFiltered(Ui_ListViewFiltered, QMenu):
+class ListViewFocus(Ui_ListViewFiltered, QWidget):
 
     newItem = Signal(str)
     renameItem = Signal(str)
-    linkItem = Signal(list)
+    linkItem = Signal(object)
 
     def __init__(self, *args, **kwargs):
-        super(ListViewFiltered, self).__init__(*args, **kwargs)
+        super(ListViewFocus, self).__init__(*args, **kwargs)
         self.setupUi(self)
         self.rename_mode = False
         self.filter_regex = r"[A-Za-z0-9]+"
@@ -200,7 +205,10 @@ class ListViewFiltered(Ui_ListViewFiltered, QMenu):
         self.searchBox.installEventFilter(self.focus_filter)
         self.searchBox.textChanged.connect(self.filterRegExpChanged)
         self.searchBox.focusOut.connect(self.listView.setFocus)
+        focus_first = lambda x: self.listView.setCurrentIndex(self.proxyModel.index(0, 0))
+        self.searchBox.focusOut.connect(focus_first)
         self.searchBox.onReturn.connect(self.onViewReturn)
+        self.listView.onBackspace.connect(self.searchBox.keyPressEvent)
 
         qregex = QRegularExpression(self.filter_regex)
         validator = QRegularExpressionValidator(qregex)
@@ -231,15 +239,18 @@ class ListViewFiltered(Ui_ListViewFiltered, QMenu):
             self.itemModel.appendRow(item.clone())
 
     @Slot()
-    def onSelection(self, index):
-        print(item.indexes()[0].data())
-        print(index.data())
-        self.searchBox.setText(index.data())
-        self.searchBox.setFocus()
-        # model_item_index = [self.itemModel.itemFromIndex(i).data()
-        #  for i in self.listView.selectedIndexes()]
-        # index = self.listView.selectedIndexes()[0]
-        # cmds.createNode(index.data())
+    def onSelection(self, selection):
+        indices = selection.indexes()
+        if indices:
+            asset = indices[0].data(polymorphicItem.Object)
+            #print(asset)
+            
+            #self.searchBox.setText(asset.name)
+            #self.searchBox.setFocus()
+            # model_item_index = [self.itemModel.itemFromIndex(i).data()
+            #  for i in self.listView.selectedIndexes()]
+            # index = self.listView.selectedIndexes()[0]
+
 
     @Slot()
     def onViewFill(self):
@@ -293,12 +304,40 @@ class ListViewFiltered(Ui_ListViewFiltered, QMenu):
         y = pos.y()
         self.move(x + 75, y - 5)
         self.searchBox.setFocus()
-        super(ListViewFiltered, self).show()
+        super(ListViewFocus, self).show()
+
+
+class ListViewFiltered(ListViewFocus):
+
+    def __init__(self, *args, **kwargs):
+        super(ListViewFiltered, self).__init__(*args, **kwargs)
+        self.setWindowFlags(Qt.Popup|Qt.WindowStaysOnTopHint|Qt.FramelessWindowHint)
+
+
+class AssetNameListView(ListViewFocus):
+
+    def __init__(self, *args, **kwargs):
+        super(AssetNameListView, self).__init__(*args, **kwargs)
+        self.searchBox.removeEventFilter(self.focus_filter)
+
+    def show(self):
+        super(AssetNameListView, self).show()
+
+    @Slot()
+    def hide_filter(self):
+        return
+
+    @Slot()
+    def onViewReturn(self):
+        super(AssetNameListView, self).onViewReturn()
+        self.searchBox.clear()
+        self.show()
 
 
 class FocusListView(QListView):
 
     onReturn = Signal(bool)
+    onBackspace = Signal(QEvent)
     fill_line_text = Signal(bool)
 
     def __init__(self, *args, **kwargs):
@@ -313,17 +352,77 @@ class FocusListView(QListView):
         if event.key() == Qt.Key_Space:
             self.fill_line_text.emit(True)
 
+        if event.key() == Qt.Key_Backspace:
+            self.onBackspace.emit(event)
+
         super(FocusListView, self).keyPressEvent(event)
 
 
-class contextPainter(QPainter):
-    def __init__(self, *args, **kwargs):
-        super(contextPainter, self).__init__(*args, **kwargs)
+class DialogOverlay(QDialog):
 
-    def __enter__(self):
-        self.save()
-        return self
+    def read_opaque(self):                                                                                   
+        return self._opaque                                                               
+                                                                                                    
+    def set_opaque(self, val):                                                                                
+        self._opaque = val 
 
-    def __exit__(self, *exc):
-        self.restore()
-        return False
+    p_opaque = Property(int, read_opaque, set_opaque)
+
+    def __init__(self, parent, widget, modal=True):
+        super(DialogOverlay, self).__init__(parent)
+        # Experimental
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        # Essentials
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setAutoFillBackground(True)
+        self.setMouseTracking(True)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(128, 32, 128, 32)
+        self.layout.setAlignment(Qt.AlignCenter)
+        self.widget = widget
+        #self.layout.addWidget(widget)
+        self._opaque = 0
+        self.setModal(modal)
+        parent.installEventFilter(self)
+
+        # Optional Animation
+        self.anim = QPropertyAnimation(self, b"p_opaque")
+        self.anim.setDuration(175)
+        self.anim.setStartValue(0)
+        self.anim.setEndValue(150)
+        self.anim1 = QPropertyAnimation(self, b"geometry")
+        self.anim1.setDuration(175)
+        self.anim1.setStartValue(self.parent().rect() - QMargins(10, 10, 10, 10))
+        self.anim1.setEndValue(self.parent().rect())
+        self.show()
+        self.anim.start(QPropertyAnimation.DeleteWhenStopped)
+        self.anim1.start(QPropertyAnimation.DeleteWhenStopped)
+        
+        self.anim.finished.connect(partial(self.layout.addWidget, widget))
+        self.anim.finished.connect(widget.show)
+
+    def eventFilter(self, widget, event):
+        parent = self.parent()
+        if widget is parent and event.type() == QEvent.Resize:
+                self.setGeometry(parent.rect())
+                return True
+        else:
+            return False
+
+    def mousePressEvent(self, event):
+        if self.isModal() and not self.widget.underMouse():
+            self.parent().removeEventFilter(self)
+            self.close()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+        painter.setBrush(QColor(10, 10, 10, self._opaque))
+        painter.setPen(Qt.NoPen)
+        painter.drawRect(self.geometry())
+
+    def show(self):
+        parent = self.parent()
+        self.setGeometry(parent.rect())
+        super(DialogOverlay, self).show()

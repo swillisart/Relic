@@ -1,13 +1,17 @@
 import copy
 import datetime
+import os
 import time
 import json
 import subprocess
 from functools import partial
+from sequencePath import sequencePath as Path
+
 # -- Module --
-from library.config import relic_preferences
-from library.objectmodels import allCategories, polymorphicItem, subcategory
+from library.config import relic_preferences, kohaiPreview
+from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset
 from library.ui.asset_delegate import Ui_AssetDelegate
+from library.ui.compact_delegate import Ui_CompactDelegate
 from library.widgets.util import updateWidgetProperty
 from library.widgets.metadataView import (categoryWidget, classWidget,
                                           qualityWidget, subcategoryWidget,
@@ -16,13 +20,14 @@ from library.widgets.metadataView import (categoryWidget, classWidget,
 from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins,
                             QMimeData, QModelIndex, QObject, QPoint,
                             QPropertyAnimation, QRect, QSize, Signal, Slot, QEvent, QTimer)
-from PySide6.QtGui import (QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
+from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
                            QPainterPath, QPen, QPixmap, QRegion,
                            QStandardItemModel, Qt, QImage, QMouseEvent)
 from PySide6.QtWidgets import (QAbstractItemView, QGraphicsDropShadowEffect,
                                QListView, QMenu, QStyle, QStyledItemDelegate,
-                               QStyleOption, QWidget, QApplication)
+                               QStyleOption, QWidget, QApplication, QCheckBox)
 
+INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 class assetItemModel(QStandardItemModel):
 
@@ -30,6 +35,8 @@ class assetItemModel(QStandardItemModel):
         super(assetItemModel, self).__init__(parent)
         proto_item = polymorphicItem(fields=subcategory(name='', count=0))
         self.setItemPrototype(proto_item)
+        try: parent.setModel(self)
+        except: pass
 
     def mimeData(self, indexes):
         by_category = {}
@@ -91,10 +98,8 @@ class assetListView(QListView):
         scroller = self.verticalScrollBar()
         scroller.setSingleStep(50)
         self.setResizeMode(QListView.Adjust)
-        self.setViewMode(QListView.IconMode)
-        self.setGridSize(QSize(296, 233))
+        self.iconMode()
         #self.setMouseTracking(True)
-        self.setFlow(QListView.LeftToRight)
         self.setUniformItemSizes(True)
         # Drag & Drop
         self.setDropIndicatorShown(True)
@@ -105,9 +110,33 @@ class assetListView(QListView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenus)
 
-        self.setItemDelegate(AssetStyleDelegate(self))
         self.lastIndex = None
         self.editor = None
+
+        # Actions
+        self.actionExploreLocation = QAction('Browse File Location', self)
+        self.actionExploreLocation.triggered.connect(self.browseLocalAsset)
+        self.actionDelete = QAction('Delete', self)
+        self.actionDelete.triggered.connect(self.deleteAsset)
+        """
+        self.actionScreenshotIcon = context_menu.addAction('Upload Thumbnail')
+        self.actionScreenshotIcon.triggered.connect(self.uploadThumbnail)
+        self.actionRegeneratePreview = context_menu.addAction('Regenerate Preview')
+        self.actionRegeneratePreview.triggered.connect(self.regenPreview)
+        """
+
+
+    def iconMode(self):
+        self.setFlow(QListView.LeftToRight)
+        self.setViewMode(QListView.IconMode)
+        self.setGridSize(QSize(296, 233))
+        self.setItemDelegate(AssetStyleDelegate(self))
+
+    def compactMode(self):
+        self.setFlow(QListView.TopToBottom)
+        self.setViewMode(QListView.ListMode)
+        self.setGridSize(QSize(267+1, 58+1))
+        self.setItemDelegate(AssetCompactDelegate(self))
 
     def setModel(self, model):
         super(assetListView, self).setModel(model)
@@ -137,21 +166,38 @@ class assetListView(QListView):
             if self.editor:
                 self.editor.close()
                 self.setFocus()
-
-            self.editor = AssetEditor(self, index)
-            r = self.visualRect(index)
-            point = r.topLeft()#self.mapToGlobal(r.topLeft())
-            img_s1 = QRect(point, QSize(r.width(), r.height()))
-            asset = index.data(polymorphicItem.Object)
-            if hasattr(asset, 'duration'):
-                asset.stream_video_to(self.editor.updateSequence)
-            self.editor.dragIt.connect(self.enterDrag)
-            self.editor.loadLinks.connect(self.onLinkLoad.emit)
-            self.editor.setGeometry(img_s1)
-            self.editor.show()
-            self.editor.setFocus()
+            if self.viewMode() == QListView.IconMode:
+                self.editor = AssetEditor(self, index)
+                r = self.visualRect(index)
+                point = r.topLeft()#self.mapToGlobal(r.topLeft())
+                img_s1 = QRect(point, QSize(r.width(), r.height()))
+                asset = index.data(polymorphicItem.Object)
+                if hasattr(asset, 'duration'):
+                    asset.stream_video_to(self.editor.updateSequence)
+                self.editor.dragIt.connect(self.enterDrag)
+                self.editor.loadLinks.connect(self.onLinkLoad.emit)
+                self.editor.setGeometry(img_s1)
+                self.editor.show()
+                self.editor.setFocus()
         else:
             self.lastIndex = index
+
+    def mouseDoubleClickEvent(self, event):
+        super(assetListView, self).mousePressEvent(event)
+        selection = [x for x in self.selectedIndexes()]
+
+        for index in selection:
+            preview = INGEST_PATH / 'unsorted{}_proxy.jpg'.format(index.row())
+            #asset = index.data(polymorphicItem.Object)
+            kohaiPreview(preview)
+            break
+
+    def mousePressEvent(self, event):
+        index = self.indexAt(event.pos())
+        pop = index in self.selectedIndexes()
+        super(assetListView, self).mousePressEvent(event)
+        if pop and event.buttons() == Qt.LeftButton:
+            self.selmod.select(index, QItemSelectionModel.Deselect)
 
     @Slot()
     def enterDrag(self, parent):
@@ -166,18 +212,10 @@ class assetListView(QListView):
         """
         sender = self.sender()
         context_menu = QMenu(self)
+        self.openlocation = context_menu.addAction(self.actionExploreLocation)
 
-        self.openlocation = context_menu.addAction("Browse File Location")
-        self.openlocation.triggered.connect(self.browseLocalAsset)
-        """
-        self.preview_screenshot = context_menu.addAction("Upload Thumbnail")
-        self.preview_screenshot.triggered.connect(self.uploadThumbnail)
-        self.regen_previews = context_menu.addAction("Regenerate Preview")
-        self.regen_previews.triggered.connect(self.regenPreview)
-        """
         if bool(int(relic_preferences.edit_mode)):
-            self.delete_item = context_menu.addAction("Delete")
-            self.delete_item.triggered.connect(self.deleteAsset)
+            self.delete_item = context_menu.addAction(self.actionDelete)
 
         context_menu.exec(QCursor.pos())
 
@@ -188,14 +226,17 @@ class assetListView(QListView):
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
             subcategory = asset.subcategory
-            if subcategory:
-                subcategory.count = (subcategory.count - 1)
-                update_list.append(subcategory)
-            asset.remove()
-            #TODO: remove from disk
-        
+            if isinstance(subcategory, list):
+                subcategory = subcategory[0]
+    
+            subcategory.count = (subcategory.count - 1)
+            update_list.append(subcategory.data())
+
+            if not isinstance(asset, temp_asset):
+                asset.remove()
+                #TODO: remove from disk
         # Update the subcategories with new counts
-        [x.data().update(fields=['count']) for x in update_list]
+        [x.update(fields=['count']) for x in update_list]
 
     def browseLocalAsset(self, action):
         for index in self.selectedIndexes():
@@ -205,17 +246,16 @@ class assetListView(QListView):
             subprocess.Popen(cmd)
 
     def leaveEvent(self, event):
+        self.lastIndex = None
         if self.editor:
             self.editor.close()
             self.setFocus()
         super(assetListView, self).leaveEvent(event)
 
-class AssetDelegateWidget(Ui_AssetDelegate, QWidget):
+class AssetItemPaint:
+
     def __init__(self, *args, **kwargs):
-        super(AssetDelegateWidget, self).__init__(*args, **kwargs)
-        self.setupUi(self)
-        #self.progressBar.setProperty("complete", True)
-        #self.progressBar.setStyle(self.progressBar.style())
+        super(AssetItemPaint, self).__init__(*args, **kwargs)
         self.colors = [
             QColor(168, 58, 58),
             QColor(156, 156, 156),
@@ -267,12 +307,25 @@ class AssetDelegateWidget(Ui_AssetDelegate, QWidget):
 
 
 
+class AssetDelegateWidget(AssetItemPaint, Ui_AssetDelegate, QWidget):
+    def __init__(self, *args, **kwargs):
+        super(AssetDelegateWidget, self).__init__(*args, **kwargs)
+        self.setupUi(self)
+        #self.progressBar.setProperty("complete", True)
+        #self.progressBar.setStyle(self.progressBar.style())
 
-        
+
+class CompactDelegateWidget(AssetItemPaint, Ui_CompactDelegate, QWidget):
+    def __init__(self, *args, **kwargs):
+        super(CompactDelegateWidget, self).__init__(*args, **kwargs)
+        self.setupUi(self)
+        self.checkBox = QCheckBox(self)
+        self.checkBox.hide()
+
+
 class AssetStyleDelegate(QStyledItemDelegate):
     def __init__(self, *args, **kwargs):
         super(AssetStyleDelegate, self).__init__(*args, **kwargs)
-
         self.asset_widget = AssetDelegateWidget(self.parent())
         self.asset_widget.hide()
 
@@ -290,11 +343,14 @@ class AssetStyleDelegate(QStyledItemDelegate):
         updateWidgetProperty(widget.frame, "selected", select_state)
     
         widget.paint(painter, rect, asset)
+        self.paintOverlays(painter, asset, rect)
+
+    def paintOverlays(self, painter, asset, rect):
         # Paint HUD Overlays
         overlay = None
-        if hasattr(asset, 'duration') and asset.duration != 0:
-            timecode = datetime.timedelta(seconds=asset.duration)
-            overlay = str(timecode)
+        if hasattr(asset, 'duration'):
+            if timecode := asset.duration:
+                overlay = datetime.timedelta(seconds=timecode)
  
         if hasattr(asset, 'resolution'):
             overlay = str(asset.resolution)
@@ -307,10 +363,23 @@ class AssetStyleDelegate(QStyledItemDelegate):
                 overlay
             )
 
-
     def sizeHint(self, option, index):
         #width = relic_preferences.asset_preview_size
         return QSize(296-12, 233-12)
+
+
+class AssetCompactDelegate(AssetStyleDelegate):
+    def __init__(self, *args, **kwargs):
+        super(AssetCompactDelegate, self).__init__(*args, **kwargs)
+        self.asset_widget = CompactDelegateWidget(self.parent())
+        self.asset_widget.hide()
+
+    def paintOverlays(self, painter, asset, rect):
+        # Don't Paint HUD Overlays
+        return
+
+    def sizeHint(self, option, index):
+        return QSize(267, 58)
 
 
 class AssetEditor(AssetDelegateWidget):

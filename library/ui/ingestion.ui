@@ -1,0 +1,1201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>IngestForm</class>
+ <widget class="QWidget" name="IngestForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>768</width>
+    <height>468</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+	background-color: rgb(68, 68, 68);
+    color: rgb(200, 200, 200);
+    selection-background-color: rgb(126, 126, 126);
+    selection-color: rgb(250, 250, 250);
+    outline: 0;
+}
+QWidget:item {
+    background-color: transparent;
+}
+QWidget:item:hover {
+    background-color: rgb(150, 146, 137);
+    color: rgb(250, 250, 250);
+}
+QWidget:item:selected {
+    background-color: rgb(150, 146, 137);
+    color: rgb(43, 43, 43);
+}
+QWidget:disabled {
+    background-color: rgb(43, 43, 43);
+    color: rgb(92, 92, 92);
+}
+
+QMainWindow::separator {
+  width: 0px;
+  height: 0px;
+  border: 2px solid rgb(43,43,43);
+  border-right: 1px solid rgb(108,108,108);
+  border-bottom: 1px solid rgb(108,108,108);
+  border-radius: 0px;
+  margin: 8px;
+}
+QMainWindow::separator:hover {
+  border-right: 1px solid rgb(150, 146, 137);
+  border-bottom: 1px solid rgb(150, 146, 137);
+}
+QPushButton {
+    outline: none;
+    padding: 3px;
+	padding-left: 18px;
+	padding-right: 18px;
+	border: none;
+    background-color: rgb(92, 92, 92);
+}
+QPushButton:hover {
+    color: rgb(250, 250, 250);
+    background-color: rgb(108, 108, 108);
+ }
+QScrollArea {
+    border: 1px solid rgb(57, 57, 57);
+}
+
+/* QMenu ------------------------------------------------------------------ */
+
+QMenu {
+    border: 1px solid rgb(68, 68, 68);
+    background-color: rgb(43, 43, 43);
+    padding: 1px;
+}
+QMenu::separator {
+    height: 1px;
+    background-color: rgb(92, 92, 92);
+    color: rgb(200, 200, 200);
+    padding-left: 2px;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+QMenu::item {
+    padding: 4px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: rgb(68, 68, 68);
+}
+QMenu::indicator {
+    padding: 6px;
+    margin: -1px;
+	width: 13px;
+	height: 13px;
+    background-color: rgb(57, 57, 57);
+}
+QMenu::icon {
+    padding: 4px;
+    margin: 0px;
+	width: 18px;
+	height: 18px;
+    background-color: rgb(57, 57, 57);
+}
+QMenu::indicator:non-exclusive:checked {
+    image: url(:/resources/checkbox_checked.svg);
+}
+QMenu::indicator:non-exclusive:unchecked {
+    image: url(:/resources/checkbox.svg);
+}
+
+QLineEdit,
+QAbstractSpinBox,
+QTextEdit {
+    background-color: rgb(43, 43, 43);
+    background-image: url();
+    color: rgb(200, 200, 200);
+/*
+    border: 2px solid rgb(43, 43, 43);
+    border-radius: 3px;
+    color: rgb(200, 200, 200);
+    padding: 1px;
+    margin-top: 0px;
+    padding-left: 0px;
+*/
+}
+
+/* QSlider ---------------------------------------------------------------- */
+QSlider::add-page:horizontal, 
+QSlider::sub-page:horizontal,
+QSlider::add-page:vertical, 
+QSlider::sub-page:vertical {
+    background: rgb(43, 43, 43);
+}
+QSlider::add-page:vertical, 
+QSlider::sub-page:vertical {
+    margin-left: 4px;
+    margin-right: 4px;
+}
+QSlider::add-page:horizontal, 
+QSlider::sub-page:horizontal {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+QSlider::handle:vertical {
+    background: #787878;
+    border: 2px solid rgb(43, 43, 43);
+    width: 8px;
+    height: 6px;
+    margin: 0 -8px;
+    border-radius: 4px;
+}
+QSlider::handle:horizontal {
+    background: #787878;
+    border: 2px solid rgb(43, 43, 43);
+    margin: -8px 0;
+	width: 6px;
+	height: 8px;
+    border-radius: 4px;
+}
+QSlider::groove {
+    background: rgb(43, 43, 43);
+    border: 1px solid rgb(68, 68, 68);
+    border-radius: 4px;
+    margin: 0px;
+}
+QSlider::groove:horizontal {
+    height: 4px;
+}
+QSlider::groove:vertical {
+    width: 4px;
+}
+QSlider::sub-page:vertical:disabled, 
+QSlider::sub-page:horizontal:disabled {
+    background: #14506E;
+}
+
+/* QScrollBar ------------------------------------------------------------- */
+
+QScrollBar:horizontal {
+    height: 10px;
+    margin: 0px 16px 0px 16px;
+    border: 1px solid rgb(55, 55, 55);
+    border-radius: 40px;
+    background-color: rgb(55, 55, 55);
+}
+QScrollBar::handle:horizontal {
+    background-color: #787878;
+    border: 0px solid rgb(68, 68, 68);
+    border-radius: 4px;
+    min-width: 8px;
+}
+QScrollBar::add-line:horizontal:hover,
+QScrollBar::add-line:horizontal:on,
+QScrollBar::add-line:horizontal {
+    margin: 0px 3px 0px 0px;
+    border-image: url(:/resources/stylesheet-branch-closed.png);
+    height: 10px;
+    width: 6px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal:hover,
+QScrollBar::sub-line:horizontal:on,
+QScrollBar::sub-line:horizontal {
+    margin: 0px 0px 0px 3px;
+    border-image: url(:/resources/stylesheet-branch-closedleft.png);
+    height: 10px;
+    width: 6px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
+QScrollBar:vertical {
+    background-color: rgb(55, 55, 55);
+    width: 10px;
+    margin: 16px 0px 16px 0px;
+    border: 1px solid rgb(55, 55, 55);
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background-color: #787878;
+    border: 1px solid rgb(68, 68, 68);
+    min-height: 8px;
+    border-radius: 4px;
+}
+QScrollBar::sub-line:vertical {
+    margin: 3px 0px 0px 0px;
+    border-image: url(:/resources/stylesheet-branch-openup.png);
+    height: 6px;
+    width: 10px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+QScrollBar::add-line:vertical {
+    margin: 0px 0px 3px 0px;
+    border-image: url(:/resources/stylesheet-branch-open.png);
+    height: 6px;
+    width: 10px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical:hover,
+QScrollBar::sub-line:vertical:on {
+    border-image: url(:/resources/stylesheet-branch-openup.png);
+    height: 10px;
+    width: 10px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal,
+QScrollBar::up-arrow:horizontal,
+QScrollBar::down-arrow:horizontal,
+QScrollBar::up-arrow:vertical,
+QScrollBar::down-arrow:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical  {
+    background: none;
+}
+
+QListView,
+QTreeView,
+QTableView,
+QColumnView {
+    border: none;
+}
+QListView::item,
+QTreeView::item,
+QTableView::item,
+QColumnView::item {
+    border-top: none;
+    padding: 0px; /*DO NOT CHANGE*/
+    padding-right: 8px; /*DO NOT CHANGE*/
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+QTreeView::branch {
+    border-top: 0px solid rgb(43, 43, 43);
+    border-bottom: 0px solid rgb(43, 43, 43);
+    padding: 4px; /*DO NOT CHANGE*/
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+QTreeView::branch:has-siblings:!adjoins-item {
+    border-image: url(:/resources/stylesheet-vline.png);
+}
+QTreeView::branch:has-siblings:adjoins-item {
+    border-image: url(:/resources/stylesheet-branch-more.png);
+}
+QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+    border-image: url(:/resources/stylesheet-branch-end.png);
+}
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+    image: url(:/resources/icons/treeExpand.svg);
+}
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+    image: url(:/resources/icons/treeCollapse.svg);
+}
+
+
+/* QCombobox -------------------------------------------------------------- */
+QComboBox {
+    border: 0px;
+    border-radius: 3px;
+    background-color: rgb(92, 92, 92);
+    padding-top: 2px;     /* This fix  #103, #111*/
+    padding-bottom: 1px;  /* This fix  #103, #111*/
+    padding-left: 4px;
+    padding-right: 4px;
+    min-width: 75px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 2px;
+    border-left-color: rgb(68, 68, 68);
+    border-left-style: solid;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    padding-right: 3px;
+    margin-left: 6px;
+}
+QComboBox::down-arrow,
+QComboBox::down-arrow:on,
+QComboBox::down-arrow:hover,
+QComboBox::down-arrow:focus {
+    image: url(:/resources/stylesheet-branch-open.png);
+}
+
+
+/* QCheckBox -------------------------------------------------------------- */
+
+
+QCheckBox::indicator:checked:hover,
+QTreeView::indicator:checked:hover,
+QListView::indicator:checked:hover {
+    image: url(:/resources/checkbox_checked_hover.svg);
+}
+QCheckBox::indicator:unchecked:hover,
+QTreeView::indicator:unchecked:hover,
+QListView::indicator:unchecked:hover {
+    image: url(:/resources/checkbox_hover.svg);
+}
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+}
+QCheckBox::indicator:checked,
+QTreeView::indicator:checked,
+QListView::indicator:checked {
+    image: url(:/resources/checkbox_checked.svg);
+}
+
+QCheckBox::indicator:checked:hover,
+QTreeView::indicator:checked:hover,
+QListView::indicator:checked:hover {
+    image: url(:/resources/checkbox_checked_hover.svg);
+}
+
+QCheckBox::indicator:unchecked,
+QTreeView::indicator:unchecked,
+QListView::indicator:unchecked {
+    color: rgb(43, 43, 43);
+    image: url(:/resources/checkbox.svg);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* QTabWiget -------------------------------------------------------------- */
+
+QTabWidget {
+    padding: 4px;
+    padding-left: 16px;
+    padding-right: 16px;
+    selection-background-color: rgb(68, 68, 68);
+    border: 0;
+}
+QTabWidget::tab-bar {
+    alignment: center;
+}
+QTabWidget::pane {
+    border: none;
+    margin: 0px;
+}
+QTabWidget::pane:selected {
+    background-color: rgb(68, 68, 68);
+}
+
+/* QTabBar ---------------------------------------------------------------- */
+
+QTabBar {
+    qproperty-drawBase: 0;
+    border-radius: 3px;
+    margin: 0px;
+    padding: 4px;
+    border: 0;
+    background-color: rgb(68, 68, 68);
+    font: bold 10pt;
+}
+
+QTabBar::tab {
+    border-bottom: 3px solid rgb(55, 55, 55);
+    color: #787878;
+    background-color: rgb(68, 68, 68);
+}
+
+/* QTabBar::tab - selected ----------------------------------------------- */
+
+QTabBar::tab:top:selected:disabled {
+    border-bottom: 3px solid #14506E;
+    color: #787878;
+    background-color: rgb(68, 68, 68);
+}
+QTabBar::tab:bottom:selected:disabled {
+    border-top: 3px solid #14506E;
+    color: #787878;
+    background-color: rgb(68, 68, 68);
+}
+QTabBar::tab:left:selected:disabled {
+    border-left: 3px solid #14506E;
+    color: #787878;
+    background-color: rgb(68, 68, 68);
+}
+QTabBar::tab:right:selected:disabled {
+    border-right: 3px solid #14506E;
+    color: #787878;
+    background-color: rgb(68, 68, 68);
+}
+
+/* QTabBar::tab - !selected and disabled ---------------------------------- */
+
+QTabBar::tab:disabled {
+	margin: 0; padding: 0; border: none;
+}
+QTabBar::tab:top:!selected:disabled {
+    margin-left: 4px;
+    margin-right: 4px;
+    margin-top: 2px;
+    margin-bottom: 1px;
+    padding-left: 10px; 
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    min-width: 4px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    font-weight: normal;
+    border-bottom: 3px solid rgb(68, 68, 68);
+    border-right: 1px solid rgb(68, 68, 68);
+    border-left: 1px solid rgb(68, 68, 68);
+    border-top: 1px solid rgb(68, 68, 68);
+    color: rgb(100, 100, 100);
+}
+QTabBar::tab:bottom:!selected:disabled {
+    border-top: 3px solid rgb(43, 43, 43);
+    color: #787878;
+    background-color: rgb(43, 43, 43);
+}
+QTabBar::tab:left:!selected:disabled {
+    border-right: 3px solid rgb(43, 43, 43);
+    color: #787878;
+    background-color: rgb(43, 43, 43);
+}
+QTabBar::tab:right:!selected:disabled {
+    border-left: 3px solid rgb(43, 43, 43);
+    color: #787878;
+    background-color: rgb(43, 43, 43);
+}
+/* QTabBar::tab - selected ----------------------------------------------- */
+
+QTabBar::tab {
+    background-color: rgb(55, 55, 55);
+    color: rgb(175, 175, 175);
+    margin-left: 4px;
+    margin-right: 4px;
+    margin-top: 2px;
+    margin-bottom: 1px;
+    padding-left: 18px; 
+    padding-right: 18px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    min-width: 4px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    font-weight: normal;
+    border-bottom: 3px solid rgb(43, 43, 43);
+    border-right: 1px solid rgb(43, 43, 43);
+    border-left: 1px solid rgb(43, 43, 43);
+    border-top: 1px solid rgb(43, 43, 43);
+}
+
+QTabBar::tab:selected {
+    color: rgb(220, 220, 220);
+    background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));
+    border-bottom: 2px solid rgb(70, 125, 160);
+    border-right: 1px solid rgb(66, 118, 150);
+    border-left: 1px solid rgb(66, 118, 150);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-top: 1px solid rgb(43, 43, 43);
+}
+</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_3">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frame_4">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="titleLabel">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Ingest Wizard</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Category :</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="categoryWidget" name="categoryComboBox"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_2">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(75, 75, 75);</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="collectTab">
+         <attribute name="title">
+          <string>1. Collect</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QPlainTextEdit" name="collectPathTextEdit">
+            <property name="styleSheet">
+             <string notr="true">border: 1px solid grey;</string>
+            </property>
+            <property name="verticalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOff</enum>
+            </property>
+            <property name="horizontalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOff</enum>
+            </property>
+            <property name="lineWrapMode">
+             <enum>QPlainTextEdit::NoWrap</enum>
+            </property>
+            <property name="placeholderText">
+             <string>Insert paths or urls here...</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <property name="spacing">
+             <number>9</number>
+            </property>
+            <property name="topMargin">
+             <number>3</number>
+            </property>
+            <property name="bottomMargin">
+             <number>3</number>
+            </property>
+            <item>
+             <layout class="QGridLayout" name="gridLayout">
+              <property name="leftMargin">
+               <number>9</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>9</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="6" column="1">
+               <widget class="QCheckBox" name="lightsCheckBox">
+                <property name="text">
+                 <string> [ .ies ]</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <spacer name="verticalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="moviesLabel">
+                <property name="text">
+                 <string>Movies :</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="texturesReferencesLabel">
+                <property name="text">
+                 <string>Reference Images:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>texturesReferencesCheckBox</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="Line" name="line_8">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="lightsLabel">
+                <property name="text">
+                 <string>Lights :</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QCheckBox" name="texturesReferencesCheckBox">
+                <property name="text">
+                 <string> [ .tif, .jpg, .png ]</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="toolsLabel">
+                <property name="text">
+                 <string>Tools :</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>File Types Filtering</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QCheckBox" name="toolsCheckBox">
+                <property name="text">
+                 <string> [ .py, .mel, .nk ]</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QCheckBox" name="moviesCheckBox">
+                <property name="text">
+                 <string> [ .mov, .mp4, .mxf ]</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="rawLabel">
+                <property name="text">
+                 <string>Camera Raw :</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QCheckBox" name="rawCheckBox">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string> [ .cr2, .dng, .red ]</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <property name="leftMargin">
+               <number>9</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>9</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="2" column="1">
+               <widget class="QCheckBox" name="texturesReferencesCheckBox_2">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="Line" name="line_9">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="texturesReferencesLabel_2">
+                <property name="text">
+                 <string>Categorize Using Parent Folder</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>texturesReferencesCheckBox</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Advanced</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_3">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="categorizeTab">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <attribute name="title">
+          <string>2. Categorize</string>
+         </attribute>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QFrame" name="frame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout">
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="collectedLabel">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>false</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Files Collected : 0/0</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="assetListView" name="collectedListView">
+               <property name="resizeMode">
+                <enum>QListView::Adjust</enum>
+               </property>
+               <property name="uniformItemSizes">
+                <bool>true</bool>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="selectionRectVisible">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="categorizeFrame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_5">
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_4">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>false</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Naming :</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="text">
+                <string> Provide a new name or re-use an existing name from the list below.</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="AssetNameListView" name="existingNamesList" native="true"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line_5">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_6">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_6">
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="newAssetsLabel">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>false</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>New Assets : 0/0</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line_4">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="assetListView" name="newAssetListView">
+               <property name="resizeMode">
+                <enum>QListView::Adjust</enum>
+               </property>
+               <property name="uniformItemSizes">
+                <bool>true</bool>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="selectionRectVisible">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_3">
+     <property name="styleSheet">
+      <string notr="true">QFrame {
+    background-color: rgb(55, 55, 55);
+}</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="topMargin">
+       <number>6</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <property name="spacing">
+         <number>9</number>
+        </property>
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="nextButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="text">
+           <string>Next</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="cancelButton">
+          <property name="text">
+           <string>Cancel</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>assetListView</class>
+   <extends>QListView</extends>
+   <header>library.widgets.assets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>AssetNameListView</class>
+   <extends>QWidget</extends>
+   <header>library.widgets.util.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>categoryWidget</class>
+   <extends>QComboBox</extends>
+   <header>library.widgets.metadataView.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../relic_resources.qrc"/>
+  <include location="../../Lib/site-packages/qtshare/resources.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>cancelButton</sender>
+   <signal>clicked()</signal>
+   <receiver>IngestForm</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>706</x>
+     <y>443</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>383</x>
+     <y>233</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

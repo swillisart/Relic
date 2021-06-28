@@ -1,17 +1,33 @@
 import sys
 from itertools import groupby
-from operator import itemgetter
 
 from sequencePath import sequencePath as Path
 
 from PySide6.QtGui import QStandardItem
 from PySide6.QtCore import Qt, QSettings
-from PySide6.QtWidgets import QApplication 
+from PySide6.QtWidgets import QApplication
 
 from library.database_manager import AssetDatabase
 from library.config import relic_preferences
 
 db = AssetDatabase('http://localhost:8000/')
+
+RELATE_MAP = {
+    # Data Tables
+    'relationships': 0,
+    'alusers': 1,
+    'tags': 2,
+    'subcategory': 3,
+    # Categories
+    'references': 4,
+    'modeling': 5,
+    'elements': 6,
+    'lighting': 7,
+    'shading': 8,
+    'software': 9,
+    'mayatools': 10,
+    'nuketools': 11,
+}
 
 class BaseFields(object):
     __slots__ = ()
@@ -38,7 +54,7 @@ class BaseFields(object):
 
     def __str__(self):
         attrs = ', '.join(['{}: {}'.format(x, getattr(self, x)) for x in self.__slots__])
-        return '<class {}> ({})'.format(self.__class__.__name__, attrs) 
+        return '<class {}> ({})'.format(self.categoryName, attrs) 
 
     def __repr__(self):
         args = ''
@@ -50,10 +66,18 @@ class BaseFields(object):
                 attr_fmt = attr
             args += "{}={}, ".format(x, attr_fmt)
 
-        return '{}({})'.format(self.__class__.__name__, args)
+        return '{}({})'.format(self.categoryName, args)
+
+    @property 
+    def categoryName(self):
+        return self.__class__.__name__
+
+    @property
+    def relationMap(self):
+        return RELATE_MAP.get(self.categoryName)
 
     def create(self):
-        data = {self.__class__.__name__: self.export}
+        data = {self.categoryName: self.export}
         self.id = db.accessor.doRequest('createAsset', data)
     
     def update(self, fields=None):
@@ -65,11 +89,11 @@ class BaseFields(object):
             if self.getLabel(x) in fields:
                 if not isinstance(data[x], tuple):
                     export_data[x] = (data[x],)
-        update_data = {self.__class__.__name__: export_data}
+        update_data = {self.categoryName: export_data}
         db.accessor.doRequest('updateAssets', update_data)
 
     def nameExists(self):
-        rc = 'nameExists/{}/{}'.format(self.__class__.__name__, self.name)
+        rc = 'nameExists/{}/{}'.format(self.categoryName, self.name)
         return db.accessor.doRequest(rc)
 
     def remove(self):
@@ -77,12 +101,17 @@ class BaseFields(object):
             ids = (self.id, )
         else:
             ids = self.id
-        rc = 'removeAssets/{}'.format(self.__class__.__name__)
+        rc = 'removeAssets/{}'.format(self.categoryName)
         db.accessor.doRequest(rc, ids)
 
-    def fetch(self):
-        rc = 'fetchAsset/{}'.format(self.__class__.__name__)
-        result = db.accessor.doRequest(rc, self.export)
+    def fetch(self, id=False):
+        rc = 'fetchAsset/{}'.format(self.categoryName)
+        if id:
+            rc = 'getAssetById/{}'.format(self.categoryName)
+            result = db.accessor.doRequest(rc, [id])
+        else:
+            result = db.accessor.doRequest(rc, self.export)
+
         for i, x in enumerate(self.__slots__):
             try:
                 setattr(self, x, result[i])
@@ -90,10 +119,7 @@ class BaseFields(object):
                 setattr(self, x, None)
 
     def search(self, text):
-        rc = 'searchCategory/{}/{}'.format(
-            self.__class__.__name__,
-            text
-        )
+        rc = 'searchCategory/{}/{}'.format(self.categoryName, text)
         results = db.accessor.doRequest(rc)
         return results
 
@@ -137,23 +163,26 @@ class BaseFields(object):
 
     @property
     def local_path(self):
-        return Path(relic_preferences.local_storage) / str(self.path)
-    
-    @property
-    def path(self):
-        return self.path
+        path = Path(str(self.path))
+        storage = Path(relic_preferences.local_storage)
+        category = self.categoryName
+        subcategory = str(path.parents(0))
+        return storage / category / subcategory / path.name / path.stem
 
-    @path.setter
-    def set_path(self, value):
-        self.path = Path(value)
+    @property
+    def relativePath(self):
+        stem = str(self.path).rsplit('/', 1)[-1]
+        partial_path = Path(self.categoryName) / str(self.path)
+        return partial_path.parents(0) / partial_path.name / stem
+
+    def fetchIcon(self):
+        icon_path = self.relativePath.suffixed('_icon', ext='.jpg')
+        rc = 'retrieveIcon/{}'.format(icon_path)
+        db.accessor.doStream(rc, self.id)
 
     def stream_video_to(self, slot):
-        #db.accessor.videoStreamData.disconnect()
-        #if db.accessor.response:
-        #    db.accessor.response.abort()
-
-        temp_path = self.path.parents(0) / (self.path.name + '_icon.mp4')
-        rc = 'retrieveVideo/{}/0/0'.format(temp_path)
+        video_path = self.relativePath.suffixed('_icon', ext='.mp4')
+        rc = 'retrieveVideo/{}/0/0'.format(video_path)
         db.accessor.videoStreamData.connect(slot)
         db.accessor.doRequest(rc)
 
@@ -182,7 +211,7 @@ class BaseFields(object):
 
     @property
     def values(self):
-        return tuple(getattr(self, x) for x in self.__slots__ if getattr(self, x) is not None)
+        return [getattr(self, x) for x in self.__slots__]
 
 
 class allCategories(object):
@@ -259,7 +288,10 @@ class Library(object):
         if not search_results:
             return False
         for category in search_results:
-            category_int = int(category)
+            try:
+                category_int = int(category)
+            except:
+                continue
             obj_name = self.categories.getLabel(category_int)
             asset_constructor = globals()[obj_name]
 
@@ -315,15 +347,8 @@ class Library(object):
                     subcategory = category_obj.subcategory_by_id.get(subcategory)
                     asset.subcategory = subcategory
 
-                # TODO: Fix baked-in category and subcategory strings on paths
-                #relative_path = Path(self.categories.getLabel(category)) / asset.path
-                #asset.path = relative_path
-
-                asset.path = Path(asset.path)
-                path = asset.path.parents(0) / (asset.path.name + '_icon.jpg')
-                rc = 'retrieveIcon/{}'.format(path)
                 yield asset
-                db.accessor.doStream(rc, asset.id)
+                asset.fetchIcon()
 
 
 class category(object):
@@ -398,7 +423,7 @@ class relationships(BaseFields):
             ids = (self.id, )
         else:
             ids = self.id
-        rc = 'removeRelationship/{}'.format(self.__class__.__name__)
+        rc = 'removeRelationship/{}'.format(self.categoryName)
         db.accessor.doRequest(rc, ids)
 
 class details:
@@ -461,6 +486,19 @@ class relic_asset:
         'upstream',
     ]
 
+class temp_asset(BaseFields):
+    """used to house all possible attributes for constructing an asset
+    which does not exist in the library.
+    """
+    attrs = [
+        'duration',
+        'framerate',
+        'polycount',
+        'textured',
+    ]
+    __slots__ = tuple(
+        relic_asset.base + attrs + relic_asset.extra
+    )
 
 class references(BaseFields):
     attrs = [

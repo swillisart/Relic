@@ -231,7 +231,8 @@ class Ui_ExpandableTabs(object):
         self.iconButton.setFocusPolicy(Qt.NoFocus)
         self.iconButton.setStyleSheet(u"padding: -2px;\n"
 "margin-right: 4px;\n"
-"border: none;")
+"border: none;\n"
+"background-color: rgb(57, 57, 57);")
         icon = QIcon()
         icon.addFile(u":/resources/icons/references.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.iconButton.setIcon(icon)
@@ -303,6 +304,11 @@ class Ui_ExpandableTabs(object):
 
         self.ContentFrame = QFrame(ExpandableTabs)
         self.ContentFrame.setObjectName(u"ContentFrame")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.ContentFrame.sizePolicy().hasHeightForWidth())
+        self.ContentFrame.setSizePolicy(sizePolicy1)
         self.ContentFrame.setFrameShape(QFrame.StyledPanel)
         self.ContentFrame.setFrameShadow(QFrame.Raised)
         self.horizontalLayout_3 = QHBoxLayout(self.ContentFrame)
@@ -326,6 +332,8 @@ class Ui_ExpandableTabs(object):
 
         self.frame = QFrame(self.ContentFrame)
         self.frame.setObjectName(u"frame")
+        sizePolicy1.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        self.frame.setSizePolicy(sizePolicy1)
         self.frame.setFrameShape(QFrame.StyledPanel)
         self.frame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame)
@@ -371,11 +379,11 @@ class Ui_ExpandableTabs(object):
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.frame_3 = QFrame(self.verticalControl)
         self.frame_3.setObjectName(u"frame_3")
-        sizePolicy1 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.frame_3.sizePolicy().hasHeightForWidth())
-        self.frame_3.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.frame_3.sizePolicy().hasHeightForWidth())
+        self.frame_3.setSizePolicy(sizePolicy2)
         self.frame_3.setStyleSheet(u"QFrame {\n"
 "    border-radius: 0px;\n"
 "	border: 1px dotted gray;	\n"
@@ -392,11 +400,11 @@ class Ui_ExpandableTabs(object):
 
         self.pushButton = QPushButton(self.verticalControl)
         self.pushButton.setObjectName(u"pushButton")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy2)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy3)
         icon2 = QIcon()
         icon2.addFile(u":/resources/stylesheet-branch-openup.png", QSize(), QIcon.Normal, QIcon.Off)
         self.pushButton.setIcon(icon2)
@@ -406,8 +414,8 @@ class Ui_ExpandableTabs(object):
 
         self.pushButton_2 = QPushButton(self.verticalControl)
         self.pushButton_2.setObjectName(u"pushButton_2")
-        sizePolicy2.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
-        self.pushButton_2.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
+        self.pushButton_2.setSizePolicy(sizePolicy3)
         icon3 = QIcon()
         icon3.addFile(u":/resources/stylesheet-branch-open.png", QSize(), QIcon.Normal, QIcon.Off)
         self.pushButton_2.setIcon(icon3)
@@ -417,8 +425,8 @@ class Ui_ExpandableTabs(object):
 
         self.frame_5 = QFrame(self.verticalControl)
         self.frame_5.setObjectName(u"frame_5")
-        sizePolicy1.setHeightForWidth(self.frame_5.sizePolicy().hasHeightForWidth())
-        self.frame_5.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.frame_5.sizePolicy().hasHeightForWidth())
+        self.frame_5.setSizePolicy(sizePolicy2)
         self.frame_5.setStyleSheet(u"QFrame {\n"
 "    border-radius: 0px;\n"
 "	border: 1px dotted gray;	\n"

@@ -19,7 +19,7 @@ class Ui_AssetDelegate(object):
     def setupUi(self, AssetDelegate):
         if not AssetDelegate.objectName():
             AssetDelegate.setObjectName(u"AssetDelegate")
-        AssetDelegate.resize(284, 221)
+        AssetDelegate.resize(296, 239)
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

@@ -53,7 +53,8 @@ class libraryNetwork(QObject):
         #self.response.readyRead.connect(self.onReady)
         self.response.errorOccurred.connect(self.onError)
         loop.exec()
-        self.response.deleteLater()
+        #if self.response:
+        #    self.response.deleteLater()
         return self.result
 
     @Slot()
@@ -62,6 +63,9 @@ class libraryNetwork(QObject):
         data = bytes_string.data()
         content_type = self.response.header(QNetworkRequest.ContentTypeHeader)
         if content_type == 'application/json':
+            if not data:
+                self.result = None
+                return
             obj = json.loads(data)
             self.result = obj
         elif content_type == 'image/jpg':
@@ -106,7 +110,8 @@ class libraryNetwork(QObject):
         #self.response.readyRead.connect(self.onReady)
         self.response.errorOccurred.connect(self.onError)
         loop.exec()
-        self.response.deleteLater()
+        #if self.response:
+        #    self.response.deleteLater()
 
     def run(self):
         pass

@@ -15,11 +15,14 @@ RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3']
 HDR_EXT = ['.exr', '.hdr']
 LDR_EXT = ['.jpg', '.png', '.tif', '.tga', '.jpeg']
 LIGHT_EXT = ['.ies']
-APP_EXT = ['.ma', '.mb', '.max', '.hip']
-TOOLS_EXT = ['.nk', '.mel', '.py', 'hda']
-#CACHE_EXT = ['.abc', '.fbx']
+DCC_EXT = ['.ma', '.mb', '.max', '.hip']
+TOOLS_EXT = ['.nk', '.mel', '.py', '.hda', '.exe']
+GEO_EXT = ['.abc', '.fbx']
 
 KOHAI = KohaiClient()
+
+INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
+
 
 def kohaiPreview(path):
     KOHAI.requestFileLoad(str(path))
@@ -89,7 +92,9 @@ class Preferences(object):
         QSettings.setPath(QSettings.IniFormat, QSettings.SystemScope, str(path))
         return QSettings()
 
-relic_preferences = Preferences()
+RELIC_PREFS = Preferences()
+
+TRASH = Path(RELIC_PREFS.local_storage) / 'trash'
 
 # -- Logging --
 logging.basicConfig(

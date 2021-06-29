@@ -598,14 +598,10 @@ class Ui_RelicMainWindow(object):
         self.verticalLayout.setContentsMargins(9, 0, 9, 0)
         self.line_5 = QFrame(self.centralwidget)
         self.line_5.setObjectName(u"line_5")
+        self.line_5.setFrameShadow(QFrame.Raised)
         self.line_5.setFrameShape(QFrame.HLine)
-        self.line_5.setFrameShadow(QFrame.Sunken)
 
         self.verticalLayout.addWidget(self.line_5)
-
-        self.verticalSpacer_2 = QSpacerItem(2, 9, QSizePolicy.Minimum, QSizePolicy.Fixed)
-
-        self.verticalLayout.addItem(self.verticalSpacer_2)
 
         self.documentationDock = QDockWidget(self.centralwidget)
         self.documentationDock.setObjectName(u"documentationDock")
@@ -738,11 +734,9 @@ class Ui_RelicMainWindow(object):
 
         self.dockTitleFrame = QFrame(self.centralwidget)
         self.dockTitleFrame.setObjectName(u"dockTitleFrame")
-        self.dockTitleFrame.setStyleSheet(u"QFrame{\n"
+        self.dockTitleFrame.setStyleSheet(u"QFrame {\n"
 "    background-color: rgb(57, 57, 57);\n"
-"   /* border: 1px solid rgb(43,43,43);*/\n"
 "    border: 2px solid rgb(57,57,57);\n"
-"\n"
 "}")
         self.dockTitleFrame.setFrameShape(QFrame.StyledPanel)
         self.dockTitleFrame.setFrameShadow(QFrame.Raised)
@@ -885,11 +879,9 @@ class Ui_RelicMainWindow(object):
 
         self.attributeDockTitle = QFrame(self.centralwidget)
         self.attributeDockTitle.setObjectName(u"attributeDockTitle")
-        self.attributeDockTitle.setStyleSheet(u"QFrame{\n"
+        self.attributeDockTitle.setStyleSheet(u"QFrame {\n"
 "    background-color: rgb(57, 57, 57);\n"
-"   /* border: 1px solid rgb(43,43,43);*/\n"
 "    border: 2px solid rgb(57,57,57);\n"
-"\n"
 "}")
         self.attributeDockTitle.setFrameShape(QFrame.StyledPanel)
         self.attributeDockTitle.setFrameShadow(QFrame.Raised)
@@ -1435,13 +1427,13 @@ class Ui_RelicMainWindow(object):
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setContentsMargins(9, 9, 9, 9)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_2.setContentsMargins(1, 1, 1, 1)
         self.categoryScrollArea = QScrollArea(self.dockWidgetContents)
         self.categoryScrollArea.setObjectName(u"categoryScrollArea")
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 105, 557))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 103, 555))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1563,44 +1555,32 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.addDockWidget(Qt.TopDockWidgetArea, self.searchDock)
         self.attributeDock = QDockWidget(RelicMainWindow)
         self.attributeDock.setObjectName(u"attributeDock")
+        self.attributeDock.setMinimumSize(QSize(78, 88))
         palette2 = QPalette()
-        palette2.setBrush(QPalette.Active, QPalette.WindowText, brush)
-        palette2.setBrush(QPalette.Active, QPalette.Button, brush1)
-        palette2.setBrush(QPalette.Active, QPalette.Text, brush)
-        palette2.setBrush(QPalette.Active, QPalette.ButtonText, brush)
-        palette2.setBrush(QPalette.Active, QPalette.Base, brush1)
-        palette2.setBrush(QPalette.Active, QPalette.Window, brush1)
-        palette2.setBrush(QPalette.Active, QPalette.Highlight, brush2)
-        palette2.setBrush(QPalette.Active, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette.Active, QPalette.PlaceholderText, brush)
-#endif
-        palette2.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
-        palette2.setBrush(QPalette.Inactive, QPalette.Button, brush1)
-        palette2.setBrush(QPalette.Inactive, QPalette.Text, brush)
-        palette2.setBrush(QPalette.Inactive, QPalette.ButtonText, brush)
-        palette2.setBrush(QPalette.Inactive, QPalette.Base, brush1)
-        palette2.setBrush(QPalette.Inactive, QPalette.Window, brush1)
-        palette2.setBrush(QPalette.Inactive, QPalette.Highlight, brush2)
-        palette2.setBrush(QPalette.Inactive, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette.Inactive, QPalette.PlaceholderText, brush)
-#endif
-        palette2.setBrush(QPalette.Disabled, QPalette.WindowText, brush4)
-        palette2.setBrush(QPalette.Disabled, QPalette.Button, brush5)
-        palette2.setBrush(QPalette.Disabled, QPalette.Text, brush4)
-        palette2.setBrush(QPalette.Disabled, QPalette.ButtonText, brush4)
-        palette2.setBrush(QPalette.Disabled, QPalette.Base, brush5)
-        palette2.setBrush(QPalette.Disabled, QPalette.Window, brush5)
-        palette2.setBrush(QPalette.Disabled, QPalette.Highlight, brush2)
-        palette2.setBrush(QPalette.Disabled, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
-#endif
         self.attributeDock.setPalette(palette2)
         self.attributeDock.setStyleSheet(u"")
         self.attrDockWidgetContents = QWidget()
         self.attrDockWidgetContents.setObjectName(u"attrDockWidgetContents")
+        self.verticalLayout_3 = QVBoxLayout(self.attrDockWidgetContents)
+        self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(1, 1, 1, 1)
+        self.scrollArea = QScrollArea(self.attrDockWidgetContents)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 103, 555))
+        self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.attributesLayout.setSpacing(4)
+        self.attributesLayout.setContentsMargins(9, 9, 9, 9)
+        self.attributesLayout.setObjectName(u"attributesLayout")
+        self.attributesLayout.setContentsMargins(4, 4, 4, 4)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.verticalLayout_3.addWidget(self.scrollArea)
+
         self.attributeDock.setWidget(self.attrDockWidgetContents)
         RelicMainWindow.addDockWidget(Qt.RightDockWidgetArea, self.attributeDock)
 

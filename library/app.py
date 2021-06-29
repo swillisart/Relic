@@ -14,7 +14,7 @@ from sequencePath import sequencePath as Path
 
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
-from library.config import relic_preferences, kohaiPreview
+from library.config import RELIC_PREFS, kohaiPreview
 from library.objectmodels import Library, db, polymorphicItem
 from library.widgets.assets import assetItemModel, assetListView
 from library.widgets.subcategoriesViews import ExpandableTab, CategoryManager
@@ -158,8 +158,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         shadow = QGraphicsDropShadowEffect(self, blurRadius=6.0,
                 color=QColor(31, 31, 31), offset=QPoint(0, 0))
         self.categoryDock.setGraphicsEffect(shadow)
-        shadow = QGraphicsDropShadowEffect(self, blurRadius=8.0,
-                color=QColor(31, 31, 31), offset=QPoint(1, 1))
+        shadow = QGraphicsDropShadowEffect(self, blurRadius=6.0,
+                color=QColor(31, 31, 31), offset=QPoint(0, 0))
         self.attributeDock.setGraphicsEffect(shadow)
         shadow = QGraphicsDropShadowEffect(self, blurRadius=8.0,
                 color=QColor(31, 31, 31), offset=QPoint(0, 0))
@@ -176,7 +176,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         self.links_view = LinkViewWidget(self)
         self.metatdata_view = metadataFormView(self)
-        self.attributeDock.setWidget(self.metatdata_view)
+        self.attributesLayout.addWidget(self.metatdata_view)
+        #self.attributeDock.setWidget(self.metatdata_view)
         self.linksDock.setWidget(self.links_view)
 
         # Signals / Slots
@@ -195,7 +196,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
 
         db.accessor.imageStreamData.connect(self.updateIcons)
-        self.actionAdministration_Mode.setChecked(int(relic_preferences.edit_mode))
+        self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
 
         self.documentationDock.setTitleBarWidget(self.documentationDockTitle)
         self.documentationDock.hide()
@@ -267,7 +268,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         # Only re-query the database if the searchbox has changed
         new_search = False
-        limit = int(relic_preferences.assets_per_page)
+        limit = int(RELIC_PREFS.assets_per_page)
 
         # Split text into list of search term keywords
         text = self.searchBox.text()
@@ -336,7 +337,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def toggleAdminMode(self, toggle):
         #TODO: query the databse for permissions level
-        relic_preferences.edit_mode = int(toggle)
+        RELIC_PREFS.edit_mode = int(toggle)
 
 
 def main(args):

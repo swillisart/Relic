@@ -8,7 +8,7 @@ from functools import partial
 from sequencePath import sequencePath as Path
 
 # -- Module --
-from library.config import relic_preferences, kohaiPreview
+from library.config import RELIC_PREFS, kohaiPreview, INGEST_PATH, TRASH
 from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset
 from library.ui.asset_delegate import Ui_AssetDelegate
 from library.ui.compact_delegate import Ui_CompactDelegate
@@ -23,11 +23,11 @@ from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins,
 from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
                            QPainterPath, QPen, QPixmap, QRegion,
                            QStandardItemModel, Qt, QImage, QMouseEvent)
-from PySide6.QtWidgets import (QAbstractItemView, QGraphicsDropShadowEffect,
+from PySide6.QtWidgets import (QAbstractItemView,
                                QListView, QMenu, QStyle, QStyledItemDelegate,
                                QStyleOption, QWidget, QApplication, QCheckBox)
 
-INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
+ICON_SIZE = QSize(296, 239)
 
 class assetItemModel(QStandardItemModel):
 
@@ -54,7 +54,7 @@ class assetItemModel(QStandardItemModel):
 
 
         payload = json.dumps(by_category)
-        plugin_path = relic_preferences.relic_plugins_path
+        plugin_path = RELIC_PREFS.relic_plugins_path
         mimeText = "{}/asset_drop.pyw".format(
             plugin_path, 
         )
@@ -68,16 +68,13 @@ class assetItemModel(QStandardItemModel):
         drag.setMimeData(mimeData)
 
         # Capture the rendered item and set to mime data's pixmap
-        w, h = (296-12, 233-12)
-        pixmap = QPixmap(w, h)
+        size = ICON_SIZE
+        pixmap = QPixmap(size)
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing, True)
-        delegate = self.parent().itemDelegate(index)
-        options = QStyleOption()
-        options.rect = QRect(0, 0, w, h)
-        options.state |= QStyle.State_Selected
-        delegate.paint(painter, options, index)
+        delegate = AssetEditor(self.parent(), index)
+        delegate.render(painter, QPoint(), QRegion(), QWidget.DrawChildren)
         painter.end()
         drag.setPixmap(pixmap)
         drag.exec_(Qt.MoveAction)
@@ -88,6 +85,7 @@ class assetListView(QListView):
     onSelection = Signal(QModelIndex)
     ondoubleClick = Signal(QModelIndex)
     onLinkLoad = Signal(QModelIndex)
+    onDeleted = Signal(QModelIndex)
 
     def __init__(self, *args, **kwargs):
         super(assetListView, self).__init__(*args, **kwargs)
@@ -96,7 +94,7 @@ class assetListView(QListView):
         self.setAutoFillBackground(True)
         self.setFocusPolicy(Qt.StrongFocus)
         scroller = self.verticalScrollBar()
-        scroller.setSingleStep(50)
+        scroller.setSingleStep(40)
         self.setResizeMode(QListView.Adjust)
         self.iconMode()
         #self.setMouseTracking(True)
@@ -125,17 +123,16 @@ class assetListView(QListView):
         self.actionRegeneratePreview.triggered.connect(self.regenPreview)
         """
 
-
     def iconMode(self):
         self.setFlow(QListView.LeftToRight)
         self.setViewMode(QListView.IconMode)
-        self.setGridSize(QSize(296, 233))
+        self.setGridSize(ICON_SIZE + QSize(12, 12))
         self.setItemDelegate(AssetStyleDelegate(self))
 
     def compactMode(self):
         self.setFlow(QListView.TopToBottom)
         self.setViewMode(QListView.ListMode)
-        self.setGridSize(QSize(267+1, 58+1))
+        self.setGridSize(QSize(267, 58) + QSize(1, 1)) # pad by 1 pixel margins
         self.setItemDelegate(AssetCompactDelegate(self))
 
     def setModel(self, model):
@@ -150,9 +147,12 @@ class assetListView(QListView):
 
     def wheelEvent(self, event):
         if self.editor:
-            self.editor.close()
             self.setFocus()
         super(assetListView, self).wheelEvent(event)
+        pos = self.mapFromGlobal(QCursor.pos())
+        _event = QMouseEvent(QEvent.MouseMove, pos, event.button(),
+            event.buttons(), event.modifiers())
+        self.mouseMoveEvent(_event)
 
     def clear(self):
         self.model.clear()
@@ -214,7 +214,7 @@ class assetListView(QListView):
         context_menu = QMenu(self)
         self.openlocation = context_menu.addAction(self.actionExploreLocation)
 
-        if bool(int(relic_preferences.edit_mode)):
+        if bool(int(RELIC_PREFS.edit_mode)):
             self.delete_item = context_menu.addAction(self.actionDelete)
 
         context_menu.exec(QCursor.pos())
@@ -228,13 +228,16 @@ class assetListView(QListView):
             subcategory = asset.subcategory
             if isinstance(subcategory, list):
                 subcategory = subcategory[0]
-    
-            subcategory.count = (subcategory.count - 1)
-            update_list.append(subcategory.data())
+            elif subcategory:
+                subcategory.count = (subcategory.count - 1)
+                update_list.append(subcategory.data())
 
             if not isinstance(asset, temp_asset):
+                asset.path.local_path.parents(0).moveTo(TRASH)
                 asset.remove()
-                #TODO: remove from disk
+            self.setRowHidden(index.row(), True)
+            self.onDeleted.emit(index)
+
         # Update the subcategories with new counts
         [x.update(fields=['count']) for x in update_list]
 
@@ -251,6 +254,7 @@ class assetListView(QListView):
             self.editor.close()
             self.setFocus()
         super(assetListView, self).leaveEvent(event)
+
 
 class AssetItemPaint:
 
@@ -364,8 +368,7 @@ class AssetStyleDelegate(QStyledItemDelegate):
             )
 
     def sizeHint(self, option, index):
-        #width = relic_preferences.asset_preview_size
-        return QSize(296-12, 233-12)
+        return ICON_SIZE
 
 
 class AssetCompactDelegate(AssetStyleDelegate):
@@ -421,7 +424,10 @@ class AssetEditor(AssetDelegateWidget):
         unchk = partial(item.setCheckState, Qt.Unchecked)
         setit = lambda x : check() if x == 2 else unchk()
         self.checkBox.stateChanged.connect(setit)
-        self.selected = bool(index in self.view.selmod.selectedIndexes())
+        if isinstance(self.view, assetListView):
+            self.selected = bool(index in self.view.selmod.selectedIndexes())
+        else:
+            self.selected = True
         self.linksButton.clicked.connect(partial(self.loadLinks.emit, self.index))
 
     @property
@@ -463,7 +469,7 @@ class AssetEditor(AssetDelegateWidget):
         if event.buttons() in [Qt.LeftButton, Qt.MiddleButton]:
             x = abs(self._click_startpos.x() - event.pos().x())
             y = abs(self._click_startpos.y() - event.pos().y())
-            if (x + y) > 10:
+            if (x + y) > 5:
                 self.dragIt.emit(self.parent())
                 self._click_startpos = event.pos()
         if self.sequence:
@@ -481,7 +487,12 @@ class AssetEditor(AssetDelegateWidget):
         super(AssetEditor, self).mouseMoveEvent(event)
 
     def wheelEvent(self, event):
-        self.close()
+        y = event.angleDelta().y()
+        y = -80 if y < 0 else 80
+        geometry = self.geometry()
+        geometry.translate(0, y)
+        self.move(geometry.x(), geometry.y())
+        self.parent().wheelEvent(event)
 
     def leaveEvent(self, event):
         super(AssetEditor, self).leaveEvent(event)

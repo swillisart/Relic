@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QApplication
 
 from library.database_manager import AssetDatabase
-from library.config import relic_preferences
+from library.config import RELIC_PREFS
 
 db = AssetDatabase('http://localhost:8000/')
 
@@ -164,7 +164,7 @@ class BaseFields(object):
     @property
     def local_path(self):
         path = Path(str(self.path))
-        storage = Path(relic_preferences.local_storage)
+        storage = Path(RELIC_PREFS.local_storage)
         category = self.categoryName
         subcategory = str(path.parents(0))
         return storage / category / subcategory / path.name / path.stem

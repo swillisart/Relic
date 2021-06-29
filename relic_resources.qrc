@@ -58,5 +58,8 @@
     <file>resources/icons/treeExpandGrey.svg</file>
     <file>resources/icons/backArrow.svg</file>
     <file>resources/icons/kohai.svg</file>
+    <file>resources/icons/check_green.png</file>
+    <file>resources/load_wheel.webp</file>
+    <file>resources/load_wheel_24.webp</file>
   </qresource>
 </RCC>

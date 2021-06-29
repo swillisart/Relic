@@ -9,7 +9,7 @@ from library.objectmodels import (polymorphicItem, db, references, modeling,
 from library.widgets.assets import assetItemModel
 from library.widgets.util import ListViewFiltered
 from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT,
-                            LIGHT_EXT, APP_EXT, TOOLS_EXT)
+                            LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT)
 
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,
@@ -17,13 +17,20 @@ from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QSortFilterProxyModel, Qt, QTextStream, Signal,
                             Slot, QThread)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
-                           QIcon, QPainter, QPixmap,
+                           QIcon, QPainter, QPixmap, QMovie,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QDialog, QDockWidget, QFrame, QLabel, QLayout,
                                QLineEdit, QListView, QMenu, QScrollArea,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget, QMessageBox)
+
+CLOSE_MSG = """
+You have not completed categorizing the collected files.
+The remaining unprocessed files will be lost.
+
+Are you sure you want to cancel and close?
+"""
 
 class SimpleAsset(object):
     __slots__ = ['name', 'id']
@@ -52,14 +59,21 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.new_asset_item_model.rowsInserted.connect(self.updateLabelCounts)
         self.categoryComboBox.currentIndexChanged.connect(self.onCategoryChange)
         self.collectPathTextEdit.textChanged.connect(self.next_enabled)
-        #self.collectedListView.actionDelete.connect()
+        self.collectedListView.onDeleted.connect(self.updateLabelCounts)
         self.existingNamesList.newItem.connect(self.setIngestQueue)
         self.existingNamesList.linkItem.connect(self.setIngestQueue)
         self.todo = 0
+        self.done = 0
         self.ingest_thread = IngestionThread(self)
         inplace_update = lambda x: x.update() 
         self.ingest_thread.itemDone.connect(inplace_update)
-
+        self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.loading_movie = QMovie(':resources/load_wheel_24.webp')
+        self.loading_movie.setCacheMode(QMovie.CacheAll)
+        self.loading_movie.start()
+        self.loadingLabel.setMovie(self.loading_movie)
+        self.loadingLabel.hide()
+        self.completedLabel.hide()
 
     @Slot()
     def setIngestQueue(self, item):
@@ -143,10 +157,14 @@ class IngestForm(Ui_IngestForm, QDialog):
     def nextStage(self):
         stage = self.tabWidget.currentIndex()
         if stage == 0:
+            self.loadingLabel.show()
             self.categorizeTab.setEnabled(True)
             self.next_disabled()
             self.collect()
-        self.tabWidget.setCurrentIndex(stage+1)
+            self.tabWidget.setCurrentIndex(stage+1)
+        else:
+            self.close()
+
     
     def collect(self):
         paths = self.collectPathTextEdit.toPlainText().split('\n')
@@ -156,11 +174,17 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.router = ConversionRouter(function_map)
         self.router.moveToThread(self.collect_thread)
         self.router.finished.connect(self.collect_thread.quit)
+        self.router.finished.connect(self.collectionComplete)
         self.router.progress.connect(self.receiveAsset)
         self.router.started.connect(self.updateLabelCounts)
         self.collect_thread.started.connect(self.router.run)
         self.router.addToQueue(paths)
         self.collect_thread.start()
+
+    @Slot()
+    def collectionComplete(self):
+        self.loadingLabel.hide()
+        self.completedLabel.show()
 
     @Slot()
     def receiveAsset(self, asset):
@@ -178,14 +202,22 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     @Slot()
     def updateLabelCounts(self, value):
-        done = self.new_asset_item_model.rowCount()
+        self.done = 0
+        for i in range(self.collect_item_model.rowCount()):
+            if self.collectedListView.isRowHidden(i):
+                self.done += 1
+
         collected = self.collect_item_model.rowCount()
         if isinstance(value, int):
             self.todo = (value + 1)
-        collect_msg = 'Files Collected : {}/{}'.format(collected, self.todo)
+        collect_msg = 'Collected : {}/{}'.format(collected, self.todo)
         self.collectedLabel.setText(collect_msg)
-        assets_msg = 'New Assets : {}/{}'.format(done, self.todo)
+        assets_msg = 'Processed : {}/{}'.format(self.done, self.todo)
         self.newAssetsLabel.setText(assets_msg)
+        if self.done == self.todo:
+            self.nextButton.setText('Finish')
+            self.next_enabled()
+
 
     def getConversionMap(self):
         """Setup an file-extension based conversion map
@@ -205,7 +237,8 @@ class IngestForm(Ui_IngestForm, QDialog):
             [function_map.update({ext:'processHDR'}) for ext in HDR_EXT]
         if self.rawCheckBox.checkState():
             [function_map.update({ext:'processRAW'}) for ext in RAW_EXT]
-
+        if self.toolsCheckBox.checkState():
+            [function_map.update({ext:'processTOOL'}) for ext in TOOLS_EXT]
         if self.lightsCheckBox.checkState():
             pass
 
@@ -214,10 +247,18 @@ class IngestForm(Ui_IngestForm, QDialog):
         #TODO: add standalone conversions for these:
         #LIGHT_EXT = ['.ies']
         #SHADER_EXT = ['.mtlx', '.osl', '.sbsar']
-        #APP_EXT = ['.ma', '.mb', '.max', '.hip']
+        #DCC_EXT = ['.ma', '.mb', '.max', '.hip']
         #TOOLS_EXT = ['.nk', '.mel', '.py', 'hda']
 
     def close(self):
+        if self.done != self.todo:
+            message = QMessageBox(QMessageBox.Warning, 'Are you sure?', CLOSE_MSG,
+                    QMessageBox.NoButton, self)
+            message.addButton('Yes', QMessageBox.AcceptRole)
+            message.addButton('No', QMessageBox.RejectRole)
+            if message.exec_() == QMessageBox.RejectRole:
+                return
+
         # make all category widgets visible again
         [category.show() for category in self.category_widgets]
         self.beforeClose.emit(self.category_dock)

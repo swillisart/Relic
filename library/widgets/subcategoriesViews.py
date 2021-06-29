@@ -2,7 +2,7 @@ import functools
 import os
 
 # -- Module --
-from library.config import relic_preferences
+from library.config import RELIC_PREFS
 from library.objectmodels import (allCategories, polymorphicItem,
                                   relationships, subcategory)
 from library.ui.expandableTabs import Ui_ExpandableTabs
@@ -200,7 +200,7 @@ class subcategoryTreeView(QTreeView):
         collapse = context_menu.addAction("Collapse All")
         collapse.triggered.connect(self.collapseAll)
         
-        if bool(int(relic_preferences.edit_mode)):
+        if bool(int(RELIC_PREFS.edit_mode)):
             context_menu.addAction(self.actionCreate)
             context_menu.addAction(self.actionRename)
             context_menu.addAction(self.actionDelete)
@@ -314,7 +314,7 @@ class subcategoryTreeView(QTreeView):
             return super(subcategoryTreeView, self).dragEnterEvent(event)
 
     def dropEvent(self, event):
-        if bool(int(relic_preferences.edit_mode)):
+        if bool(int(RELIC_PREFS.edit_mode)):
             return
         mime = event.mimeData()
         index = self.indexAt(event.pos())
@@ -558,7 +558,7 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         self.nameLabel.setText(category.name)
         self.countSpinBox.setValue(category.count)
         for widget in (self.styledLine, self.styledLine_1, self.styledLine_2):
-            color = getattr(relic_preferences, category.name.lower() + '_color')
+            color = getattr(RELIC_PREFS, category.name.lower() + '_color')
             widget.setStyleSheet(
                 'QFrame {{background-color: rgb({});border: none}}'.format(
                     color))

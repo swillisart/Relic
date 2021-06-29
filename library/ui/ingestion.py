@@ -23,7 +23,7 @@ class Ui_IngestForm(object):
     def setupUi(self, IngestForm):
         if not IngestForm.objectName():
             IngestForm.setObjectName(u"IngestForm")
-        IngestForm.resize(768, 468)
+        IngestForm.resize(797, 468)
         IngestForm.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"
@@ -710,6 +710,7 @@ class Ui_IngestForm(object):
         self.gridLayout_2.setContentsMargins(9, 0, 9, 0)
         self.texturesReferencesCheckBox_2 = QCheckBox(self.collectTab)
         self.texturesReferencesCheckBox_2.setObjectName(u"texturesReferencesCheckBox_2")
+        self.texturesReferencesCheckBox_2.setEnabled(False)
 
         self.gridLayout_2.addWidget(self.texturesReferencesCheckBox_2, 2, 1, 1, 1)
 
@@ -722,6 +723,7 @@ class Ui_IngestForm(object):
 
         self.texturesReferencesLabel_2 = QLabel(self.collectTab)
         self.texturesReferencesLabel_2.setObjectName(u"texturesReferencesLabel_2")
+        self.texturesReferencesLabel_2.setEnabled(False)
         self.texturesReferencesLabel_2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.gridLayout_2.addWidget(self.texturesReferencesLabel_2, 2, 0, 1, 1)
@@ -759,11 +761,37 @@ class Ui_IngestForm(object):
         self.verticalLayout = QVBoxLayout(self.frame)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(-1, 0, -1, 0)
-        self.collectedLabel = QLabel(self.frame)
+        self.frame_5 = QFrame(self.frame)
+        self.frame_5.setObjectName(u"frame_5")
+        self.frame_5.setFrameShape(QFrame.StyledPanel)
+        self.frame_5.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_7 = QHBoxLayout(self.frame_5)
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.loadingLabel = QLabel(self.frame_5)
+        self.loadingLabel.setObjectName(u"loadingLabel")
+        self.loadingLabel.setPixmap(QPixmap(u":/resources/load_wheel_24.webp"))
+
+        self.horizontalLayout_7.addWidget(self.loadingLabel)
+
+        self.completedLabel = QLabel(self.frame_5)
+        self.completedLabel.setObjectName(u"completedLabel")
+        self.completedLabel.setPixmap(QPixmap(u":/resources/icons/check_green.png"))
+
+        self.horizontalLayout_7.addWidget(self.completedLabel)
+
+        self.collectedLabel = QLabel(self.frame_5)
         self.collectedLabel.setObjectName(u"collectedLabel")
         self.collectedLabel.setFont(font)
 
-        self.verticalLayout.addWidget(self.collectedLabel)
+        self.horizontalLayout_7.addWidget(self.collectedLabel)
+
+        self.horizontalSpacer_4 = QSpacerItem(10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_7.addItem(self.horizontalSpacer_4)
+
+
+        self.verticalLayout.addWidget(self.frame_5)
 
         self.line_2 = QFrame(self.frame)
         self.line_2.setObjectName(u"line_2")
@@ -800,6 +828,11 @@ class Ui_IngestForm(object):
         self.verticalLayout_5.setContentsMargins(-1, 0, -1, 0)
         self.label_4 = QLabel(self.categorizeFrame)
         self.label_4.setObjectName(u"label_4")
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
+        self.label_4.setSizePolicy(sizePolicy)
         self.label_4.setFont(font)
 
         self.verticalLayout_5.addWidget(self.label_4)
@@ -932,7 +965,7 @@ class Ui_IngestForm(object):
         self.texturesReferencesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .tif, .jpg, .png ]", None))
         self.toolsLabel.setText(QCoreApplication.translate("IngestForm", u"Tools :", None))
         self.label_2.setText(QCoreApplication.translate("IngestForm", u"File Types Filtering", None))
-        self.toolsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .py, .mel, .nk ]", None))
+        self.toolsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .py, .exe, .nk ]", None))
         self.moviesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .mov, .mp4, .mxf ]", None))
         self.rawLabel.setText(QCoreApplication.translate("IngestForm", u"Camera Raw :", None))
         self.rawCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .cr2, .dng, .red ]", None))
@@ -940,10 +973,12 @@ class Ui_IngestForm(object):
         self.texturesReferencesLabel_2.setText(QCoreApplication.translate("IngestForm", u"Categorize Using Parent Folder", None))
         self.label_7.setText(QCoreApplication.translate("IngestForm", u"Advanced", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.collectTab), QCoreApplication.translate("IngestForm", u"1. Collect", None))
-        self.collectedLabel.setText(QCoreApplication.translate("IngestForm", u"Files Collected : 0/0", None))
+        self.loadingLabel.setText("")
+        self.completedLabel.setText("")
+        self.collectedLabel.setText(QCoreApplication.translate("IngestForm", u"Collected : 0/0 ", None))
         self.label_4.setText(QCoreApplication.translate("IngestForm", u"Naming :", None))
         self.label_5.setText(QCoreApplication.translate("IngestForm", u" Provide a new name or re-use an existing name from the list below.", None))
-        self.newAssetsLabel.setText(QCoreApplication.translate("IngestForm", u"New Assets : 0/0", None))
+        self.newAssetsLabel.setText(QCoreApplication.translate("IngestForm", u"Processed : 0/0", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.categorizeTab), QCoreApplication.translate("IngestForm", u"2. Categorize", None))
         self.nextButton.setText(QCoreApplication.translate("IngestForm", u"Next", None))
         self.cancelButton.setText(QCoreApplication.translate("IngestForm", u"Cancel", None))

@@ -3,13 +3,14 @@ import sys
 import time
 from functools import partial
 import glob
-import libraw
 import ctypes
 import subprocess
+
+import libraw
 import numpy as np
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
-from library.config import log, logFunction, MOVIE_EXT, relic_preferences
+from library.config import log, logFunction, MOVIE_EXT, RELIC_PREFS
 from library.objectmodels import BaseFields, relic_asset, temp_asset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QMutex, QObject, QPoint, QMutexLocker,
@@ -28,6 +29,9 @@ from sequencePath import sequencePath as Path
 
 CREATE_NO_WINDOW = 0x08000000
 
+FILTER_GRAPH_PROXY = 'pad=ceil(iw/2)*2:ceil(ih/2)*2'
+
+SIZE = ImageDimensions(288, 192)
 
 def getMovInfo(fpath):
     """
@@ -42,8 +46,10 @@ def getMovInfo(fpath):
         >>> ['5.292', '912x899', '24']
     """
     cmd = 'exiftool -s3 -Duration# -ImageSize -VideoFrameRate "{}"'.format(fpath)
-    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW).decode("utf-8").split('\r\n')
-    return output[:3]
+    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW)
+    result = output.decode("utf-8").split('\r\n')[:3]
+    return result
+
 
 def generatePreviews(img_buf, path):
     """Makes Proxy & Icon previews from an OpenImageIO image buffer"""
@@ -56,7 +62,7 @@ def generatePreviews(img_buf, path):
     proxy_spec['compression'] = 'jpeg:75'
     proxy_buf = oiio.ImageBuf(proxy_spec)
 
-    icon_spec = oiio.ImageSpec(384, 256, 3, oiio.UINT8)
+    icon_spec = oiio.ImageSpec(SIZE.w, SIZE.h, 3, oiio.UINT8)
     icon_spec['compression'] = 'jpeg:40'
     icon_buf = oiio.ImageBuf(icon_spec)
 
@@ -86,7 +92,7 @@ def assetFromStill(spec, icon_path, in_img_path):
     icon = QPixmap.fromImage(QImage(str(icon_path)))
     res = '{}x{}x{}'.format(spec.width, spec.height, spec.nchannels)
     asset = temp_asset(
-        name=in_img_path.name,
+        name=in_img_path.stem,
         category=0,
         type=0,
         duration=0,
@@ -176,29 +182,35 @@ class ConversionRouter(QObject):
         width, height = res.split('x')
 
         icon_path = out_img_path.suffixed('_icon', ext='.jpg')
+        w, h = SIZE.w, SIZE.h
+        FILTER_GRAPH_ICON = [
+            f'setpts=PTS/{pts}', 
+            f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
+            f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
+
         cmd = [
-            "ffmpeg",
-            "-loglevel", "error",
-            "-y",
-            "-i", str(in_img_path),
-            "-pix_fmt", "yuv422p",
-            "-vcodec", "h264",
-            "-crf", "26",
-            "-preset", "medium",
-            "-tune", "fastdecode",
-            "-movflags", "+faststart",
-            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+            'ffmpeg',
+            '-loglevel', 'error',
+            '-y',
+            '-i', str(in_img_path),
+            '-pix_fmt', 'yuv422p',
+            '-vcodec', 'h264',
+            '-crf', '26',
+            '-preset', 'medium',
+            '-tune', 'fastdecode',
+            '-movflags', '+faststart',
+            '-vf', FILTER_GRAPH_PROXY,
             str(out_img_path.suffixed('_proxy', ext='.mp4')),
-            "-r", "24",
-            "-vf", "setpts=PTS/{},scale=w=256:h=144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2".format(pts),
-            "-an",  # Flag to not try linking audio file
-            "-pix_fmt", "yuv422p",
-            "-vcodec", "h264",
-            "-tune", "fastdecode",
-            "-movflags", "+faststart",
+            '-r', '24',
+            '-vf', ','.join(FILTER_GRAPH_ICON),
+            '-an',  # Flag to not try linking audio file
+            '-pix_fmt', 'yuv422p',
+            '-vcodec', 'h264',
+            '-tune', 'fastdecode',
+            '-movflags', '+faststart',
             str(out_img_path.suffixed('_icon', ext='.mp4')),
-            "-vf", "select=gte(n\,1),scale=w=256:h=144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2",
-            "-vframes", "1",
+            '-vf', 'select=gte(n\,1),{}'.format(','.join(FILTER_GRAPH_ICON[1:])),
+            '-vframes', '1',
             str(icon_path),
         ]
         subprocess.call(cmd, stdout=subprocess.DEVNULL)
@@ -219,31 +231,34 @@ class ConversionRouter(QObject):
         spec = a_input.spec()
         a_input.close()
         pts = ((framelength * 24) / 100) / 24
-
+        w, h = SIZE.w, SIZE.h
+        FILTER_GRAPH_ICON = [
+            f'setpts=PTS/{pts}', 
+            f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
+            f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
         command = [
-            "ffmpeg",
-            "-loglevel", "error",
-            "-y",
-            "-f", "rawvideo",
-            "-vcodec", "rawvideo",
-            "-s", "{}x{}".format(spec.width, spec.height),
-            "-pix_fmt", "rgb24",
-            "-i", "-",  # Input comes from a pipe
-            "-r", "24",  # fps
-            "-an",  # Flag to not try linking audio file
-            "-pix_fmt", "yuv422p",
-            "-vcodec", "h264",
-            "-crf", "26",
-            "-preset", "medium",
-            "-tune", "fastdecode",
-            "-movflags", "+faststart",
-            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+            'ffmpeg',
+            '-loglevel', 'error',
+            '-y',
+            '-f', 'rawvideo',
+            '-vcodec', 'rawvideo',
+            '-s', '{}x{}'.format(spec.width, spec.height),
+            '-pix_fmt', 'rgb24',
+            '-i', '-',  # Input comes from a pipe
+            '-r', '24',  # fps
+            '-an', # Flag to not try linking audio file
+            '-pix_fmt', 'yuv422p',
+            '-vcodec', 'h264',
+            '-crf', '26',
+            '-preset', 'medium',
+            '-tune', 'fastdecode',
+            '-movflags', '+faststart',
+            '-vf', FILTER_GRAPH_PROXY,
             str(out_img_path.suffixed('_proxy', ext='.mp4')),
-            "-vf", "setpts=PTS/{p},scale=w={w}:h={h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2".format(
-                p=pts, w=256, h=144),
-            "-an",  # Flag to not try linking audio file
-            "-vcodec", "h264",
-            "-movflags", "+faststart",
+            '-vf', ','.join(FILTER_GRAPH_ICON),
+            '-an',  # Flag to not try linking audio file
+            '-vcodec', 'h264',
+            '-movflags', '+faststart',
             str(out_img_path.suffixed('_icon', ext='.mp4'))
         ]
 
@@ -291,6 +306,26 @@ class ConversionRouter(QObject):
         return asset
 
     @staticmethod
+    @logFunction('')
+    def processTOOL(in_path, out_path):
+        if in_path.ext == '.exe':
+            with open(str(out_path), 'w') as fp:
+                fp.write(str(in_path))
+
+        icon = QPixmap.fromImage(QImage(':resources/icons/noicon.jpg'))
+        out_icon = out_path.suffixed('_icon', ext='.jpg')
+        icon.save(str(out_icon))
+        asset = temp_asset(
+            name=in_path.stem,
+            category=5,
+            type=0,
+            duration=0,
+            path=in_path,
+            icon=icon,
+        )
+        return asset
+
+    @staticmethod
     @logFunction('Making preview from (RAW)')
     def processRAW(in_img_path, out_img_path):
         neat_image_cmd = [
@@ -331,6 +366,7 @@ class ConversionRouter(QObject):
         buf = oiio.ImageBufAlgo.colormatrixtransform(buf, ACESCG_MATRIX)
 
         out_img_path.ext = '.exr' # Raw is always converted to exr.
+        in_img_path.ext = '.exr' # Raw is always converted to exr.
         buf.write(str(out_img_path))
 
         formatted = oiio.ImageBuf(
@@ -376,6 +412,7 @@ class IngestionThread(QThread):
             self.stopped = False
             self.condition.wakeOne()
 
+
     def stop(self):
         with QMutexLocker(self.mutex):
             self.stopped = True
@@ -408,7 +445,6 @@ class IngestionThread(QThread):
                 out_path = item.local_path
 
                 files_map = {}
-                #in_path.copyTo(out_path)
 
                 temp_filename = 'unsorted' + file_id
                 temp_path = ingest_path / temp_filename
@@ -433,7 +469,6 @@ class IngestionThread(QThread):
                     in_proxy = temp_path.suffixed('_proxy', ext='.jpg')
                     out_proxy = out_path.suffixed('_proxy', ext='.jpg')
 
-                #print(files_map)
                 files_map[in_proxy] = out_proxy
                 for src, dst in files_map.items():
                     if src.sequence_path:
@@ -441,9 +476,9 @@ class IngestionThread(QThread):
                             frame = Path(seq_file).frame
                             src.frame = frame
                             dst.frame = frame
-                            src.copyTo(dst)
+                            src.moveTo(dst)
                     else:
-                        src.copyTo(dst)
+                        src.moveTo(dst)
                 item.filehash = out_path.parents(0).hash
                 item.filesize = out_path.parents(0).size
                 # Clear the Id to allow for database creation

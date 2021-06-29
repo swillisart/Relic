@@ -4,7 +4,7 @@ import time
 import numpy as np
 from library.objectmodels import (allCategories, alusers, polymorphicItem,
                                   relationships, subcategory, tags)
-from library.config import relic_preferences
+from library.config import RELIC_PREFS
 
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
 from PySide6.QtCore import QRect, QSize, Signal, Slot
@@ -29,9 +29,26 @@ class metadataFormView(QFrame):
     def clearLayout(self):
         layout = self.layout
         for i in reversed(range(layout.count())): 
-            w = layout.itemAt(i).widget()
-            if w:
-                w.deleteLater()
+            item = layout.itemAt(i)
+            w = item.widget()
+            if isinstance(item, (QSpacerItem, QHLine)):
+                layout.takeAt(i)
+            elif w:
+                w.hide()
+
+    def createWidget(self, label, value):
+        # Create our widget from globals
+        meta_constructor = globals()[label+'Widget']
+        meta_widget = meta_constructor(self)
+
+        # Create the label
+        if isinstance(value, list):
+            label_text = '{} : {} '.format(label, len(value))
+        else:
+            label_text = '{} : '.format(label)
+        meta_label = QLabel(label_text.capitalize())
+
+        return meta_widget, meta_label
 
     def loadAsset(self, asset):
         self.clearLayout()
@@ -39,32 +56,34 @@ class metadataFormView(QFrame):
         line_offset = 0
         for i, label, value in asset:
             try:
-                meta_constructor = globals()[label+'Widget']
-                meta_widget = meta_constructor(self)
+                if hasattr(self, label):
+                    meta_widget = getattr(self, label)
+                    meta_label = getattr(self, label+'Label')
+                else:
+                    meta_widget, meta_label = self.createWidget(label ,value)
+                    setattr(self, label, meta_widget)
+                    setattr(self, label+'Label', meta_label)
+                if isinstance(meta_widget, classWidget):
+                    meta_widget.enableClassBoxFilter(asset.category)
                 if value:
                     meta_widget.setValue(value)
+
                 if isinstance(value, list):
                     label_text = '{} : {} '.format(label.capitalize(), len(value))
-                else:
-                    label_text = '{} : '.format(label.capitalize())
-                meta_label = QLabel(label_text)
                 self.layout.addWidget(meta_label, line_offset, 0, 1, 1, Qt.AlignTop)
                 self.layout.addWidget(meta_widget, line_offset, 1, 1, 1, Qt.AlignRight | Qt.AlignTop)
+
                 self.layout.addWidget(QHLine(), line_offset + 1, 0, 1, 2)
                 self.layout.addWidget(QHLine(), line_offset + 1, 1, 1, 2)
-
+                meta_label.show()
+                meta_widget.show()
             except Exception as exerr:
                 #print('No widget for {}'.format(exerr))
                 pass
             line_offset += (i + 2)
 
-        for x in self.children():
-            if isinstance(x, classWidget):
-                x.enableClassBoxFilter(asset.category)
         spacer = QSpacerItem(10, 10, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
         self.layout.addItem(spacer)
-
 
 class baseRating(QWidget):
 
@@ -289,7 +308,7 @@ class metadataRelationView(QListView):
 
     def _createContextMenus(self, value):
         context_menu = QMenu(self)
-        if int(relic_preferences.edit_mode):
+        if int(RELIC_PREFS.edit_mode):
             new_action = context_menu.addAction("Add New")
             new_action.triggered.connect(self.relationalDataLinks.show)
             remove_action = context_menu.addAction("Remove Selected")
@@ -519,6 +538,8 @@ class proxyWidget(baseLabel):
 class dependenciesWidget(baseLabel):
     pass
 
+class nodecountWidget(baseLabel):
+    pass
 
 class idWidget(baseLabel):
     pass
@@ -531,8 +552,7 @@ class linksWidget(baseLabel):
 class pathWidget(baseLabel):
     def __init__(self, *args, **kwargs):
         super(pathWidget, self).__init__(*args, **kwargs)
-        self.setWordWrap(True)
-        self.setStyleSheet('padding: 1px;')
+        #self.setStyleSheet('padding: 1px;')
 
 
 class categoryWidget(QComboBox):

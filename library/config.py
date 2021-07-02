@@ -1,5 +1,6 @@
 import os
 import logging
+import subprocess
 
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
@@ -27,8 +28,12 @@ INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 def kohaiPreview(path):
     KOHAI.requestFileLoad(str(path))
     if KOHAI.errored:
-        #TODO: launch Kohai 
-        pass
+        cmd = [
+            os.getenv('kohai_path') or 'P:/Code/Kohai/Kohai.exe',
+            '--path', str(path),
+        ]
+        msg = str(cmd)
+        subprocess.Popen(cmd)
 
 class pref(object):
     def __init__(self, value, default, options):

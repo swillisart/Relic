@@ -194,13 +194,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.documentationFilterBox.textChanged.connect(self.searchPage)
         self.documentationFilterBox.returnPressed.connect(self.findNextInPage)
 
-
+        self.viewScaleSlider.valueChanged.connect(self.scaleView)
         db.accessor.imageStreamData.connect(self.updateIcons)
         self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
 
         self.documentationDock.setTitleBarWidget(self.documentationDockTitle)
         self.documentationDock.hide()
         self.documentationDock.setAutoFillBackground(True)
+
+    @Slot()
+    def scaleView(self, value):
+        if value == 1:
+            self.assets_view.compactMode()
+        elif value == 2:
+            self.assets_view.iconMode()
 
     @Slot()
     def showDocumentation(self):
@@ -345,6 +352,6 @@ def main(args):
     ctypes.windll.kernel32.SetConsoleTitleW("Relic")
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic")
     window = RelicMainWindow()
-    window.resize(1500, 925)
+    window.resize(1600, 925)
     window.show()
     sys.exit(app.exec_())

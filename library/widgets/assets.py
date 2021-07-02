@@ -124,15 +124,17 @@ class assetListView(QListView):
         """
 
     def iconMode(self):
+        self.compact_mode = False
         self.setFlow(QListView.LeftToRight)
         self.setViewMode(QListView.IconMode)
         self.setGridSize(ICON_SIZE + QSize(12, 12))
         self.setItemDelegate(AssetStyleDelegate(self))
 
     def compactMode(self):
-        self.setFlow(QListView.TopToBottom)
-        self.setViewMode(QListView.ListMode)
-        self.setGridSize(QSize(267, 58) + QSize(1, 1)) # pad by 1 pixel margins
+        self.compact_mode = True
+        self.setFlow(QListView.LeftToRight)
+        self.setViewMode(QListView.IconMode)
+        self.setGridSize(QSize(267, 58) + QSize(2, 2)) # pad by 1 pixel margins
         self.setItemDelegate(AssetCompactDelegate(self))
 
     def setModel(self, model):
@@ -166,7 +168,7 @@ class assetListView(QListView):
             if self.editor:
                 self.editor.close()
                 self.setFocus()
-            if self.viewMode() == QListView.IconMode:
+            if not self.compact_mode:
                 self.editor = AssetEditor(self, index)
                 r = self.visualRect(index)
                 point = r.topLeft()#self.mapToGlobal(r.topLeft())

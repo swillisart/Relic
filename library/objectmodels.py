@@ -158,6 +158,33 @@ class BaseFields(object):
 
         return self.upstream
 
+    def moveToSubcategory(self, new_subcategory):
+        """drag and drop re-categorization
+        Moves this asset category to the new one
+
+        Parameters
+        ----------
+        new_subcategory : subcategory
+            the destination subcategory
+        """
+
+        subcategory_link = relationships(link=self.links, category_map=3)
+        subcategory_link.fetch()
+        # Retrieve our view item from the global cache.
+        category_obj = Library.categories.get(self.category)
+        old_category = category_obj.subcategory_by_id.get(subcategory_link.category_id)
+
+        old = old_category.data(polymorphicItem.Object)
+        new = new_subcategory.data(polymorphicItem.Object)
+
+        old.count -= 1
+        new.count += 1
+        old.update(fields=['count'])
+        new.update(fields=['count'])
+        # Update the relationship id to point to our new subcategory
+        subcategory_link.category_id = new_subcategory.id
+        subcategory_link.update(fields=['category_id'])
+
     def getLabel(self, i):
         return self.__slots__[i]
 
@@ -356,7 +383,7 @@ class category(object):
         self.name = name.capitalize()
         self.id = id
         self.count = 0
-        self.icon = ':resources/icons/{}.svg'.format(self.name.lower())
+        self.icon = ':/resources/categories/{}.svg'.format(self.name.lower())
         self.subcategory_by_id = {}
         self.tree = None # QTreeView
         self.tab = None # TabWidget

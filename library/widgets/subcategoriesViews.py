@@ -1,21 +1,22 @@
 import functools
+import json
 import os
 
 # -- Module --
+from library import objectmodels
 from library.config import RELIC_PREFS
-from library.objectmodels import (allCategories, polymorphicItem,
-                                  relationships, subcategory)
+from library.objectmodels import polymorphicItem, relationships, subcategory
 from library.ui.expandableTabs import Ui_ExpandableTabs
-from library.widgets.util import rasterizeSVG, ListViewFiltered
-
+from library.widgets.util import ListViewFiltered, rasterizeSVG
 # -- Third-party --
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
-                            QRegularExpression, QSize, QSortFilterProxyModel,
-                            Signal, Slot, QPoint)
-from PySide6.QtGui import (QColor, QIcon, QRegularExpressionValidator,
-                           QStandardItemModel, Qt, QCursor, QAction)
-from PySide6.QtWidgets import (QAbstractItemView, QListView, QMessageBox,
-                               QStyledItemDelegate, QTreeView, QWidget, QMenu)
+                            QPoint, QRegularExpression, QSize,
+                            QSortFilterProxyModel, Signal, Slot)
+from PySide6.QtGui import (QAction, QColor, QCursor, QIcon,
+                           QRegularExpressionValidator, QStandardItemModel, Qt)
+from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
+                               QMessageBox, QStyledItemDelegate, QTreeView,
+                               QWidget)
 
 
 class recursiveTreeFilter(QSortFilterProxyModel):
@@ -81,7 +82,6 @@ class subcategoryDelegate(QStyledItemDelegate):
 
 class subcategoryTreeView(QTreeView):
 
-    resortingDropped = Signal(dict)
     modifications = Signal(bool)
 
     def __init__(self, category=None):
@@ -167,7 +167,7 @@ class subcategoryTreeView(QTreeView):
             # Assign an icon from file.
             tmp = 'E:/OneDrive/Documents/Scripts/standalone_apps/asset_library_packaged/asset_management2/asset_library/plugins/alNuke/icons'
             fp = '{}/{}.png'.format(tmp, tree_item.name)
-            tree_icon = QIcon(fp) if QFile.exists(fp) else QIcon(':resources/icons/folder.svg')
+            tree_icon = QIcon(fp) if QFile.exists(fp) else QIcon(':resources/general/folder.svg')
             tree_item.setIcon(tree_icon)
 
             # If the subcategory does not have a link-to-parent relationship
@@ -296,7 +296,11 @@ class subcategoryTreeView(QTreeView):
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
-            event.accept()
+            # ensure the payload category matches the current tree's category
+            category = self.category.name.lower()
+            payload = json.loads(event.mimeData().text())
+            if category in payload.keys():
+                event.acceptProposedAction()
         else:
             selection = self.selectedIndexes()
             # Reset counts data to build our items
@@ -313,24 +317,32 @@ class subcategoryTreeView(QTreeView):
                 self.counts = {k: -item.count for k, v in self.counts.items()}
             return super(subcategoryTreeView, self).dragEnterEvent(event)
 
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            self.setFocus()
+            self.update()
+        super(subcategoryTreeView, self).dragMoveEvent(event)
+        event.acceptProposedAction()
+
     def dropEvent(self, event):
-        if bool(int(RELIC_PREFS.edit_mode)):
+        if not int(RELIC_PREFS.edit_mode):
             return
         mime = event.mimeData()
         index = self.indexAt(event.pos())
 
-        # If the item is external (Or from the main asset listing view) 
-        # Emit the resorting signal to move the assets subcategory. 
+        # Drag and drop re-categorization (from the asset list view)
         if mime.hasUrls() and index.isValid():
+            subcategory = self.indexToItem(index)
+            if not subcategory:
+                return event.reject()
             event.setDropAction(Qt.MoveAction)
             event.accept()
-            for url in mime.urls():
-                source = url.toLocalFile()
-                splitted = source.split()
-                category = splitted[1]
-                ids = splitted[2:]
-                #new_parent = str(index.data()).lower()
-                #self.resortingDropped.emit((ids, category, new_parent))
+            payload = json.loads(mime.text())
+            for key, values in payload.items():
+                constructor = getattr(objectmodels, str(key))
+                for fields in values:
+                    asset = constructor(**fields)
+                    asset.moveToSubcategory(subcategory)
         else:
             # Apply subtractions regardless of destination.
             self.updateCounts()

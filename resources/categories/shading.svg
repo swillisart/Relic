@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: -->
+
+<svg
+   width="256pt"
+   height="256pt"
+   viewBox="0 0 256 256"
+   version="1.1"
+   id="svg22805"
+   sodipodi:docname="shading.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs22809" />
+  <sodipodi:namedview
+     id="namedview22807"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="pt"
+     showgrid="false"
+     inkscape:zoom="0.19498953"
+     inkscape:cx="-1541.1084"
+     inkscape:cy="664.13823"
+     inkscape:window-width="1920"
+     inkscape:window-height="1147"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg22805" />
+  <g
+     id="FRAME_0"
+     style="visibility:visible"
+     fill-rule="evenodd">
+    <defs
+       id="defs22763">
+      <radialGradient
+         id="GRAD_0"
+         gradientUnits="userSpaceOnUse"
+         cx="72.020000"
+         cy="173.890000"
+         r="124.824405">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,217,228)"
+           opacity="1"
+           id="stop22758" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(100,118,124)"
+           opacity="1"
+           id="stop22760" />
+      </radialGradient>
+    </defs>
+    <path
+       style="fill:url(#GRAD_0);stroke-width:0"
+       d="M59.750000,62.500000 Q41.500000,76.250000 49.000000,107.000000 Q55.500000,135.250000 83.000000,166.250000 Q110.500000,195.500000 139.750000,206.250000 Q173.500000,216.750000 187.250000,200.000000 L194.250000,198.750000 Q185.500000,220.250000 173.500000,221.750000 Q138.250000,236.250000 72.000000,174.500000 L60.000000,159.500000 L50.250000,144.500000 L41.000000,126.250000 Q28.000000,91.750000 37.750000,73.000000 L37.750000,72.750000 L45.750000,62.500000 Q57.750000,55.000000 60.750000,56.500000 L59.750000,62.500000 "
+       id="path22765" />
+    <defs
+       id="defs22772">
+      <radialGradient
+         id="GRAD_1"
+         gradientUnits="userSpaceOnUse"
+         cx="148.16418"
+         cy="108.15535"
+         r="107.636344"
+         fx="148.16418"
+         fy="108.15535">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,217,229)"
+           opacity="1"
+           id="stop22767" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(91,108,114)"
+           opacity="1"
+           id="stop22769" />
+      </radialGradient>
+    </defs>
+    <path
+       style="fill:url(#GRAD_1);stroke-width:0"
+       d="M59.750000,62.500000 L60.750000,56.500000 L64.250000,47.000000 L71.750000,38.500000 Q93.000000,24.500000 122.000000,22.500000 Q167.000000,19.500000 204.000000,55.250000 Q233.250000,85.000000 232.500000,132.500000 L230.500000,150.000000 L228.000000,158.750000 L221.000000,176.250000 Q210.750000,198.000000 194.250000,198.750000 L187.250000,200.000000 Q134.000000,198.000000 96.750000,155.500000 Q55.250000,110.750000 59.750000,62.500000 "
+       id="path22774" />
+    <defs
+       id="defs22781">
+      <radialGradient
+         id="GRAD_2"
+         gradientUnits="userSpaceOnUse"
+         cx="70.510000"
+         cy="150.710000"
+         r="128.214925">
+        <stop
+           offset="0"
+           style="stop-color:rgb(113,134,141)"
+           opacity="1"
+           id="stop22776" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(108,129,135)"
+           opacity="1"
+           id="stop22778" />
+      </radialGradient>
+    </defs>
+    <path
+       style="fill:url(#GRAD_2);stroke-width:0"
+       d="M187.250000,200.000000 Q173.500000,216.750000 139.750000,206.250000 Q110.500000,195.500000 83.000000,166.250000 Q55.500000,135.250000 49.000000,107.000000 Q41.500000,76.250000 59.750000,62.500000 Q55.250000,110.750000 96.750000,155.500000 Q134.000000,198.000000 187.250000,200.000000 "
+       id="path22783" />
+    <defs
+       id="defs22790">
+      <radialGradient
+         id="GRAD_3"
+         gradientUnits="userSpaceOnUse"
+         cx="72.020000"
+         cy="173.890000"
+         r="112.424713">
+        <stop
+           offset="0"
+           style="stop-color:rgb(126,150,158)"
+           opacity="1"
+           id="stop22785" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(40,48,50)"
+           opacity="1"
+           id="stop22787" />
+      </radialGradient>
+    </defs>
+    <path
+       style="fill:url(#GRAD_3);stroke-width:0"
+       d="M173.500000,221.750000 Q101.000000,251.500000 49.250000,198.000000 Q2.000000,140.250000 37.750000,73.000000 Q28.000000,91.750000 41.000000,126.250000 L50.250000,144.500000 L60.000000,159.500000 L72.000000,174.500000 Q138.250000,236.250000 173.500000,221.750000 "
+       id="path22792" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 194.25,198.75 c -5.83333,14.33333 -17.67961,24.03984 -25.67961,25.03984 C 120.08524,228.60608 13.002969,147.10813 37.75,72.75 c 3.463261,-5.711771 16.590807,-18.933994 23,-16.25 6.650593,-24.774081 42.05971,-32.517428 61.25,-34 30,-2 57.33333,10.359052 82,34.192386 19.5,19.833332 29,44.140944 28.5,75.807614 -1.38802,22.87206 -14.5564,64.5855 -38.25,66.25 l -7,1.25 c -35.5,-1.33333 -65.66667,-16.16667 -90.5,-44.5 -27.666667,-29.83333 -40,-60.833333 -37,-93 l 1,-6"
+       id="path22798"
+       sodipodi:nodetypes="cccccccccccc" />
+    <path
+       style="stroke:rgb(0, 0, 0);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;fill:none;stroke-miterlimit:4;stroke-dasharray:none"
+       d="M173.500000,221.750000 Q101.000000,251.500000 49.250000,198.000000 Q2.000000,140.250000 37.750000,73.000000   "
+       id="path22802" />
+  </g>
+</svg>

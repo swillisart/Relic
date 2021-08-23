@@ -19,4 +19,4 @@ Scripts
 relic_resources.py
 resources.py
 qtshare
-./library/plugins/alNuke/numpy
+library/plugins/alNuke/Lib

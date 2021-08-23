@@ -48,12 +48,12 @@ QCheckBox {
 QCheckBox::indicator:checked:hover,
 QTreeView::indicator:checked:hover,
 QListView::indicator:checked:hover {
-    image: url(:/resources/checkbox_checked_hover.svg);
+    image: url(:/resources/style/checkbox_checked_hover.svg);
 }
 QCheckBox::indicator:unchecked:hover,
 QTreeView::indicator:unchecked:hover,
 QListView::indicator:unchecked:hover {
-    image: url(:/resources/checkbox_hover.svg);
+    image: url(:/resources/style/checkbox_hover.svg);
 }
 QCheckBox::indicator {
     width: 14px;
@@ -62,20 +62,20 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked,
 QTreeView::indicator:checked,
 QListView::indicator:checked {
-    image: url(:/resources/checkbox_checked.svg);
+    image: url(:/resources/style/checkbox_checked.svg);
 }
 
 QCheckBox::indicator:checked:hover,
 QTreeView::indicator:checked:hover,
 QListView::indicator:checked:hover {
-    image: url(:/resources/checkbox_checked_hover.svg);
+    image: url(:/resources/style/checkbox_checked_hover.svg);
 }
 
 QCheckBox::indicator:unchecked,
 QTreeView::indicator:unchecked,
 QListView::indicator:unchecked {
     color: rgb(43, 43, 43);
-    image: url(:/resources/checkbox.svg);
+    image: url(:/resources/style/checkbox.svg);
 }</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -229,6 +229,26 @@ QFrame[selected=&quot;true&quot;]{
          <number>0</number>
         </property>
         <item>
+         <widget class="QToolButton" name="categoryIcon">
+          <property name="styleSheet">
+           <string notr="true">border: none;</string>
+          </property>
+          <property name="text">
+           <string>...</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/categories/shading.svg</normaloff>:/resources/categories/shading.svg</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>18</width>
+            <height>18</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="checkBox">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -288,8 +308,8 @@ background-color: rgb(92, 92, 92);
            <string>12</string>
           </property>
           <property name="icon">
-           <iconset resource="../../relic_resources.qrc">
-            <normaloff>:/resources/icons/folder_link.svg</normaloff>:/resources/icons/folder_link.svg</iconset>
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/general/folder_link.svg</normaloff>:/resources/general/folder_link.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -326,16 +346,15 @@ background-color: rgb(92, 92, 92);
          <string>Asset Type</string>
         </property>
         <property name="styleSheet">
-         <string notr="true">padding: -2px;
-border: none;
+         <string notr="true">border: none;
 margin-right: 4px;</string>
         </property>
         <property name="text">
          <string>...</string>
         </property>
         <property name="icon">
-         <iconset resource="../../relic_resources.qrc">
-          <normaloff>:/resources/icons/collection.svg</normaloff>:/resources/icons/collection.svg</iconset>
+         <iconset resource="../../resources.qrc">
+          <normaloff>:/resources/asset_types/collection.svg</normaloff>:/resources/asset_types/collection.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -471,8 +490,7 @@ QProgressBar[complete=&quot;true&quot;]::chunk{
   </layout>
  </widget>
  <resources>
-  <include location="../../relic_resources.qrc"/>
-  <include location="../../Lib/site-packages/qtshare/resources.qrc"/>
+  <include location="../../resources.qrc"/>
  </resources>
  <connections/>
 </ui>

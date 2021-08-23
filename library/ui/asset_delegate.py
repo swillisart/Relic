@@ -12,7 +12,6 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import relic_resources_rc
 import resources_rc
 
 class Ui_AssetDelegate(object):
@@ -53,13 +52,13 @@ class Ui_AssetDelegate(object):
 "QCheckBox::indicator:checked:hover,\n"
 "QTreeView::indicator:checked:hover,\n"
 "QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/checkbox_checked_hover.svg);\n"
+"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "QCheckBox::indicator:unchecked:hover,\n"
 "QTreeView::indicator:unchecked:hover,\n"
 "QListView::indicator:unchecked:hover {\n"
-"    image: url(:/resources/checkbox_hover.svg"
-                        ");\n"
+"    image: url(:/resources/style/checkb"
+                        "ox_hover.svg);\n"
 "}\n"
 "QCheckBox::indicator {\n"
 "    width: 14px;\n"
@@ -68,20 +67,20 @@ class Ui_AssetDelegate(object):
 "QCheckBox::indicator:checked,\n"
 "QTreeView::indicator:checked,\n"
 "QListView::indicator:checked {\n"
-"    image: url(:/resources/checkbox_checked.svg);\n"
+"    image: url(:/resources/style/checkbox_checked.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:checked:hover,\n"
 "QTreeView::indicator:checked:hover,\n"
 "QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/checkbox_checked_hover.svg);\n"
+"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:unchecked,\n"
 "QTreeView::indicator:unchecked,\n"
 "QListView::indicator:unchecked {\n"
 "    color: rgb(43, 43, 43);\n"
-"    image: url(:/resources/checkbox.svg);\n"
+"    image: url(:/resources/style/checkbox.svg);\n"
 "}")
         self.verticalLayout = QVBoxLayout(AssetDelegate)
         self.verticalLayout.setSpacing(0)
@@ -150,6 +149,16 @@ class Ui_AssetDelegate(object):
         self.headerLayout.setSpacing(6)
         self.headerLayout.setObjectName(u"headerLayout")
         self.headerLayout.setContentsMargins(6, 0, 6, 0)
+        self.categoryIcon = QToolButton(self.HeaderFrame)
+        self.categoryIcon.setObjectName(u"categoryIcon")
+        self.categoryIcon.setStyleSheet(u"border: none;")
+        icon = QIcon()
+        icon.addFile(u":/resources/categories/shading.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.categoryIcon.setIcon(icon)
+        self.categoryIcon.setIconSize(QSize(18, 18))
+
+        self.headerLayout.addWidget(self.categoryIcon)
+
         self.checkBox = QCheckBox(self.HeaderFrame)
         self.checkBox.setObjectName(u"checkBox")
         sizePolicy.setHeightForWidth(self.checkBox.sizePolicy().hasHeightForWidth())
@@ -179,9 +188,9 @@ class Ui_AssetDelegate(object):
 "QToolButton:hover{\n"
 "background-color: rgb(92, 92, 92);\n"
 "}")
-        icon = QIcon()
-        icon.addFile(u":/resources/icons/folder_link.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.linksButton.setIcon(icon)
+        icon1 = QIcon()
+        icon1.addFile(u":/resources/general/folder_link.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.linksButton.setIcon(icon1)
         self.linksButton.setIconSize(QSize(24, 24))
         self.linksButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
@@ -197,12 +206,11 @@ class Ui_AssetDelegate(object):
         self.iconButton = QToolButton(self.HeaderFrame)
         self.iconButton.setObjectName(u"iconButton")
         self.iconButton.setFocusPolicy(Qt.NoFocus)
-        self.iconButton.setStyleSheet(u"padding: -2px;\n"
-"border: none;\n"
+        self.iconButton.setStyleSheet(u"border: none;\n"
 "margin-right: 4px;")
-        icon1 = QIcon()
-        icon1.addFile(u":/resources/icons/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.iconButton.setIcon(icon1)
+        icon2 = QIcon()
+        icon2.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.iconButton.setIcon(icon2)
         self.iconButton.setIconSize(QSize(24, 24))
 
         self.horizontalLayout_5.addWidget(self.iconButton)
@@ -285,6 +293,7 @@ class Ui_AssetDelegate(object):
 
     def retranslateUi(self, AssetDelegate):
         AssetDelegate.setWindowTitle(QCoreApplication.translate("AssetDelegate", u"Form", None))
+        self.categoryIcon.setText(QCoreApplication.translate("AssetDelegate", u"...", None))
         self.checkBox.setText("")
         self.nameLabel.setText(QCoreApplication.translate("AssetDelegate", u"MyAsset01", None))
 #if QT_CONFIG(tooltip)

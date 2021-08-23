@@ -7,7 +7,7 @@ from PySide6.QtGui import QStandardItem
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QApplication
 
-from library.database_manager import AssetDatabase
+from library.io.database import AssetDatabase
 from library.config import RELIC_PREFS
 
 db = AssetDatabase('http://localhost:8000/')
@@ -127,7 +127,7 @@ class BaseFields(object):
         rc = 'retrieveLinks/{}/{}'.format(self.links, int(noassets))
         related = db.accessor.doRequest(rc)
         self.upstream = []
-        if not related:
+        if not related or isinstance(related, list):
             return False
         for category_name, value in related.items():
             for index, name in enumerate(allCategories.__slots__):
@@ -159,8 +159,8 @@ class BaseFields(object):
         return self.upstream
 
     def moveToSubcategory(self, new_subcategory):
-        """drag and drop re-categorization
-        Moves this asset category to the new one
+        """ re-categorization of an asset
+        Moves this asset from it's current category to a new one.
 
         Parameters
         ----------
@@ -184,6 +184,9 @@ class BaseFields(object):
         # Update the relationship id to point to our new subcategory
         subcategory_link.category_id = new_subcategory.id
         subcategory_link.update(fields=['category_id'])
+        stem = str(self.path).rsplit('/', 1)[-1]
+        self.path = new.name + '/' + stem
+        self.update(fields=['path'])
 
     def getLabel(self, i):
         return self.__slots__[i]
@@ -195,6 +198,12 @@ class BaseFields(object):
         category = self.categoryName
         subcategory = str(path.parents(0))
         return storage / category / subcategory / path.name / path.stem
+
+    @property
+    def network_path(self):
+        storage = Path(RELIC_PREFS.network_storage)
+        subcategory = str(path.parents(0))
+        return storage / self.relativePath
 
     @property
     def relativePath(self):
@@ -212,6 +221,13 @@ class BaseFields(object):
         rc = 'retrieveVideo/{}/0/0'.format(video_path)
         db.accessor.videoStreamData.connect(slot)
         db.accessor.doRequest(rc)
+
+    def download(self):
+        #rc = '/downloadFile/{}'.format(self.relativePath)
+        #db.accessor.download(rc, self)
+        rc = '/downloadDependency/{}/{}/{}'.format(
+            self.relativePath.parent, 'source_images', 'T_LanternPole_a.png')
+        db.accessor.download(rc, self)
 
     @property
     def export(self):

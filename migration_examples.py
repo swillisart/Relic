@@ -33,9 +33,9 @@ def bakeIes(afile, renderer=None):
     makeIconFile(proxy, icon)
 
 
-def resolve_asset_source_destination(fpath, destination, relative=0):
+def resolve_asset_source_destination(fpath, destination, relative=False):
     """Puts the file type into a specified folder for the type.
-
+    
     Example:
         (/path/to/source.tx, /library/category/asset, relative=0)
     
@@ -52,13 +52,11 @@ def resolve_asset_source_destination(fpath, destination, relative=0):
     """
 
     if fpath.path.suffix in TEXTURE_EXT:
-        new_destination = "{}_sources/images/{}".format(destination.name, fpath.name)
-    elif fpath.path.suffix in APP_EXT:
-        new_destination = "{}_sources/scenes".format(destination.name)
+        'source_images'
     elif fpath.path.suffix in CACHE_EXT:
-        new_destination = "{}_sources/caches".format(destination.name)
+        'source_caches'
     else:
-        new_destination = destination.name + "_sources"
+        'source_misc'
     if relative:
         out = alPath("{}/{}".format(new_destination, fpath.path.name))
     else:

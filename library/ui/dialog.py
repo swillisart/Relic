@@ -12,21 +12,20 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import relic_resources_rc
 import resources_rc
 
 class Ui_RelicMainWindow(object):
     def setupUi(self, RelicMainWindow):
         if not RelicMainWindow.objectName():
             RelicMainWindow.setObjectName(u"RelicMainWindow")
-        RelicMainWindow.resize(1078, 702)
+        RelicMainWindow.resize(1083, 705)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(RelicMainWindow.sizePolicy().hasHeightForWidth())
         RelicMainWindow.setSizePolicy(sizePolicy)
         icon = QIcon()
-        icon.addFile(u":/resources/icons/app_icon.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/resources/app/app_icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         RelicMainWindow.setWindowIcon(icon)
         RelicMainWindow.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
@@ -118,10 +117,10 @@ class Ui_RelicMainWindow(object):
 "    background-color: rgb(57, 57, 57);\n"
 "}\n"
 "QMenu::indicator:non-exclusive:checked {\n"
-"    image: url(:/resources/checkbox_checked.svg);\n"
+"    image: url(:/resources/style/checkbox_checked.svg);\n"
 "}\n"
 "QMenu::indicator:non-exclusive:unchecked {\n"
-"    image: url(:/resources/checkbox.svg);\n"
+"    image: url(:/resources/style/checkbox.svg);\n"
 "}\n"
 "\n"
 "QLineEdit,\n"
@@ -145,9 +144,9 @@ class Ui_RelicMainWindow(object):
 "QSlider::sub-page:horizontal,\n"
 "QSlider::add-page:vertical, \n"
 "QSlider::sub-page:vertical {\n"
-"    background: rgb(43, 43, 43);\n"
-"}"
-                        "\n"
+"    background: rgb(43, 43"
+                        ", 43);\n"
+"}\n"
 "QSlider::add-page:vertical, \n"
 "QSlider::sub-page:vertical {\n"
 "    margin-left: 4px;\n"
@@ -187,9 +186,9 @@ class Ui_RelicMainWindow(object):
 "    width: 4px;\n"
 "}\n"
 "QSlider::sub-page:vertical:disabled, \n"
-"QSlider::sub-page:horizontal:disabled {\n"
-"    ba"
-                        "ckground: #14506E;\n"
+"QSlider::sub-page:horizontal:disabled "
+                        "{\n"
+"    background: #14506E;\n"
 "}\n"
 "\n"
 "/* QScrollBar ------------------------------------------------------------- */\n"
@@ -211,7 +210,7 @@ class Ui_RelicMainWindow(object):
 "QScrollBar::add-line:horizontal:on,\n"
 "QScrollBar::add-line:horizontal {\n"
 "    margin: 0px 3px 0px 0px;\n"
-"    border-image: url(:/resources/stylesheet-branch-closed.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-closed.png);\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
 "    subcontrol-position: right;\n"
@@ -221,8 +220,8 @@ class Ui_RelicMainWindow(object):
 "QScrollBar::sub-line:horizontal:on,\n"
 "QScrollBar::sub-line:horizontal {\n"
 "    margin: 0px 0px 0px 3px;\n"
-"    border-image: url(:/resou"
-                        "rces/stylesheet-branch-closedleft.png);\n"
+"    border-"
+                        "image: url(:/resources/style/stylesheet-branch-closedleft.png);\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
 "    subcontrol-position: left;\n"
@@ -243,7 +242,7 @@ class Ui_RelicMainWindow(object):
 "}\n"
 "QScrollBar::sub-line:vertical {\n"
 "    margin: 3px 0px 0px 0px;\n"
-"    border-image: url(:/resources/stylesheet-branch-openup.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
 "    height: 6px;\n"
 "    width: 10px;\n"
 "    subcontrol-position: top;\n"
@@ -251,16 +250,16 @@ class Ui_RelicMainWindow(object):
 "}\n"
 "QScrollBar::add-line:vertical {\n"
 "    margin: 0px 0px 3px 0px;\n"
-"    border-image: url(:/resources/stylesheet-branch-open.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-open.png);\n"
 "    height: 6px;\n"
 "    width: 10px;\n"
-"    subcontrol-position: bottom;\n"
-"    subcontrol-origi"
-                        "n: margin;\n"
+"    subcontrol-positi"
+                        "on: bottom;\n"
+"    subcontrol-origin: margin;\n"
 "}\n"
 "QScrollBar::sub-line:vertical:hover,\n"
 "QScrollBar::sub-line:vertical:on {\n"
-"    border-image: url(:/resources/stylesheet-branch-openup.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
 "    height: 10px;\n"
 "    width: 10px;\n"
 "    subcontrol-position: top;\n"
@@ -294,38 +293,38 @@ class Ui_RelicMainWindow(object):
 "    margin-bottom: 2px;\n"
 "}\n"
 "\n"
-"QTreeView::branch {\n"
-"    border-top: 0px solid "
-                        "rgb(43, 43, 43);\n"
+"QTreeVie"
+                        "w::branch {\n"
+"    border-top: 0px solid rgb(43, 43, 43);\n"
 "    border-bottom: 0px solid rgb(43, 43, 43);\n"
 "    padding: 4px; /*DO NOT CHANGE*/\n"
 "    margin-top: 2px;\n"
 "    margin-bottom: 2px;\n"
 "}\n"
 "QTreeView::branch:has-siblings:!adjoins-item {\n"
-"    border-image: url(:/resources/stylesheet-vline.png);\n"
+"    border-image: url(:/resources/style/stylesheet-vline.png);\n"
 "}\n"
 "QTreeView::branch:has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/stylesheet-branch-more.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
 "}\n"
 "QTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/stylesheet-branch-end.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-end.png);\n"
 "}\n"
 "QTreeView::branch:has-children:!has-siblings:closed,\n"
 "QTreeView::branch:closed:has-children:has-siblings {\n"
-"    image: url(:/resources/icons/treeExpand.svg);\n"
+"    image: url(:/resources/style/treeExpand.svg);\n"
 "}\n"
 "QTreeView::branch:open:has-children:!has-siblings,\n"
 "QTreeView::branch:open:has-children:has-siblings  {\n"
-"    image: url(:/resources/icons/treeCollapse.svg);\n"
+"    image: url(:/resources/style/treeCollapse.svg);\n"
 "}\n"
 "\n"
 "\n"
-"/* QCombobox -------------------------------------------------------------- */\n"
+"/* QCombobox -----------------------------------------------"
+                        "--------------- */\n"
 "QComboBox {\n"
 "    border: 0px;\n"
-""
-                        "    border-radius: 3px;\n"
+"    border-radius: 3px;\n"
 "    background-color: rgb(92, 92, 92);\n"
 "    padding-top: 2px;     /* This fix  #103, #111*/\n"
 "    padding-bottom: 1px;  /* This fix  #103, #111*/\n"
@@ -349,23 +348,23 @@ class Ui_RelicMainWindow(object):
 "QComboBox::down-arrow:on,\n"
 "QComboBox::down-arrow:hover,\n"
 "QComboBox::down-arrow:focus {\n"
-"    image: url(:/resources/stylesheet-branch-open.png);\n"
+"    image: url(:/resources/style/stylesheet-branch-open.png);\n"
 "}\n"
 "\n"
 "\n"
 "/* QCheckBox -------------------------------------------------------------- */\n"
 "\n"
 "\n"
-"QCheckBox::indicator:checked:hover,\n"
+"QCheckBox::indicator:che"
+                        "cked:hover,\n"
 "QTreeView::indicator:checked:hover,\n"
-"QListView:"
-                        ":indicator:checked:hover {\n"
-"    image: url(:/resources/checkbox_checked_hover.svg);\n"
+"QListView::indicator:checked:hover {\n"
+"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "QCheckBox::indicator:unchecked:hover,\n"
 "QTreeView::indicator:unchecked:hover,\n"
 "QListView::indicator:unchecked:hover {\n"
-"    image: url(:/resources/checkbox_hover.svg);\n"
+"    image: url(:/resources/style/checkbox_hover.svg);\n"
 "}\n"
 "QCheckBox::indicator {\n"
 "    width: 14px;\n"
@@ -374,46 +373,46 @@ class Ui_RelicMainWindow(object):
 "QCheckBox::indicator:checked,\n"
 "QTreeView::indicator:checked,\n"
 "QListView::indicator:checked {\n"
-"    image: url(:/resources/checkbox_checked.svg);\n"
+"    image: url(:/resources/style/checkbox_checked.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:checked:hover,\n"
 "QTreeView::indicator:checked:hover,\n"
 "QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/checkbox_checked_hover.svg);\n"
+"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:unchecked,\n"
 "QTreeView::indicator:unchecked,\n"
 "QListView::indicator:unchecked {\n"
 "    color: rgb(43, 43, 43);\n"
-"    image: url(:/resources/checkbox.svg);\n"
+"    image: url(:/resources/style/checkbox.svg);\n"
 "}\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
 "\n"
 "\n"
 "\n"
 "\n"
 ""
                         "\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
 "\n"
 "\n"
 "\n"
@@ -459,11 +458,11 @@ class Ui_RelicMainWindow(object):
 "QTabBar::tab {\n"
 "    border-bottom: 3px solid rgb(55, 55, 55);\n"
 "    color: #787878;\n"
-"    background-color: rgb(68, 68, 68);\n"
+" "
+                        "   background-color: rgb(68, 68, 68);\n"
 "}\n"
 "\n"
-"/* QTabBar::tab - selected ---------------"
-                        "-------------------------------- */\n"
+"/* QTabBar::tab - selected ----------------------------------------------- */\n"
 "\n"
 "QTabBar::tab:top:selected:disabled {\n"
 "    border-bottom: 3px solid #14506E;\n"
@@ -494,11 +493,11 @@ class Ui_RelicMainWindow(object):
 "QTabBar::tab:top:!selected:disabled {\n"
 "    margin-left: 4px;\n"
 "    margin-right: 4px;\n"
-"    margin-top: 2px;\n"
+""
+                        "    margin-top: 2px;\n"
 "    margin-bottom: 1px;\n"
 "    padding-left: 10px; \n"
-"    paddin"
-                        "g-right: 10px;\n"
+"    padding-right: 10px;\n"
 "    padding-top: 4px;\n"
 "    padding-bottom: 4px;\n"
 "    min-width: 4px;\n"
@@ -526,10 +525,10 @@ class Ui_RelicMainWindow(object):
 "    color: #787878;\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}\n"
-"/* QTabBar::tab - selected ----------------------------------------------- */\n"
+"/"
+                        "* QTabBar::tab - selected ----------------------------------------------- */\n"
 "\n"
-"QTabBa"
-                        "r::tab {\n"
+"QTabBar::tab {\n"
 "    background-color: rgb(55, 55, 55);\n"
 "    color: rgb(175, 175, 175);\n"
 "    margin-left: 4px;\n"
@@ -555,10 +554,10 @@ class Ui_RelicMainWindow(object):
 "    background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));\n"
 "    border-bottom: 2px solid rgb(70, 125, 160);\n"
 "    border-right: 1px solid rgb(66, 118, 150);\n"
-"    border-left: 1px solid rgb(66, 118, 150);\n"
+"    border"
+                        "-left: 1px solid rgb(66, 118, 150);\n"
 "    border-top-left-radius: 3px;\n"
-"    border-top-"
-                        "right-radius: 3px;\n"
+"    border-top-right-radius: 3px;\n"
 "    border-top: 1px solid rgb(43, 43, 43);\n"
 "}\n"
 "")
@@ -566,25 +565,21 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setDockNestingEnabled(True)
         self.actionPreferences = QAction(RelicMainWindow)
         self.actionPreferences.setObjectName(u"actionPreferences")
-        icon1 = QIcon()
-        icon1.addFile(u":/resources/icons/treeMod3.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionPreferences.setIcon(icon1)
         self.actionExit = QAction(RelicMainWindow)
         self.actionExit.setObjectName(u"actionExit")
-        icon2 = QIcon()
-        icon2.addFile(u":/resources/close.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionExit.setIcon(icon2)
+        icon1 = QIcon()
+        icon1.addFile(u":/resources/style/close.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionExit.setIcon(icon1)
         self.actionAdministration_Mode = QAction(RelicMainWindow)
         self.actionAdministration_Mode.setObjectName(u"actionAdministration_Mode")
         self.actionAdministration_Mode.setCheckable(True)
         self.actionDocumentation = QAction(RelicMainWindow)
         self.actionDocumentation.setObjectName(u"actionDocumentation")
-        self.actionDocumentation.setIcon(icon1)
         self.actionIngest = QAction(RelicMainWindow)
         self.actionIngest.setObjectName(u"actionIngest")
-        icon3 = QIcon()
-        icon3.addFile(u":/resources/icons/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionIngest.setIcon(icon3)
+        icon2 = QIcon()
+        icon2.addFile(u":/resources/general/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionIngest.setIcon(icon2)
         self.actionPortal = QAction(RelicMainWindow)
         self.actionPortal.setObjectName(u"actionPortal")
         self.actionPortal.setCheckable(True)
@@ -813,9 +808,9 @@ class Ui_RelicMainWindow(object):
 "QPushButton:checked {\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}")
-        icon4 = QIcon()
-        icon4.addFile(u":/resources/icons/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.filterButton.setIcon(icon4)
+        icon3 = QIcon()
+        icon3.addFile(u":/resources/general/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.filterButton.setIcon(icon3)
         self.filterButton.setIconSize(QSize(18, 18))
         self.filterButton.setCheckable(True)
         self.filterButton.setChecked(True)
@@ -864,10 +859,10 @@ class Ui_RelicMainWindow(object):
 "    color: rgb(250, 250, 250);\n"
 "}\n"
 "")
-        icon5 = QIcon()
-        icon5.addFile(u":/resources/icons/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon5.addFile(u":/resources/icons/pageArrowLeft.svg", QSize(), QIcon.Active, QIcon.On)
-        self.categoryExpandButton.setIcon(icon5)
+        icon4 = QIcon()
+        icon4.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Active, QIcon.On)
+        self.categoryExpandButton.setIcon(icon4)
         self.categoryExpandButton.setIconSize(QSize(22, 22))
         self.categoryExpandButton.setCheckable(True)
         self.categoryExpandButton.setChecked(True)
@@ -903,10 +898,10 @@ class Ui_RelicMainWindow(object):
 "    color: rgb(250, 250, 250);\n"
 "}\n"
 "")
-        icon6 = QIcon()
-        icon6.addFile(u":/resources/icons/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon6.addFile(u":/resources/icons/pageArrow.svg", QSize(), QIcon.Active, QIcon.On)
-        self.attrExpandButton.setIcon(icon6)
+        icon5 = QIcon()
+        icon5.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Active, QIcon.On)
+        self.attrExpandButton.setIcon(icon5)
         self.attrExpandButton.setIconSize(QSize(22, 22))
         self.attrExpandButton.setCheckable(True)
         self.attrExpandButton.setChecked(True)
@@ -967,7 +962,7 @@ class Ui_RelicMainWindow(object):
 "QPushButton:checked {\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}")
-        self.attrFilterButotn.setIcon(icon4)
+        self.attrFilterButotn.setIcon(icon3)
         self.attrFilterButotn.setIconSize(QSize(18, 18))
         self.attrFilterButotn.setCheckable(True)
         self.attrFilterButotn.setChecked(True)
@@ -1038,9 +1033,9 @@ class Ui_RelicMainWindow(object):
 "    color: rgb(250, 250, 250);\n"
 "}\n"
 "")
-        icon7 = QIcon()
-        icon7.addFile(u":/resources/icons/backArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.backButton.setIcon(icon7)
+        icon6 = QIcon()
+        icon6.addFile(u":/resources/general/backArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.backButton.setIcon(icon6)
         self.backButton.setIconSize(QSize(22, 22))
         self.backButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.backButton.setArrowType(Qt.NoArrow)
@@ -1101,7 +1096,7 @@ class Ui_RelicMainWindow(object):
 "QPushButton:checked {\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}")
-        self.linkFilterButton.setIcon(icon4)
+        self.linkFilterButton.setIcon(icon3)
         self.linkFilterButton.setIconSize(QSize(18, 18))
         self.linkFilterButton.setCheckable(True)
         self.linkFilterButton.setChecked(True)
@@ -1212,7 +1207,7 @@ class Ui_RelicMainWindow(object):
 "QPushButton:checked {\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}")
-        self.documentationFilterButton.setIcon(icon4)
+        self.documentationFilterButton.setIcon(icon3)
         self.documentationFilterButton.setIconSize(QSize(18, 18))
         self.documentationFilterButton.setCheckable(True)
         self.documentationFilterButton.setChecked(True)
@@ -1268,7 +1263,7 @@ class Ui_RelicMainWindow(object):
 "    color: rgb(250, 250, 250);\n"
 "}\n"
 "")
-        self.backButton_2.setIcon(icon2)
+        self.backButton_2.setIcon(icon1)
         self.backButton_2.setIconSize(QSize(22, 22))
         self.backButton_2.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.backButton_2.setArrowType(Qt.NoArrow)
@@ -1321,9 +1316,9 @@ class Ui_RelicMainWindow(object):
 
         self.previewCheckBox = QCheckBox(self.centralwidget)
         self.previewCheckBox.setObjectName(u"previewCheckBox")
-        icon8 = QIcon()
-        icon8.addFile(u":/resources/icons/kohai.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.previewCheckBox.setIcon(icon8)
+        icon7 = QIcon()
+        icon7.addFile(u":/resources/app/kohai.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.previewCheckBox.setIcon(icon7)
 
         self.horizontalLayout_3.addWidget(self.previewCheckBox)
 
@@ -1349,9 +1344,9 @@ class Ui_RelicMainWindow(object):
 "    background-color: rgb(92, 92, 92);\n"
 "    color: rgb(250, 250, 250);\n"
 "}")
-        icon9 = QIcon()
-        icon9.addFile(u":/resources/icons/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pageDownButton.setIcon(icon9)
+        icon8 = QIcon()
+        icon8.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.pageDownButton.setIcon(icon8)
         self.pageDownButton.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_4.addWidget(self.pageDownButton)
@@ -1384,9 +1379,9 @@ class Ui_RelicMainWindow(object):
 "    background-color: rgb(92, 92, 92);\n"
 "    color: rgb(250, 250, 250);\n"
 "}")
-        icon10 = QIcon()
-        icon10.addFile(u":/resources/icons/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pageUpButton.setIcon(icon10)
+        icon9 = QIcon()
+        icon9.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.pageUpButton.setIcon(icon9)
         self.pageUpButton.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_4.addWidget(self.pageUpButton)
@@ -1400,7 +1395,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1078, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1083, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -1429,7 +1424,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 74, 555))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 74, 558))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1509,7 +1504,7 @@ class Ui_RelicMainWindow(object):
 "    padding: 2px;\n"
 "	border: none;\n"
 "}")
-        self.searchButton.setIcon(icon4)
+        self.searchButton.setIcon(icon3)
         self.searchButton.setIconSize(QSize(20, 20))
         self.searchButton.setFlat(False)
 
@@ -1600,7 +1595,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 555))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 558))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)

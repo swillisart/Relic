@@ -12,7 +12,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import relic_resources_rc
+import resources_rc
 
 class Ui_CompactDelegate(object):
     def setupUi(self, CompactDelegate):
@@ -47,13 +47,13 @@ class Ui_CompactDelegate(object):
 "QCheckBox::indicator:checked:hover,\n"
 "QTreeView::indicator:checked:hover,\n"
 "QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/checkbox_checked_hover.svg);\n"
+"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "QCheckBox::indicator:unchecked:hover,\n"
 "QTreeView::indicator:unchecked:hover,\n"
 "QListView::indicator:unchecked:hover {\n"
-"    image: url(:/resources/checkbox_hover.svg"
-                        ");\n"
+"    image: url(:/resources/style/checkb"
+                        "ox_hover.svg);\n"
 "}\n"
 "QCheckBox::indicator {\n"
 "    width: 14px;\n"
@@ -62,20 +62,20 @@ class Ui_CompactDelegate(object):
 "QCheckBox::indicator:checked,\n"
 "QTreeView::indicator:checked,\n"
 "QListView::indicator:checked {\n"
-"    image: url(:/resources/checkbox_checked.svg);\n"
+"    image: url(:/resources/style/checkbox_checked.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:checked:hover,\n"
 "QTreeView::indicator:checked:hover,\n"
 "QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/checkbox_checked_hover.svg);\n"
+"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:unchecked,\n"
 "QTreeView::indicator:unchecked,\n"
 "QListView::indicator:unchecked {\n"
 "    color: rgb(43, 43, 43);\n"
-"    image: url(:/resources/checkbox.svg);\n"
+"    image: url(:/resources/style/checkbox.svg);\n"
 "}")
         self.verticalLayout_3 = QVBoxLayout(CompactDelegate)
         self.verticalLayout_3.setSpacing(0)
@@ -177,6 +177,35 @@ class Ui_CompactDelegate(object):
         self.headerLayout.setSpacing(3)
         self.headerLayout.setObjectName(u"headerLayout")
         self.headerLayout.setContentsMargins(3, 0, 3, 0)
+        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4.setSpacing(0)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_4.setContentsMargins(2, 0, 0, 0)
+        self.iconButton = QToolButton(self.HeaderFrame)
+        self.iconButton.setObjectName(u"iconButton")
+        self.iconButton.setFocusPolicy(Qt.NoFocus)
+        self.iconButton.setStyleSheet(u"border: none;")
+        icon = QIcon()
+        icon.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.iconButton.setIcon(icon)
+        self.iconButton.setIconSize(QSize(18, 18))
+
+        self.verticalLayout_4.addWidget(self.iconButton)
+
+        self.categoryIcon = QToolButton(self.HeaderFrame)
+        self.categoryIcon.setObjectName(u"categoryIcon")
+        self.categoryIcon.setFocusPolicy(Qt.NoFocus)
+        self.categoryIcon.setStyleSheet(u"border: none;")
+        icon1 = QIcon()
+        icon1.addFile(u":/resources/categories/software.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.categoryIcon.setIcon(icon1)
+        self.categoryIcon.setIconSize(QSize(18, 18))
+
+        self.verticalLayout_4.addWidget(self.categoryIcon)
+
+
+        self.headerLayout.addLayout(self.verticalLayout_4)
+
         self.label = QLabel(self.HeaderFrame)
         self.label.setObjectName(u"label")
         sizePolicy1 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -186,12 +215,17 @@ class Ui_CompactDelegate(object):
         self.label.setSizePolicy(sizePolicy1)
         self.label.setMinimumSize(QSize(72, 48))
         self.label.setSizeIncrement(QSize(0, 0))
-        self.label.setStyleSheet(u"border: 1px solid rgb(55, 55, 55);")
+        self.label.setStyleSheet(u"")
 
         self.headerLayout.addWidget(self.label)
 
         self.nameLabel = QLabel(self.HeaderFrame)
         self.nameLabel.setObjectName(u"nameLabel")
+        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.nameLabel.sizePolicy().hasHeightForWidth())
+        self.nameLabel.setSizePolicy(sizePolicy2)
         font = QFont()
         font.setPointSize(10)
         self.nameLabel.setFont(font)
@@ -212,46 +246,16 @@ class Ui_CompactDelegate(object):
 "QToolButton:hover{\n"
 "background-color: rgb(92, 92, 92);\n"
 "}")
-        icon = QIcon()
-        icon.addFile(u":/resources/icons/folder_link.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.linksButton.setIcon(icon)
+        icon2 = QIcon()
+        icon2.addFile(u":/resources/general/folder_link.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.linksButton.setIcon(icon2)
         self.linksButton.setIconSize(QSize(24, 24))
         self.linksButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         self.headerLayout.addWidget(self.linksButton)
 
-        self.horizontalSpacer = QSpacerItem(1, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.headerLayout.addItem(self.horizontalSpacer)
-
 
         self.horizontalLayout_5.addLayout(self.headerLayout)
-
-        self.typeIcon = QToolButton(self.HeaderFrame)
-        self.typeIcon.setObjectName(u"typeIcon")
-        self.typeIcon.setFocusPolicy(Qt.NoFocus)
-        self.typeIcon.setStyleSheet(u"padding: -2px;\n"
-"border: none;\n"
-"margin-right: 4px;")
-        icon1 = QIcon()
-        icon1.addFile(u":/resources/icons/component.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.typeIcon.setIcon(icon1)
-        self.typeIcon.setIconSize(QSize(24, 24))
-
-        self.horizontalLayout_5.addWidget(self.typeIcon)
-
-        self.iconButton = QToolButton(self.HeaderFrame)
-        self.iconButton.setObjectName(u"iconButton")
-        self.iconButton.setFocusPolicy(Qt.NoFocus)
-        self.iconButton.setStyleSheet(u"padding: -2px;\n"
-"border: none;\n"
-"margin-right: 4px;")
-        icon2 = QIcon()
-        icon2.addFile(u":/resources/icons/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.iconButton.setIcon(icon2)
-        self.iconButton.setIconSize(QSize(24, 24))
-
-        self.horizontalLayout_5.addWidget(self.iconButton)
 
 
         self.verticalLayout_2.addWidget(self.HeaderFrame)
@@ -294,6 +298,14 @@ class Ui_CompactDelegate(object):
 
     def retranslateUi(self, CompactDelegate):
         CompactDelegate.setWindowTitle(QCoreApplication.translate("CompactDelegate", u"Form", None))
+#if QT_CONFIG(tooltip)
+        self.iconButton.setToolTip(QCoreApplication.translate("CompactDelegate", u"Asset Type", None))
+#endif // QT_CONFIG(tooltip)
+        self.iconButton.setText(QCoreApplication.translate("CompactDelegate", u"...", None))
+#if QT_CONFIG(tooltip)
+        self.categoryIcon.setToolTip(QCoreApplication.translate("CompactDelegate", u"Asset Type", None))
+#endif // QT_CONFIG(tooltip)
+        self.categoryIcon.setText(QCoreApplication.translate("CompactDelegate", u"...", None))
         self.label.setText("")
         self.nameLabel.setText(QCoreApplication.translate("CompactDelegate", u"MyAsset01", None))
 #if QT_CONFIG(tooltip)
@@ -301,13 +313,5 @@ class Ui_CompactDelegate(object):
 "Press to open the Asset's Upstream Dependencies (Links)", None))
 #endif // QT_CONFIG(tooltip)
         self.linksButton.setText(QCoreApplication.translate("CompactDelegate", u"12", None))
-#if QT_CONFIG(tooltip)
-        self.typeIcon.setToolTip(QCoreApplication.translate("CompactDelegate", u"Asset Type", None))
-#endif // QT_CONFIG(tooltip)
-        self.typeIcon.setText(QCoreApplication.translate("CompactDelegate", u"...", None))
-#if QT_CONFIG(tooltip)
-        self.iconButton.setToolTip(QCoreApplication.translate("CompactDelegate", u"Asset Type", None))
-#endif // QT_CONFIG(tooltip)
-        self.iconButton.setText(QCoreApplication.translate("CompactDelegate", u"...", None))
     # retranslateUi
 

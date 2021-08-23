@@ -1,13 +1,17 @@
 import os
+import json
 from functools import partial
+
+from sequencePath import sequencePath as Path
 
 from library.ui.ingestion import Ui_IngestForm
 from library.io.ingest import ConversionRouter, IngestionThread
 from library.objectmodels import (polymorphicItem, db, references, modeling,
                                 elements, lighting, shading, software, 
-                                mayatools, nuketools, relationships)
+                                mayatools, nuketools, relationships, temp_asset, tags)
 from library.widgets.assets import assetItemModel
 from library.widgets.util import ListViewFiltered
+
 from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT,
                             LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT)
 
@@ -17,7 +21,7 @@ from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QSortFilterProxyModel, Qt, QTextStream, Signal,
                             Slot, QThread)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
-                           QIcon, QPainter, QPixmap, QMovie,
+                           QIcon, QPainter, QPixmap, QMovie, QImage,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QDialog, QDockWidget, QFrame, QLabel, QLayout,
@@ -68,12 +72,27 @@ class IngestForm(Ui_IngestForm, QDialog):
         inplace_update = lambda x: x.update() 
         self.ingest_thread.itemDone.connect(inplace_update)
         self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.loading_movie = QMovie(':resources/load_wheel_24.webp')
+        self.loading_movie = QMovie(':resources/general/load_wheel_24.webp')
         self.loading_movie.setCacheMode(QMovie.CacheAll)
         self.loading_movie.start()
         self.loadingLabel.setMovie(self.loading_movie)
         self.loadingLabel.hide()
         self.completedLabel.hide()
+        self.keep_original_name = False 
+
+    def collectFromJson(self, data):
+        assets = json.loads(data)
+
+        self.categorizeTab.setEnabled(True)
+        self.tabWidget.setCurrentIndex(1)
+        self.keep_original_name = True
+        
+        for fields in assets:
+            asset = temp_asset(**fields)
+            asset.path = Path(asset.path)
+            icon_path = asset.path.suffixed('_icon', ext='.jpg')
+            asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
+            self.collectedListView.addItem(asset)
 
     @Slot()
     def setIngestQueue(self, item):
@@ -111,9 +130,13 @@ class IngestForm(Ui_IngestForm, QDialog):
                 asset.name = '{}_{}'.format(primary_asset.name, num)
                 asset.type = 5 # Variant
                 link_primary = True
+            # store the associated temp on-disk location for copying.
+            if not self.keep_original_name:
+                temp_filename = 'unsorted' + str(asset.id)
+            else:
+                temp_filename = asset.name
 
-            # store the associated temp on-disk id for copying. 
-            file_id = str(asset.id)
+            asset.dependencies = 0
             asset.id = None # IMPORTANT clears the id for clean asset creation
             asset.create()
             asset.fetch(id=asset.id)
@@ -131,10 +154,34 @@ class IngestForm(Ui_IngestForm, QDialog):
                     link=primary_asset.links,
                 )
                 primary_relation.create()
+            
+            if temp_asset.links:
+                for link in temp_asset.links:
+                    link_relation = relationships(
+                        category_map=int(link['category'])+4,
+                        category_id=int(link['id']),
+                        link=int(asset.links),
+                    )
+                    link_relation.create()
+                asset.dependencies = len(temp_asset.links)
+            if temp_asset.tags:
+                for tag_data in temp_asset.tags:
+                    tag = tags(**tag_data)
+                    tag.id = tag.nameExists()
+                    if not tag.id:
+                        tag.create()
+
+                    tag_relation = relationships(
+                        category_map=tag.relationMap,
+                        category_id=tag.id,
+                        link=int(asset.links),
+                    )
+                    tag_relation.create()
 
             self.collectedListView.setRowHidden(index.row(), True)
             self.newAssetListView.addItem(asset)
-            self.ingest_thread.load([file_id, asset])
+            extra_files = temp_asset.dependencies
+            self.ingest_thread.load([temp_filename, asset, extra_files])
 
         # Update counts on assets and subcategory
         subcategory.count += total
@@ -167,6 +214,8 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     
     def collect(self):
+        self.keep_original_name = False 
+
         paths = self.collectPathTextEdit.toPlainText().split('\n')
         function_map = self.getConversionMap()
 
@@ -198,7 +247,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.category_widgets = []
         for index in range(self.categoryComboBox.count()):
             self.category_widgets.append(layout.itemAt(index).widget()) 
-        self.onCategoryChange(0)
+        #self.onCategoryChange(0)
 
     @Slot()
     def updateLabelCounts(self, value):
@@ -266,7 +315,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.ingest_thread.quit()
         if hasattr(self, 'collect_thread'):
             self.collect_thread.quit()
-        super(IngestForm, self).close()
         self.parent().close()
 
     @Slot()

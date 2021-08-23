@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1078</width>
-    <height>702</height>
+    <width>1083</width>
+    <height>705</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,8 +20,8 @@
    <string>Relic</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../relic_resources.qrc">
-    <normaloff>:/resources/icons/app_icon.png</normaloff>:/resources/icons/app_icon.png</iconset>
+   <iconset resource="../../resources.qrc">
+    <normaloff>:/resources/app/app_icon.svg</normaloff>:/resources/app/app_icon.svg</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">QWidget {
@@ -112,10 +112,10 @@ QMenu::icon {
     background-color: rgb(57, 57, 57);
 }
 QMenu::indicator:non-exclusive:checked {
-    image: url(:/resources/checkbox_checked.svg);
+    image: url(:/resources/style/checkbox_checked.svg);
 }
 QMenu::indicator:non-exclusive:unchecked {
-    image: url(:/resources/checkbox.svg);
+    image: url(:/resources/style/checkbox.svg);
 }
 
 QLineEdit,
@@ -203,7 +203,7 @@ QScrollBar::add-line:horizontal:hover,
 QScrollBar::add-line:horizontal:on,
 QScrollBar::add-line:horizontal {
     margin: 0px 3px 0px 0px;
-    border-image: url(:/resources/stylesheet-branch-closed.png);
+    border-image: url(:/resources/style/stylesheet-branch-closed.png);
     height: 10px;
     width: 6px;
     subcontrol-position: right;
@@ -213,7 +213,7 @@ QScrollBar::sub-line:horizontal:hover,
 QScrollBar::sub-line:horizontal:on,
 QScrollBar::sub-line:horizontal {
     margin: 0px 0px 0px 3px;
-    border-image: url(:/resources/stylesheet-branch-closedleft.png);
+    border-image: url(:/resources/style/stylesheet-branch-closedleft.png);
     height: 10px;
     width: 6px;
     subcontrol-position: left;
@@ -234,7 +234,7 @@ QScrollBar::handle:vertical {
 }
 QScrollBar::sub-line:vertical {
     margin: 3px 0px 0px 0px;
-    border-image: url(:/resources/stylesheet-branch-openup.png);
+    border-image: url(:/resources/style/stylesheet-branch-openup.png);
     height: 6px;
     width: 10px;
     subcontrol-position: top;
@@ -242,7 +242,7 @@ QScrollBar::sub-line:vertical {
 }
 QScrollBar::add-line:vertical {
     margin: 0px 0px 3px 0px;
-    border-image: url(:/resources/stylesheet-branch-open.png);
+    border-image: url(:/resources/style/stylesheet-branch-open.png);
     height: 6px;
     width: 10px;
     subcontrol-position: bottom;
@@ -250,7 +250,7 @@ QScrollBar::add-line:vertical {
 }
 QScrollBar::sub-line:vertical:hover,
 QScrollBar::sub-line:vertical:on {
-    border-image: url(:/resources/stylesheet-branch-openup.png);
+    border-image: url(:/resources/style/stylesheet-branch-openup.png);
     height: 10px;
     width: 10px;
     subcontrol-position: top;
@@ -292,21 +292,21 @@ QTreeView::branch {
     margin-bottom: 2px;
 }
 QTreeView::branch:has-siblings:!adjoins-item {
-    border-image: url(:/resources/stylesheet-vline.png);
+    border-image: url(:/resources/style/stylesheet-vline.png);
 }
 QTreeView::branch:has-siblings:adjoins-item {
-    border-image: url(:/resources/stylesheet-branch-more.png);
+    border-image: url(:/resources/style/stylesheet-branch-more.png);
 }
 QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-    border-image: url(:/resources/stylesheet-branch-end.png);
+    border-image: url(:/resources/style/stylesheet-branch-end.png);
 }
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    image: url(:/resources/icons/treeExpand.svg);
+    image: url(:/resources/style/treeExpand.svg);
 }
 QTreeView::branch:open:has-children:!has-siblings,
 QTreeView::branch:open:has-children:has-siblings  {
-    image: url(:/resources/icons/treeCollapse.svg);
+    image: url(:/resources/style/treeCollapse.svg);
 }
 
 
@@ -337,7 +337,7 @@ QComboBox::down-arrow,
 QComboBox::down-arrow:on,
 QComboBox::down-arrow:hover,
 QComboBox::down-arrow:focus {
-    image: url(:/resources/stylesheet-branch-open.png);
+    image: url(:/resources/style/stylesheet-branch-open.png);
 }
 
 
@@ -347,12 +347,12 @@ QComboBox::down-arrow:focus {
 QCheckBox::indicator:checked:hover,
 QTreeView::indicator:checked:hover,
 QListView::indicator:checked:hover {
-    image: url(:/resources/checkbox_checked_hover.svg);
+    image: url(:/resources/style/checkbox_checked_hover.svg);
 }
 QCheckBox::indicator:unchecked:hover,
 QTreeView::indicator:unchecked:hover,
 QListView::indicator:unchecked:hover {
-    image: url(:/resources/checkbox_hover.svg);
+    image: url(:/resources/style/checkbox_hover.svg);
 }
 QCheckBox::indicator {
     width: 14px;
@@ -361,20 +361,20 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked,
 QTreeView::indicator:checked,
 QListView::indicator:checked {
-    image: url(:/resources/checkbox_checked.svg);
+    image: url(:/resources/style/checkbox_checked.svg);
 }
 
 QCheckBox::indicator:checked:hover,
 QTreeView::indicator:checked:hover,
 QListView::indicator:checked:hover {
-    image: url(:/resources/checkbox_checked_hover.svg);
+    image: url(:/resources/style/checkbox_checked_hover.svg);
 }
 
 QCheckBox::indicator:unchecked,
 QTreeView::indicator:unchecked,
 QListView::indicator:unchecked {
     color: rgb(43, 43, 43);
-    image: url(:/resources/checkbox.svg);
+    image: url(:/resources/style/checkbox.svg);
 }
 
 
@@ -1311,8 +1311,8 @@ QPushButton:checked {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../../relic_resources.qrc">
-                 <normaloff>:/resources/icons/searchLight.svg</normaloff>:/resources/icons/searchLight.svg</iconset>
+                <iconset resource="../../resources.qrc">
+                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -1403,9 +1403,9 @@ QPushButton:hover {
           <string/>
          </property>
          <property name="icon">
-          <iconset resource="../../relic_resources.qrc">
-           <normaloff>:/resources/icons/pageArrow.svg</normaloff>
-           <activeon>:/resources/icons/pageArrowLeft.svg</activeon>:/resources/icons/pageArrow.svg</iconset>
+          <iconset resource="../../resources.qrc">
+           <normaloff>:/resources/general/pageArrow.svg</normaloff>
+           <activeon>:/resources/general/pageArrowLeft.svg</activeon>:/resources/general/pageArrow.svg</iconset>
          </property>
          <property name="iconSize">
           <size>
@@ -1473,9 +1473,9 @@ QPushButton:hover {
           <string/>
          </property>
          <property name="icon">
-          <iconset resource="../../relic_resources.qrc">
-           <normaloff>:/resources/icons/pageArrowLeft.svg</normaloff>
-           <activeon>:/resources/icons/pageArrow.svg</activeon>:/resources/icons/pageArrowLeft.svg</iconset>
+          <iconset resource="../../resources.qrc">
+           <normaloff>:/resources/general/pageArrowLeft.svg</normaloff>
+           <activeon>:/resources/general/pageArrow.svg</activeon>:/resources/general/pageArrowLeft.svg</iconset>
          </property>
          <property name="iconSize">
           <size>
@@ -1605,8 +1605,8 @@ QPushButton:checked {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../../relic_resources.qrc">
-                 <normaloff>:/resources/icons/searchLight.svg</normaloff>:/resources/icons/searchLight.svg</iconset>
+                <iconset resource="../../resources.qrc">
+                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -1747,8 +1747,8 @@ QToolButton:hover {
           <string>Back</string>
          </property>
          <property name="icon">
-          <iconset resource="../../relic_resources.qrc">
-           <normaloff>:/resources/icons/backArrow.svg</normaloff>:/resources/icons/backArrow.svg</iconset>
+          <iconset resource="../../resources.qrc">
+           <normaloff>:/resources/general/backArrow.svg</normaloff>:/resources/general/backArrow.svg</iconset>
          </property>
          <property name="iconSize">
           <size>
@@ -1878,8 +1878,8 @@ QPushButton:checked {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../../relic_resources.qrc">
-                 <normaloff>:/resources/icons/searchLight.svg</normaloff>:/resources/icons/searchLight.svg</iconset>
+                <iconset resource="../../resources.qrc">
+                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -2108,8 +2108,8 @@ QPushButton:checked {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../../relic_resources.qrc">
-                 <normaloff>:/resources/icons/searchLight.svg</normaloff>:/resources/icons/searchLight.svg</iconset>
+                <iconset resource="../../resources.qrc">
+                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -2231,8 +2231,8 @@ QToolButton:hover {
              <string>Close</string>
             </property>
             <property name="icon">
-             <iconset resource="../../Lib/site-packages/qtshare/resources.qrc">
-              <normaloff>:/resources/close.svg</normaloff>:/resources/close.svg</iconset>
+             <iconset resource="../../resources.qrc">
+              <normaloff>:/resources/style/close.svg</normaloff>:/resources/style/close.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -2337,8 +2337,8 @@ QToolButton:hover {
            <string>Preview On-Select</string>
           </property>
           <property name="icon">
-           <iconset resource="../../relic_resources.qrc">
-            <normaloff>:/resources/icons/kohai.svg</normaloff>:/resources/icons/kohai.svg</iconset>
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/app/kohai.svg</normaloff>:/resources/app/kohai.svg</iconset>
           </property>
          </widget>
         </item>
@@ -2382,8 +2382,8 @@ QPushButton:hover {
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../relic_resources.qrc">
-            <normaloff>:/resources/icons/pageArrowLeft.svg</normaloff>:/resources/icons/pageArrowLeft.svg</iconset>
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/general/pageArrowLeft.svg</normaloff>:/resources/general/pageArrowLeft.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -2444,8 +2444,8 @@ QPushButton:hover {
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../relic_resources.qrc">
-            <normaloff>:/resources/icons/pageArrow.svg</normaloff>:/resources/icons/pageArrow.svg</iconset>
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/general/pageArrow.svg</normaloff>:/resources/general/pageArrow.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -2466,7 +2466,7 @@ QPushButton:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1078</width>
+     <width>1083</width>
      <height>22</height>
     </rect>
    </property>
@@ -2547,7 +2547,7 @@ QPushButton:hover {
           <x>0</x>
           <y>0</y>
           <width>74</width>
-          <height>555</height>
+          <height>558</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryLayout">
@@ -2709,8 +2709,8 @@ QFrame:hover {
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../relic_resources.qrc">
-            <normaloff>:/resources/icons/searchLight.svg</normaloff>:/resources/icons/searchLight.svg</iconset>
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -3080,7 +3080,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>555</height>
+          <height>558</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">
@@ -3107,18 +3107,14 @@ QFrame:hover {
    </widget>
   </widget>
   <action name="actionPreferences">
-   <property name="icon">
-    <iconset resource="../../relic_resources.qrc">
-     <normaloff>:/resources/icons/treeMod3.svg</normaloff>:/resources/icons/treeMod3.svg</iconset>
-   </property>
    <property name="text">
     <string>Preferences</string>
    </property>
   </action>
   <action name="actionExit">
    <property name="icon">
-    <iconset resource="../../Lib/site-packages/qtshare/resources.qrc">
-     <normaloff>:/resources/close.svg</normaloff>:/resources/close.svg</iconset>
+    <iconset resource="../../resources.qrc">
+     <normaloff>:/resources/style/close.svg</normaloff>:/resources/style/close.svg</iconset>
    </property>
    <property name="text">
     <string>Exit</string>
@@ -3133,18 +3129,14 @@ QFrame:hover {
    </property>
   </action>
   <action name="actionDocumentation">
-   <property name="icon">
-    <iconset resource="../../relic_resources.qrc">
-     <normaloff>:/resources/icons/treeMod3.svg</normaloff>:/resources/icons/treeMod3.svg</iconset>
-   </property>
    <property name="text">
     <string>Documentation</string>
    </property>
   </action>
   <action name="actionIngest">
    <property name="icon">
-    <iconset resource="../../relic_resources.qrc">
-     <normaloff>:/resources/icons/folder.svg</normaloff>:/resources/icons/folder.svg</iconset>
+    <iconset resource="../../resources.qrc">
+     <normaloff>:/resources/general/folder.svg</normaloff>:/resources/general/folder.svg</iconset>
    </property>
    <property name="text">
     <string>Ingest</string>
@@ -3167,8 +3159,7 @@ QFrame:hover {
  </widget>
  <layoutdefault spacing="6" margin="9"/>
  <resources>
-  <include location="../../relic_resources.qrc"/>
-  <include location="../../Lib/site-packages/qtshare/resources.qrc"/>
+  <include location="../../resources.qrc"/>
  </resources>
  <connections>
   <connection>

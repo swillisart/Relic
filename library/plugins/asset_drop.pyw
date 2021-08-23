@@ -38,7 +38,7 @@ for key, value in json.loads(assets).items():
 app_plugin = None
 
 all_plugins = plugins.retrievePlugins(plugins_path)
-
+    
 for x in all_plugins:
     try:
         mainWindow, relic_panel = x.getMainWindows()

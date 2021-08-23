@@ -16,14 +16,36 @@ RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3']
 HDR_EXT = ['.exr', '.hdr']
 LDR_EXT = ['.jpg', '.png', '.tif', '.tga', '.jpeg']
 LIGHT_EXT = ['.ies']
-DCC_EXT = ['.ma', '.mb', '.max', '.hip']
+DCC_EXT = ['.ma', '.mb', '.max', '.hip', '.usd']
 TOOLS_EXT = ['.nk', '.mel', '.py', '.hda', '.exe']
 GEO_EXT = ['.abc', '.fbx']
+TEXTURE_EXT = HDR_EXT + LDR_EXT
 
 KOHAI = KohaiClient()
 
 INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
+def getAssetSourceLocation(filepath):
+    """Given a filepath this deterimines the relative subfolder location of the 
+    unique dependency for this asset.
+
+    Parameters
+    ----------
+    filepath : str
+
+    Returns
+    -------
+    str
+        one of 3 image, cache or misc depending on matching valid extension
+    """
+    for extension in TEXTURE_EXT:
+        if str(filepath).endswith(extension):
+            return 'source_images'
+    for extension in GEO_EXT:
+        if str(filepath).endswith(extension):
+            return 'source_caches'        
+
+    return 'source_misc'
 
 def kohaiPreview(path):
     KOHAI.requestFileLoad(str(path))
@@ -48,11 +70,10 @@ class Preferences(object):
         'asset_preview_expand': True,
         'assets_per_page': 45,
         'local_storage': '',
-        'fast_storage': '',
+        'network_storage': '',
         'project_variable': 'show',
         'render_using': '',
         'relic_plugins_path': '',
-        'edit_mode': True,
         'edit_mode': True,
         'references_color': '168, 58, 58',
         'modeling_color': '156, 156, 156',

@@ -12,7 +12,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import relic_resources_rc
+import resources_rc
 
 class Ui_ListViewFiltered(object):
     def setupUi(self, ListViewFiltered):
@@ -87,10 +87,10 @@ class Ui_ListViewFiltered(object):
 "    background-color: rgb(57, 57, 57);\n"
 "}\n"
 "QMenu::indicator:non-exclusive:checked {\n"
-"    image: url(:/resources/checkbox_checked.svg);\n"
+"    image: url(:/resources/style/checkbox_checked.svg);\n"
 "}\n"
 "QMenu::indicator:non-exclusive:unchecked {\n"
-"    image: url(:/resources/checkbox.svg);\n"
+"    image: url(:/resources/style/checkbox.svg);\n"
 "}\n"
 "\n"
 "QLineEdit,\n"
@@ -99,8 +99,8 @@ class Ui_ListViewFiltered(object):
 "    background-color: rgb(43, 43, 43);\n"
 "/*\n"
 "    border: 2px solid rgb(43, 43, 43);\n"
-"    border-"
-                        "radius: 3px;\n"
+""
+                        "    border-radius: 3px;\n"
 "    color: rgb(200, 200, 200);\n"
 "    padding: 1px;\n"
 "    margin-top: 0px;\n"
@@ -138,9 +138,9 @@ class Ui_ListViewFiltered(object):
 "    border: 2px solid rgb(43, 43, 43);\n"
 "    margin: -8px 0;\n"
 "	width: 6px;\n"
-"	height: 8px;\n"
-""
-                        "    border-radius: 4px;\n"
+"	height"
+                        ": 8px;\n"
+"    border-radius: 4px;\n"
 "}\n"
 "QSlider::groove {\n"
 "    background: rgb(43, 43, 43);\n"
@@ -176,10 +176,10 @@ class Ui_ListViewFiltered(object):
 "}\n"
 "QScrollBar::add-line:horizontal:hover,\n"
 "QScrollBar::add-line:horizontal:on,\n"
-"QScrollBar::add-line:horizontal {\n"
-"    "
-                        "margin: 0px 3px 0px 0px;\n"
-"    border-image: url(:/resources/stylesheet-branch-closed.png);\n"
+"QScrollBar::add-line:horizontal"
+                        " {\n"
+"    margin: 0px 3px 0px 0px;\n"
+"    border-image: url(:/resources/style/stylesheet-branch-closed.png);\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
 "    subcontrol-position: right;\n"
@@ -189,7 +189,7 @@ class Ui_ListViewFiltered(object):
 "QScrollBar::sub-line:horizontal:on,\n"
 "QScrollBar::sub-line:horizontal {\n"
 "    margin: 0px 0px 0px 3px;\n"
-"    border-image: url(:/resources/stylesheet-branch-closedleft.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-closedleft.png);\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
 "    subcontrol-position: left;\n"
@@ -210,8 +210,8 @@ class Ui_ListViewFiltered(object):
 "}\n"
 "QScrollBar::sub-line:vertical {\n"
 "    margin: 3px 0px 0px 0px;\n"
-"    border-image: url"
-                        "(:/resources/stylesheet-branch-openup.png);\n"
+""
+                        "    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
 "    height: 6px;\n"
 "    width: 10px;\n"
 "    subcontrol-position: top;\n"
@@ -219,7 +219,7 @@ class Ui_ListViewFiltered(object):
 "}\n"
 "QScrollBar::add-line:vertical {\n"
 "    margin: 0px 0px 3px 0px;\n"
-"    border-image: url(:/resources/stylesheet-branch-open.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-open.png);\n"
 "    height: 6px;\n"
 "    width: 10px;\n"
 "    subcontrol-position: bottom;\n"
@@ -242,11 +242,11 @@ class Ui_ListViewFiltered(object):
 "QScrollBar::add-page:vertical,\n"
 "QScrollBar::sub-page:vertical  {\n"
 "    background: none;\n"
-"}\n"
+""
+                        "}\n"
 "\n"
 "QListView,\n"
-"QTre"
-                        "eView,\n"
+"QTreeView,\n"
 "QTableView,\n"
 "QColumnView {\n"
 "    border: none;\n"
@@ -282,16 +282,16 @@ class Ui_ListViewFiltered(object):
 "    border-left-width: 2px;\n"
 "    border-left-color: rgb(68, 68, 68);\n"
 "    border-left-style: solid;\n"
-"    border-top-right-radius: 0px;\n"
-"    border-bottom"
-                        "-right-radius: 0px;\n"
+"    border-top-right-radi"
+                        "us: 0px;\n"
+"    border-bottom-right-radius: 0px;\n"
 "    padding-right: 3px;\n"
 "}\n"
 "QComboBox::down-arrow,\n"
 "QComboBox::down-arrow:on,\n"
 "QComboBox::down-arrow:hover,\n"
 "QComboBox::down-arrow:focus {\n"
-"    image: url(:/resources/stylesheet-branch-open.png);\n"
+"    image: url(:/resources/style/stylesheet-branch-open.png);\n"
 "}\n"
 "")
         self.verticalLayout = QVBoxLayout(ListViewFiltered)
@@ -327,7 +327,7 @@ class Ui_ListViewFiltered(object):
 "	border: none;\n"
 "}")
         icon = QIcon()
-        icon.addFile(u":/resources/icons/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/resources/general/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.searchButton.setIcon(icon)
         self.searchButton.setIconSize(QSize(18, 18))
         self.searchButton.setFlat(False)

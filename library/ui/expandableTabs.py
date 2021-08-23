@@ -12,8 +12,6 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import relic_resources_rc
-import resources_rc
 import resources_rc
 
 class Ui_ExpandableTabs(object):
@@ -82,10 +80,10 @@ class Ui_ExpandableTabs(object):
 "    background-color: rgb(57, 57, 57);\n"
 "}\n"
 "QMenu::indicator:non-exclusive:checked {\n"
-"    image: url(:/resources/checkbox_checked.svg);\n"
+"    image: url(:/resources/style/checkbox_checked.svg);\n"
 "}\n"
 "QMenu::indicator:non-exclusive:unchecked {\n"
-"    image: url(:/resources/checkbox.svg);\n"
+"    image: url(:/resources/style/checkbox.svg);\n"
 "}\n"
 "\n"
 "QLineEdit,\n"
@@ -102,8 +100,8 @@ class Ui_ExpandableTabs(object):
 "*/\n"
 "}\n"
 "\n"
-"/* QSlider ------------------------------"
-                        "---------------------------------- */\n"
+"/* QSlider ------------------"
+                        "---------------------------------------------- */\n"
 "QSlider::add-page:horizontal, \n"
 "QSlider::sub-page:horizontal,\n"
 "QSlider::add-page:vertical, \n"
@@ -140,9 +138,9 @@ class Ui_ExpandableTabs(object):
 "    background: rgb(43, 43, 43);\n"
 "    border: 1px solid rgb(68, 68, 68);\n"
 "    border-radius: 4px;\n"
-"    margin: 0px;\n"
-""
-                        "}\n"
+"    margi"
+                        "n: 0px;\n"
+"}\n"
 "QSlider::groove:horizontal {\n"
 "    height: 4px;\n"
 "}\n"
@@ -172,9 +170,12 @@ class Ui_ExpandableTabs(object):
 "    background-color: rgb(57, 57, 57);\n"
 "   /* background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));*/\n"
 "\n"
-"   /* border: 1px solid rgb(43,43,43);*/\n"
-"    border: 2px solid rgb(57,57,57);\n"
-"\n"
+"    border: 1px solid rgb(43,43,43);\n"
+"    border-top: 1px solid rgb(92,92,92);\n"
+"	border-radius: 2px;\n"
+"    /* border: 2px solid rgb(57,57,57);*/\n"
+"	/*border: none;*/\n"
+"	padding: 1px;\n"
 "}")
         self.HeaderFrame.setFrameShape(QFrame.StyledPanel)
         self.HeaderFrame.setFrameShadow(QFrame.Raised)
@@ -234,7 +235,7 @@ class Ui_ExpandableTabs(object):
 "border: none;\n"
 "background-color: rgb(57, 57, 57);")
         icon = QIcon()
-        icon.addFile(u":/resources/icons/references.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/resources/asset_types/reference.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.iconButton.setIcon(icon)
         self.iconButton.setIconSize(QSize(24, 24))
 
@@ -292,8 +293,8 @@ class Ui_ExpandableTabs(object):
 "    color: rgb(250, 250, 250);\n"
 "}")
         icon1 = QIcon()
-        icon1.addFile(u":/resources/icons/blankCubeGrey.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon1.addFile(u":/resources/icons/treeExpandGrey.svg", QSize(), QIcon.Active, QIcon.On)
+        icon1.addFile(u":/resources/app/blankCubeGrey.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/resources/app/treeExpandGrey.svg", QSize(), QIcon.Active, QIcon.On)
         self.checkButton.setIcon(icon1)
         self.checkButton.setCheckable(True)
 
@@ -309,6 +310,7 @@ class Ui_ExpandableTabs(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.ContentFrame.sizePolicy().hasHeightForWidth())
         self.ContentFrame.setSizePolicy(sizePolicy1)
+        self.ContentFrame.setStyleSheet(u"")
         self.ContentFrame.setFrameShape(QFrame.StyledPanel)
         self.ContentFrame.setFrameShadow(QFrame.Raised)
         self.horizontalLayout_3 = QHBoxLayout(self.ContentFrame)
@@ -334,6 +336,9 @@ class Ui_ExpandableTabs(object):
         self.frame.setObjectName(u"frame")
         sizePolicy1.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy1)
+        self.frame.setStyleSheet(u"QWidget {\n"
+"	background-color: rgb(48, 48, 48);\n"
+"}")
         self.frame.setFrameShape(QFrame.StyledPanel)
         self.frame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame)
@@ -406,7 +411,7 @@ class Ui_ExpandableTabs(object):
         sizePolicy3.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy3)
         icon2 = QIcon()
-        icon2.addFile(u":/resources/stylesheet-branch-openup.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/resources/style/stylesheet-branch-openup.png", QSize(), QIcon.Normal, QIcon.Off)
         self.pushButton.setIcon(icon2)
         self.pushButton.setIconSize(QSize(10, 10))
 
@@ -417,7 +422,7 @@ class Ui_ExpandableTabs(object):
         sizePolicy3.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
         self.pushButton_2.setSizePolicy(sizePolicy3)
         icon3 = QIcon()
-        icon3.addFile(u":/resources/stylesheet-branch-open.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/resources/style/stylesheet-branch-open.png", QSize(), QIcon.Normal, QIcon.Off)
         self.pushButton_2.setIcon(icon3)
         self.pushButton_2.setIconSize(QSize(10, 10))
 

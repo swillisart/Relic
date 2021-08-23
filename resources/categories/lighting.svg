@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: -->
+
+<svg
+   width="256pt"
+   height="256pt"
+   viewBox="0 0 256 256"
+   version="1.1"
+   id="svg1205"
+   sodipodi:docname="lighting.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1209">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient8644">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="0"
+         id="stop8640" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0;"
+         offset="1"
+         id="stop8642" />
+    </linearGradient>
+    <radialGradient
+       id="GRAD_10-2"
+       gradientUnits="userSpaceOnUse"
+       cx="140.00999"
+       cy="158.82001"
+       r="52.116417"
+       gradientTransform="matrix(0.16272448,0.98667155,0.87299683,-0.14397695,15.24526,40.851889)"
+       fx="140.00999"
+       fy="158.82001">
+      <stop
+         offset="0"
+         style="stop-color:rgb(255,255,193)"
+         opacity="1"
+         id="stop1127-8" />
+      <stop
+         offset="1"
+         style="stop-color:rgb(255,255,191)"
+         opacity="1"
+         id="stop1129-3" />
+    </radialGradient>
+    <radialGradient
+       id="GRAD_9-8"
+       gradientUnits="userSpaceOnUse"
+       cx="24.5"
+       cy="145.91"
+       r="86.62603"
+       gradientTransform="matrix(0.34202014,0.93969262,0.93969262,-0.34202014,-20.450546,48.208233)">
+      <stop
+         offset="0"
+         style="stop-color:rgb(255,255,230)"
+         opacity="1"
+         id="stop1118-1" />
+      <stop
+         offset="1"
+         style="stop-color:rgb(255,255,229)"
+         opacity="1"
+         id="stop1120-6" />
+    </radialGradient>
+    <radialGradient
+       id="GRAD_13-4"
+       gradientUnits="userSpaceOnUse"
+       cx="147.11"
+       cy="166"
+       r="85.492905"
+       gradientTransform="matrix(-0.2923717,-0.95630476,-0.95630476,0.2923717,420.66311,199.35045)">
+      <stop
+         offset="0"
+         style="stop-color:rgb(255,255,230)"
+         opacity="1"
+         id="stop1154-1" />
+      <stop
+         offset="1"
+         style="stop-color:rgb(255,255,229)"
+         opacity="1"
+         id="stop1156-7" />
+    </radialGradient>
+    <radialGradient
+       id="GRAD_10-7"
+       gradientUnits="userSpaceOnUse"
+       cx="140.00999"
+       cy="158.82001"
+       r="52.116417"
+       gradientTransform="matrix(0.34202014,0.93969262,0.93969262,-0.34202014,-20.450564,78.882622)">
+      <stop
+         offset="0"
+         style="stop-color:rgb(255,255,193)"
+         opacity="1"
+         id="stop1127-5" />
+      <stop
+         offset="1"
+         style="stop-color:rgb(255,255,191)"
+         opacity="1"
+         id="stop1129-7" />
+    </radialGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient8644"
+       id="radialGradient8648"
+       cx="131.16116"
+       cy="196.84987"
+       fx="131.16116"
+       fy="196.84987"
+       r="36.301102"
+       gradientTransform="matrix(1.5570924,0,0,1.4161543,-73.068899,-111.60109)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview1207"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="pt"
+     showgrid="false"
+     inkscape:zoom="2.6279297"
+     inkscape:cx="184.55593"
+     inkscape:cy="182.84355"
+     inkscape:window-width="1920"
+     inkscape:window-height="1147"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1205" />
+  <g
+     id="FRAME_0"
+     style="visibility:visible"
+     fill-rule="evenodd"
+     transform="rotate(110,113.20454,138.04569)">
+    <defs
+       id="defs1042">
+      <radialGradient
+         id="GRAD_0"
+         gradientUnits="userSpaceOnUse"
+         cx="32.889999"
+         cy="25.85"
+         r="88.713997">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,231)"
+           opacity="1"
+           id="stop1037" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,230)"
+           opacity="1"
+           id="stop1039" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1051">
+      <radialGradient
+         id="GRAD_1"
+         gradientUnits="userSpaceOnUse"
+         cx="151.49001"
+         cy="101.87"
+         r="74.559044">
+        <stop
+           offset="0"
+           style="stop-color:rgb(119,119,119)"
+           opacity="1"
+           id="stop1046" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(113,113,113)"
+           opacity="1"
+           id="stop1048" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1060">
+      <radialGradient
+         id="GRAD_2"
+         gradientUnits="userSpaceOnUse"
+         cx="98.510002"
+         cy="121.25"
+         r="110.56953">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,255)"
+           opacity="1"
+           id="stop1055" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,255)"
+           opacity="1"
+           id="stop1057" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1069">
+      <radialGradient
+         id="GRAD_3"
+         gradientUnits="userSpaceOnUse"
+         cx="34.939999"
+         cy="26.790001"
+         r="88.713997">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,247,134)"
+           opacity="1"
+           id="stop1064" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,247,134)"
+           opacity="1"
+           id="stop1066" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1078">
+      <radialGradient
+         id="GRAD_4"
+         gradientUnits="userSpaceOnUse"
+         cx="108.22"
+         cy="76.190002"
+         r="9.6777792">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,157)"
+           opacity="1"
+           id="stop1073" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,157)"
+           opacity="1"
+           id="stop1075" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1087">
+      <radialGradient
+         id="GRAD_5"
+         gradientUnits="userSpaceOnUse"
+         cx="102.54"
+         cy="73.389999"
+         r="49.712318">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,203)"
+           opacity="1"
+           id="stop1082" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,201)"
+           opacity="1"
+           id="stop1084" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1096">
+      <radialGradient
+         id="GRAD_6"
+         gradientUnits="userSpaceOnUse"
+         cx="141.83"
+         cy="36.880001"
+         r="130.84328">
+        <stop
+           offset="0"
+           style="stop-color:rgb(149,149,149)"
+           opacity="1"
+           id="stop1091" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(82,82,82)"
+           opacity="1"
+           id="stop1093" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1105">
+      <radialGradient
+         id="GRAD_7"
+         gradientUnits="userSpaceOnUse"
+         cx="156.31767"
+         cy="87.655807"
+         r="52.116417"
+         fx="156.31767"
+         fy="87.655807">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,177)"
+           opacity="1"
+           id="stop1100" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,176)"
+           opacity="1"
+           id="stop1102" />
+      </radialGradient>
+    </defs>
+    <path
+       style="fill:#ffffb0;fill-opacity:1;stroke-width:0"
+       d="M 132,83 162.32086,101.05976 151,131.5 131.5,113.5 132,83"
+       id="path1107"
+       sodipodi:nodetypes="ccccc" />
+    <defs
+       id="defs1114">
+      <radialGradient
+         id="GRAD_8"
+         gradientUnits="userSpaceOnUse"
+         cx="151.49001"
+         cy="101.87"
+         r="81.956528">
+        <stop
+           offset="0"
+           style="stop-color:rgb(144,144,144)"
+           opacity="1"
+           id="stop1109" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(137,137,137)"
+           opacity="1"
+           id="stop1111" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1123">
+      <radialGradient
+         id="GRAD_9"
+         gradientUnits="userSpaceOnUse"
+         cx="24.5"
+         cy="145.91"
+         r="86.62603"
+         gradientTransform="translate(-28.82451,10.491264)">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,230)"
+           opacity="1"
+           id="stop1118" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,229)"
+           opacity="1"
+           id="stop1120" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1132">
+      <radialGradient
+         id="GRAD_10"
+         gradientUnits="userSpaceOnUse"
+         cx="140.00999"
+         cy="158.82001"
+         r="52.116417">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,193)"
+           opacity="1"
+           id="stop1127" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,191)"
+           opacity="1"
+           id="stop1129" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1141">
+      <radialGradient
+         id="GRAD_11"
+         gradientUnits="userSpaceOnUse"
+         cx="104.99"
+         cy="117.82"
+         r="11.340944">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,152)"
+           opacity="1"
+           id="stop1136" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,152)"
+           opacity="1"
+           id="stop1138" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1150">
+      <radialGradient
+         id="GRAD_12"
+         gradientUnits="userSpaceOnUse"
+         cx="28.620001"
+         cy="155.42"
+         r="86.979828">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,139)"
+           opacity="1"
+           id="stop1145" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,139)"
+           opacity="1"
+           id="stop1147" />
+      </radialGradient>
+    </defs>
+    <defs
+       id="defs1159">
+      <radialGradient
+         id="GRAD_13"
+         gradientUnits="userSpaceOnUse"
+         cx="147.11"
+         cy="166"
+         r="85.492905"
+         gradientTransform="rotate(177,125.97938,184.6218)">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,230)"
+           opacity="1"
+           id="stop1154" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,229)"
+           opacity="1"
+           id="stop1156" />
+      </radialGradient>
+    </defs>
+    <path
+       style="color:#000000;fill:url(#GRAD_13);stroke-width:0;-inkscape-stroke:none"
+       d="m 105.44942,228.08164 0.25,-24 c 12.82702,-26.62022 26.67108,-56.8822 37.97684,-79.32316 L 151,131.5 105.44942,228.08164"
+       id="path1161" />
+    <defs
+       id="defs1168">
+      <radialGradient
+         id="GRAD_14"
+         gradientUnits="userSpaceOnUse"
+         cx="95.779999"
+         cy="235.47"
+         r="10.288683">
+        <stop
+           offset="0"
+           style="stop-color:rgb(255,255,150)"
+           opacity="1"
+           id="stop1163" />
+        <stop
+           offset="1"
+           style="stop-color:rgb(255,255,150)"
+           opacity="1"
+           id="stop1165" />
+      </radialGradient>
+    </defs>
+  </g>
+  <path
+     style="color:#000000;fill:url(#GRAD_13-4);stroke-width:0;-inkscape-stroke:none"
+     d="m 229.94191,99.964155 -18.72905,7.177235 C 190.58513,128.2995 166.4907,152.8718 149.26989,171.171 l 9.23225,3.36338 71.43977,-74.570225"
+     id="path1161-2" />
+  <path
+     style="visibility:visible;fill:#ffffe5;fill-opacity:1;stroke-width:0"
+     d="m 149.26989,171.171 c -3.134,-32.17259 -11.5921,-147.635015 -18.15252,-147.306687 -7.29768,0.03565 -16.71758,118.809697 -15.84888,147.359917"
+     id="path1125-1"
+     sodipodi:nodetypes="ccc" />
+  <ellipse
+     style="fill:url(#radialGradient8648);fill-opacity:1;stroke:#fffeb7;stroke-width:7.76705;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:3.82667;stroke-opacity:1;paint-order:stroke markers fill"
+     id="path7126"
+     ry="45.209015"
+     rx="50.295807"
+     cy="167.16872"
+     cx="131.16116" />
+</svg>

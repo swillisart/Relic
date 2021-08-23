@@ -51,7 +51,7 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         super(ExpandableTab, self).__init__(parent)
         self.setupUi(self)
         self.state = False
-        icon = QIcon(':/resources/icons/{}.svg'.format(asset_type.lower()))
+        icon = QIcon(':/resources/asset_types/{}.svg'.format(asset_type.lower()))
         self.iconButton.setIcon(icon)
         self.nameLabel.setText(asset_type + 's')
         self.styledLine_1.hide()
@@ -92,7 +92,7 @@ class LinkViewWidget(QWidget):
     def createGroups(self):
         self.all_tabs = []
     
-        for index, asset_type in enumerate(typeWidget.types):
+        for index, asset_type in enumerate(typeWidget.LABELS):
             view = assetListView(self)
             proxyModel = assetTypeFilter(index+1)
             proxyModel.setDynamicSortFilter(True)

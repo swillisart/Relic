@@ -10,7 +10,7 @@ import libraw
 import numpy as np
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
-from library.config import log, logFunction, MOVIE_EXT, RELIC_PREFS
+from library.config import log, logFunction, MOVIE_EXT, RELIC_PREFS, DCC_EXT, getAssetSourceLocation
 from library.objectmodels import BaseFields, relic_asset, temp_asset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QMutex, QObject, QPoint, QMutexLocker,
@@ -169,7 +169,7 @@ class ConversionRouter(QObject):
                     asset = func()
                     self.progress.emit(asset)
                 except Exception as exerr:
-                    log.error(exerr)
+                    log.error('conversion error: %s' % exerr)
                     #self.error.emit(exerr)
 
     @staticmethod
@@ -433,7 +433,7 @@ class IngestionThread(QThread):
                     return
 
                 self.mutex.lock()
-                file_id, item = self.queue.pop(0)
+                temp_filename, item, extra_files = self.queue.pop(0)
                 ingest_path = self.ingest_path
                 self.mutex.unlock()
 
@@ -446,16 +446,31 @@ class IngestionThread(QThread):
 
                 files_map = {}
 
-                temp_filename = 'unsorted' + file_id
                 temp_path = ingest_path / temp_filename
 
-                in_icon = temp_path.suffixed('_icon', ext='.jpg')
-                out_icon = out_path.suffixed('_icon', ext='.jpg')
+                files_map[in_path] = out_path
 
-                files_map[in_icon] = out_icon
-                #in_path.checkSequence()
-                if in_path.sequence_path or in_path.ext in MOVIE_EXT:
-                    files_map[in_path] = out_path
+                # Add extra auxillary files to the packaged content.
+                if extra_files:
+                    for extra in extra_files:
+                        subfolder = getAssetSourceLocation(extra)
+                        filename = Path(extra).stem
+                        new_path = out_path.parents(0) / subfolder / filename
+
+                        files_map[Path(extra)] = new_path
+
+                if in_path.ext in ['.ma', '.mb']:
+                    formats = [
+                        ['', '.mtlx'],
+                        ['_icon', '.jpg'],
+                        ['_icon', '.mp4'],
+                    ]
+                    for pair in formats:
+                        suffix, ext = pair
+                        src = in_path.suffixed(suffix, ext)
+                        dst = out_path.suffixed(suffix, ext)
+                        files_map[src] = dst
+                elif in_path.sequence_path or in_path.ext in MOVIE_EXT:
                     in_proxy = temp_path.suffixed('_proxy', ext='.mp4')
                     out_proxy = out_path.suffixed('_proxy', ext='.mp4')
 
@@ -463,22 +478,27 @@ class IngestionThread(QThread):
                     in_icon_mov = temp_path.suffixed('_icon', ext='.mp4')
                     out_icon_mov = out_path.suffixed('_icon', ext='.mp4')
                     files_map[in_icon_mov] = out_icon_mov
-
+                    files_map[in_icon] = out_icon
+                    files_map[in_proxy] = out_proxy
                 else: # Only single-frame images have proxy jpegs.
-                    files_map[in_path] = out_path
                     in_proxy = temp_path.suffixed('_proxy', ext='.jpg')
                     out_proxy = out_path.suffixed('_proxy', ext='.jpg')
 
-                files_map[in_proxy] = out_proxy
+                    in_icon = temp_path.suffixed('_icon', ext='.jpg')
+                    out_icon = out_path.suffixed('_icon', ext='.jpg')
+
+                    files_map[in_icon] = out_icon
+                    files_map[in_proxy] = out_proxy
+
                 for src, dst in files_map.items():
                     if src.sequence_path:
                         for seq_file in glob.glob(src.sequence_path):
                             frame = Path(seq_file).frame
                             src.frame = frame
                             dst.frame = frame
-                            src.moveTo(dst)
+                            src.copyTo(dst)
                     else:
-                        src.moveTo(dst)
+                        src.copyTo(dst)
                 item.filehash = out_path.parents(0).hash
                 item.filesize = out_path.parents(0).size
                 # Clear the Id to allow for database creation

@@ -14,9 +14,13 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFrame,
                                QSizePolicy, QSpacerItem, QStyledItemDelegate,
                                QStyleOptionViewItem, QTextBrowser, QWidget)
 
-ASSET_TYPES = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
+TYPE_LABELS = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
     'Reference']
-TYPE_ICONS = [QIcon(':/resources/icons/{}.svg'.format(x.lower())) for x in ASSET_TYPES]
+TYPE_ICONS = [QIcon(':/resources/asset_types/{}.svg'.format(x.lower())) for x in TYPE_LABELS]
+CATEGORY_ICONS = [QIcon(':/resources/categories/{}.svg'.format(x.lower())) for x in allCategories.__slots__]
+
+class MetaLabel(QLabel):
+    pass
 
 class metadataFormView(QFrame):
 
@@ -24,7 +28,6 @@ class metadataFormView(QFrame):
         super(metadataFormView, self).__init__(*args, **kwargs)
         self.layout = QGridLayout(self)
         self.setAutoFillBackground(True)
- 
 
     def clearLayout(self):
         layout = self.layout
@@ -35,6 +38,11 @@ class metadataFormView(QFrame):
                 layout.takeAt(i)
             elif w:
                 w.hide()
+                if isinstance(w, metadataRelationView):
+                    w.clear()
+                elif not isinstance(w, (QHLine, MetaLabel)):
+                    w.reset()
+                
 
     def createWidget(self, label, value):
         # Create our widget from globals
@@ -46,7 +54,8 @@ class metadataFormView(QFrame):
             label_text = '{} : {} '.format(label, len(value))
         else:
             label_text = '{} : '.format(label)
-        meta_label = QLabel(label_text.capitalize())
+        meta_label = MetaLabel(label_text.capitalize())
+
 
         return meta_widget, meta_label
 
@@ -96,6 +105,9 @@ class baseRating(QWidget):
         self.setSpaces()
         self.setMinimumHeight(18)
 
+    def reset(self):
+        self.setValue(0)
+
     def setCount(self, count):
         self.count = count + 1
 
@@ -108,7 +120,7 @@ class baseRating(QWidget):
         """
         self.spaces = np.linspace(0, self.width(), self.count)
 
-    def setImagePath(self, img_path):
+    def setRepeatImage(self, img_path):
         self.img = rasterizeSVG(img_path)
         find = r'rgb\([0-9]+,[0-9]+,[0-9]+\)'
         replace = 'rgb(100,100,100)'
@@ -160,6 +172,8 @@ class baseLabel(QLabel):
     def setValue(self, value):
         self.setText(str(value))
     
+    def reset(self):
+        self.clear()
 
 class dateLabel(baseLabel):
     def __init__(self, *args, **kwargs):
@@ -223,10 +237,8 @@ class tagListViewer(ListViewFiltered):
         else:
             super(tagListViewer, self).filterRegExpChanged()
 
-
-
     def sizeHint(self):
-        return QSize(275, 200)
+        return QSize(275, 250)
 
 
 class userListViewer(ListViewFiltered):
@@ -253,7 +265,7 @@ class userListViewer(ListViewFiltered):
             super(userListViewer, self).filterRegExpChanged()
 
     def sizeHint(self):
-        return QSize(275, 200)
+        return QSize(275, 250)
 
 
 class metadataRelationView(QListView):
@@ -373,11 +385,13 @@ class tagsWidget(metadataRelationView):
 
     def __init__(self, parent=None):
         super(tagsWidget, self).__init__(parent)
+        self.setMinimumHeight(72)
+
         self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 2px;')
         self.icons = {
-            0: QIcon(":/resources/icons/tagIcon.svg"),
-            1: QIcon(modifySVG(":/resources/icons/tagIcon.svg", '(200,157,8)', '(175,115,250)')),
-            2: QIcon(":/resources/icons/plugin.svg")
+            0: QIcon(":/resources/app/tagIcon.svg"),
+            1: QIcon(modifySVG(":/resources/app/tagIcon.svg", '(200,157,8)', '(175,115,250)')),
+            2: QIcon(":/resources/app/plugin.svg")
         }
         self.category_map = 2
         # Item editor
@@ -394,7 +408,7 @@ class alusersWidget(metadataRelationView):
         self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 2px;')
 
         self.icons = {
-            0: QIcon(":/resources/icons/user.png"),
+            0: QIcon(":/resources/app/user.png"),
         }
         self.category_map = 1
         # Item editor
@@ -408,7 +422,7 @@ class qualityWidget(baseRating):
 
     def __init__(self, *args, **kwargs):
         super(qualityWidget, self).__init__(*args, **kwargs)
-        self.setImagePath(":/resources/icons/star.svg")
+        self.setRepeatImage(":/resources/app/star.svg")
         self.setCount(5)
 
     def sizeHint(self):
@@ -419,7 +433,7 @@ class ratingWidget(baseRating):
 
     def __init__(self, *args, **kwargs):
         super(ratingWidget, self).__init__(*args, **kwargs)
-        self.setImagePath(":/resources/icons/heart.svg")
+        self.setRepeatImage(":/resources/app/heart.svg")
         self.setCount(10)
 
     def sizeHint(self):
@@ -440,22 +454,26 @@ class descriptionWidget(QLabel):
     def sizeHint(self):
         return QSize(1920, 96)
 
+    def reset(self):
+        self.setText('No Description...')
 
 class typeWidget(QComboBox):
 
-    types = ASSET_TYPES
-    icons = TYPE_ICONS
+    LABELS = TYPE_LABELS
+    ICONS = TYPE_ICONS
 
     def __init__(self, *args, **kwargs):
         super(typeWidget, self).__init__(*args, **kwargs)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setIconSize(QSize(24, 24))
-        for index, icon in enumerate(self.icons):
-            self.addItem(icon, self.types[index])
+        for index, icon in enumerate(self.ICONS):
+            self.addItem(icon, self.LABELS[index])
 
     def setValue(self, value):
         self.setCurrentIndex(int(value)-1)
 
+    def reset(self):
+        self.setCurrentIndex(0)
 
 class classWidget(QComboBox):
 
@@ -501,6 +519,9 @@ class classWidget(QComboBox):
 
     def setValue(self, value):
         self.setCurrentIndex(value)
+
+    def reset(self):
+        self.setCurrentIndex(0)
 
 
 class datecreatedWidget(dateLabel):
@@ -557,17 +578,21 @@ class pathWidget(baseLabel):
 
 class categoryWidget(QComboBox):
 
+    LABELS = allCategories.__slots__
+    ICONS = CATEGORY_ICONS
+
     def __init__(self, *args, **kwargs):
         super(categoryWidget, self).__init__(*args, **kwargs)
-        self.setIconSize(QSize(20, 20))
-        for x in allCategories.__slots__:
-            icon = QIcon(':/resources/icons/{}.svg'.format(x.lower()))
-            self.addItem(icon, x.capitalize())
+        self.setIconSize(QSize(24, 24))
+        for index, icon in enumerate(self.ICONS):
+            self.addItem(icon, self.LABELS[index].capitalize())
 
     def setValue(self, value):
         if value:
             self.setCurrentIndex(int(value))
 
+    def reset(self):
+        self.setCurrentIndex(0)
 
 class subcategoryWidget(QComboBox):
 
@@ -578,8 +603,11 @@ class subcategoryWidget(QComboBox):
 
     def setValue(self, value):
         self.clear()
-        icon = QIcon(':/resources/folder.svg')
+        icon = QIcon(':/resources/general/folder.svg')
         try:
             self.addItem(icon, value[0].name)
         except Exception as exerr:
             self.addItem(icon, str(value))
+
+    def reset(self):
+        self.setCurrentIndex(0)

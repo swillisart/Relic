@@ -3,19 +3,22 @@ import math
 import os
 import sys
 from functools import partial
+
 # -- Third-party --
 from PySide6.QtCore import Slot, QPoint, QModelIndex
-from PySide6.QtGui import QFontDatabase, QFont, QIcon, QColor, Qt, QTextDocument, QTextCursor
+from PySide6.QtGui import QPixmap, QImage, QFontDatabase, QFont, QIcon, QColor, Qt, QTextDocument, QTextCursor
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon,
     QMenu, QWidget, QSizePolicy,QFrame, QGraphicsDropShadowEffect, QLabel, QTextBrowser)
 
 # -- First-party --
 from sequencePath import sequencePath as Path
+from kohainetwork import server
+server.SERVER_NAME = 'relic_ingest'
 
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
 from library.config import RELIC_PREFS, kohaiPreview
-from library.objectmodels import Library, db, polymorphicItem
+from library.objectmodels import Library, db, polymorphicItem, temp_asset
 from library.widgets.assets import assetItemModel, assetListView
 from library.widgets.subcategoriesViews import ExpandableTab, CategoryManager
 from library.widgets.metadataView import metadataFormView
@@ -126,7 +129,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def __init__(self, *args, **kwargs):
         super(RelicMainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        self.app_icon = QIcon(':/resources/icons/app_icon.svg')
+        self.app_icon = QIcon(':/resources/app/app_icon.svg')
         self.tray = QSystemTrayIcon(self.app_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
@@ -212,7 +215,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def showDocumentation(self):
         self.documentationTextBrowser.setMarkdown(raw_md)
-        wat = DialogOverlay(self, self.documentationDock)
+        DialogOverlay(self, self.documentationDock)
 
     @Slot()
     def searchPage(self, text):
@@ -227,21 +230,28 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot()
     def beginIngest(self):
+        self.assets_view.hide()
         ingest = IngestForm()
-        #ingest.baaaaaaa.connect(self.doit)
         self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.Minimum) 
         ingest.setCategoryView(self.categoryDock, self.categoryLayout)
         ingest.beforeClose.connect(self.onIngestClosed)
         self.category_manager.blockSignals(True)
         DialogOverlay(self, ingest, modal=False)
+        return ingest
 
+    @Slot()
+    def externalCommand(self, asset_data):
+        ingest = self.beginIngest()
+        ingest.collectFromJson(asset_data)
 
     @Slot()
     def onIngestClosed(self, dock):
+        self.assets_view.show()
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
         self.category_manager.blockSignals(False)
-        self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding) 
-
+        try:
+            self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding) 
+        except:pass
 
     def hideDocks(self, state):
         self.categoryExpandButton.setChecked(state)
@@ -305,6 +315,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         indexes = selection.indexes()
 
         if indexes:
+            if sender.parent().drag_select:
+                # TODO: table / grid view for editing. 
+                return
             asset = indexes[0].data(polymorphicItem.Object)
             asset.related(noassets=True)
             self.metatdata_view.loadAsset(asset)
@@ -352,6 +365,8 @@ def main(args):
     ctypes.windll.kernel32.SetConsoleTitleW("Relic")
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic")
     window = RelicMainWindow()
+    ingest_server = server.KohaiServer()
+    ingest_server.incomingFile.connect(window.externalCommand)
     window.resize(1600, 925)
     window.show()
     sys.exit(app.exec_())

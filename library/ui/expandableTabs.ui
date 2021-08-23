@@ -74,10 +74,10 @@ QMenu::icon {
     background-color: rgb(57, 57, 57);
 }
 QMenu::indicator:non-exclusive:checked {
-    image: url(:/resources/checkbox_checked.svg);
+    image: url(:/resources/style/checkbox_checked.svg);
 }
 QMenu::indicator:non-exclusive:unchecked {
-    image: url(:/resources/checkbox.svg);
+    image: url(:/resources/style/checkbox.svg);
 }
 
 QLineEdit,
@@ -181,9 +181,12 @@ QSlider::sub-page:horizontal:disabled {
     background-color: rgb(57, 57, 57);
    /* background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));*/
 
-   /* border: 1px solid rgb(43,43,43);*/
-    border: 2px solid rgb(57,57,57);
-
+    border: 1px solid rgb(43,43,43);
+    border-top: 1px solid rgb(92,92,92);
+	border-radius: 2px;
+    /* border: 2px solid rgb(57,57,57);*/
+	/*border: none;*/
+	padding: 1px;
 }</string>
      </property>
      <property name="frameShape">
@@ -320,8 +323,8 @@ background-color: rgb(57, 57, 57);</string>
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset resource="../../relic_resources.qrc">
-            <normaloff>:/resources/icons/references.svg</normaloff>:/resources/icons/references.svg</iconset>
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/asset_types/reference.svg</normaloff>:/resources/asset_types/reference.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -439,9 +442,9 @@ QToolButton:hover {
          <string>...</string>
         </property>
         <property name="icon">
-         <iconset resource="../../relic_resources.qrc">
-          <normaloff>:/resources/icons/blankCubeGrey.svg</normaloff>
-          <activeon>:/resources/icons/treeExpandGrey.svg</activeon>:/resources/icons/blankCubeGrey.svg</iconset>
+         <iconset resource="../../resources.qrc">
+          <normaloff>:/resources/app/blankCubeGrey.svg</normaloff>
+          <activeon>:/resources/app/treeExpandGrey.svg</activeon>:/resources/app/blankCubeGrey.svg</iconset>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -458,6 +461,9 @@ QToolButton:hover {
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -522,6 +528,11 @@ QToolButton:hover {
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QWidget {
+	background-color: rgb(48, 48, 48);
+}</string>
         </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
@@ -657,8 +668,8 @@ border: 1px solid rgb(68,68,68);
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../Lib/site-packages/qtshare/resources.qrc">
-                <normaloff>:/resources/stylesheet-branch-openup.png</normaloff>:/resources/stylesheet-branch-openup.png</iconset>
+               <iconset resource="../../resources.qrc">
+                <normaloff>:/resources/style/stylesheet-branch-openup.png</normaloff>:/resources/style/stylesheet-branch-openup.png</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -680,8 +691,8 @@ border: 1px solid rgb(68,68,68);
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../Lib/site-packages/qtshare/resources.qrc">
-                <normaloff>:/resources/stylesheet-branch-open.png</normaloff>:/resources/stylesheet-branch-open.png</iconset>
+               <iconset resource="../../resources.qrc">
+                <normaloff>:/resources/style/stylesheet-branch-open.png</normaloff>:/resources/style/stylesheet-branch-open.png</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -728,9 +739,7 @@ border: 1px solid rgb(68,68,68);
   </layout>
  </widget>
  <resources>
-  <include location="../../relic_resources.qrc"/>
-  <include location="../../Lib/site-packages/qtshare/resources.qrc"/>
-  <include location="../../Lib/site-packages/qtshare/resources.qrc"/>
+  <include location="../../resources.qrc"/>
  </resources>
  <connections/>
 </ui>

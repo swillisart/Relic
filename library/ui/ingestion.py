@@ -946,7 +946,7 @@ class Ui_IngestForm(object):
         self.retranslateUi(IngestForm)
         self.cancelButton.clicked.connect(IngestForm.close)
 
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(IngestForm)

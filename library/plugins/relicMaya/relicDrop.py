@@ -1,5 +1,7 @@
 import sys
 import json
+import re
+from functools import partial
 
 import maya.OpenMayaUI as omui
 import maya.api.OpenMaya as om
@@ -12,26 +14,8 @@ from relic_base.config import LOG, logFunction
 
 from sequencePath import sequencePath as Path
 
-import MaterialX as mx
-
-class Namespace(str):
-    """Convenience Namespace context manager
-    """
-    def __init__(self, namespace):
-        self._namespace = namespace
-    
-    def __str__(self):
-        return self._namespace
-
-    def __enter__(self):
-        # Set Maya's active namespace to relative asset 
-        cmds.namespace(relativeNames=1)
-        cmds.namespace(set=self._namespace)
-
-    def __exit__(self, x_type, x_value, x_tb):
-        # Set Maya's namespace back to aboslute root 
-        cmds.namespace(set=':')
-        cmds.namespace(relativeNames=0)
+#REF_ID_REGEX = re.compile(r'\{[0-9]\}')
+EDIT_EXT = 'editMB'
 
 # Using the Maya Python API 2.0.
 def maya_useNewAPI():
@@ -39,7 +23,7 @@ def maya_useNewAPI():
 
 def addRelicAttributes(asset):
     maya_ref = '{}RN'.format(asset.name)
-    cmds.lockNode(maya_ref , lock=0)
+    cmds.lockNode(maya_ref, lock=False)
 
     attr = 'RELIC_hash'
     cmds.addAttr(maya_ref, longName=attr, dataType='string')
@@ -52,6 +36,11 @@ def addRelicAttributes(asset):
     attr = 'RELIC_id'
     cmds.addAttr(maya_ref, longName=attr, attributeType='long')
     cmds.setAttr(maya_ref + '.' + attr, asset.id, edit=1)
+
+    attr = 'RELIC_type'
+    cmds.addAttr(maya_ref, longName=attr, attributeType='long')
+    cmds.setAttr(maya_ref + '.' + attr, asset.type, edit=1)
+
 
 class RelicDropCallback(omui.MExternalDropCallback):
     INSTANCE = None
@@ -73,36 +62,30 @@ class RelicDropCallback(omui.MExternalDropCallback):
         data.keyboardModifiers() & omui.MExternalDropData.kControlModifier
         data.keyboardModifiers() & omui.MExternalDropData.kAltModifier
         """
-        drop_script = data.urls()[0]
+        drop_script = data.urls()[0]    
         assets = data.text()
         if data.hasFormat(b'application/x-relic') and data.hasUrls() and not doDrop:# and data.hasUrls():
-            #files = []
             for key, values in json.loads(assets).items():
-                constructor = getattr(asset_classes, str(key))
+                constructor = asset_classes.getCategoryConstructor(key)
                 for fields in values:
                     asset = constructor(**fields)
                     added = self.relicPanel.group_widget.addAsset(asset)
                     if added:
-                        print(asset.upstream)
-                        self.assetDropAction(asset)
-                        #files.append(asset.path)
+                        maya_drop = partial(self.assetDropAction, asset)
+                        icon_update = partial(asset_views.updateIcon, asset)
+                        callbacks = [icon_update, maya_drop, applyLinkedEdits]
+                        asset.setDownloadCompletionCallbacks(callbacks)
+                        asset.download()
             self.relicPanel.group_widget.updateGroups()
-            # Check the scene for unresolved library-dependent files.
-            #dependent_files = getAllPaths(library_only=True)
-            # If there are no direct files add the main file to search for <ASSET>_sources
-            #if not dependent_files:
-            #    dependent_files.extend(files)
-
-            #LOG.debug('dependent files: {}'.format(dependent_files))
             return True
 
-        #elif data.hasFormat(b'application/x-relic') and data.hasUrls() and doDrop:
+        elif data.hasFormat(b'application/x-relic') and data.hasUrls() and doDrop:
         #    for key, values in json.loads(assets).items():
         #        constructor = getattr(asset_classes, str(key))
         #        for fields in values:
         #            asset = constructor(**fields)
         #            print('dropped: ', asset)
-        #    return True
+            return True
         """
         if data.hasHtml()
         if data.hasColor()
@@ -113,11 +96,12 @@ class RelicDropCallback(omui.MExternalDropCallback):
         """
         return omui.MExternalDropCallback.kMayaDefault
 
+    @staticmethod
     @logFunction('Asset Dropped')
-    def assetDropAction(self, asset):
+    def assetDropAction(asset):
         #LOG.debug("Processing item {} in plugin".format(asset))
         class_index = getattr(asset, 'class')
-        fpath = Path(asset.path)
+        asset_path = asset.local_path
         '''
         if class_index == config.AREA_LIGHT:
             light = cmds.shadingNode("VRayLightRectShape", asLight=True)
@@ -134,7 +118,7 @@ class RelicDropCallback(omui.MExternalDropCallback):
             light.setAttr("iesFile", asset.path.replace("/", "\\"))
             #light.select()
 
-        elif class_index == config.IBL_PROBE:
+        elif class_index == config. :
             light = cmds.shadingNode("VRayLightDomeShape", asLight=True)
             light.setAttr("useDomeTex", 1)
             texture = cmds.shadingNode("file", asTexture=True)
@@ -145,15 +129,7 @@ class RelicDropCallback(omui.MExternalDropCallback):
             light.select()
         '''
         if class_index == config.MODEL:
-            model = cmds.file(
-                asset.path,
-                reference=True,
-                loadReferenceDepth="all",
-                mergeNamespacesOnClash=False,
-                deferReference=True,
-                namespace='{}'.format(asset.name),
-            )
-            addRelicAttributes(asset)
+            createMayaReference(asset, asset_path)
 
         elif class_index == config.TEXTURE:
             texture = cmds.shadingNode("file", asTexture=True)
@@ -168,33 +144,73 @@ class RelicDropCallback(omui.MExternalDropCallback):
             del TempEDPF
 
         elif asset.path.endswith('.ma') or asset.path.endswith('.mb'):
-            materialx_path = fpath.suffixed('', '.mtlx')
-            cmds.file(
-                asset.path,
-                reference=True,
-                loadReferenceDepth="all",
-                mergeNamespacesOnClash=True,
-                #deferReference=True,
-                namespace='{}'.format(asset.name),
-            )
-            cmds.file(
-                str(materialx_path),
-                reference=True,
-                loadReferenceDepth="all",
-                mergeNamespacesOnClash=True,
-                #deferReference=True,
-                namespace='{}'.format(asset.name),
-            )
-            # Perform material assignments
-            xdoc = mx.createDocument()
-            mx.readFromXmlFile(xdoc, str(materialx_path))
-            look = xdoc.getLook('standard')
-            with Namespace(asset.name):
-                for assignment in look.getMaterialAssigns():
-                    material_name = assignment.getMaterial()
-                    for geo in assignment.getCollection().getIncludeGeom().split(','):
-                        cmds.sets(geo, e=1, fe=material_name)
-
-            addRelicAttributes(asset)
+            createMayaReference(asset, asset_path)
 
         LOG.debug('Finished {}'.format(asset.name))
+
+
+def createMayaReference(asset, asset_path):
+    mref = cmds.file(
+        asset_path,
+        reference=True,
+        loadReferenceDepth="all",
+        mergeNamespacesOnClash=False,
+        namespace='{}'.format(asset_path.name),
+    )
+    materialx_path = asset_path.suffixed('', '.mtlx')
+    cmds.namespace(add=asset_path.name+'_mtlx')
+    mxref = cmds.file(
+        str(materialx_path),
+        i=True,
+        loadReferenceDepth="all",
+        mergeNamespacesOnClash=False,
+        #namespace='{}'.format(asset_path.name+'_mtlx'),
+    )
+    addRelicAttributes(asset)
+
+
+def iterateReferencePaths(all_references):
+    for ref_node in all_references:
+        ref_path = cmds.referenceQuery(ref_node, filename=1)
+        
+        if not ref_path.endswith('.mtlx') and not ref_path.endswith('.editMB'):
+            yield ref_node, Path(ref_path)
+
+def applyLinkedEdits():
+    all_references = cmds.ls(exactType='reference')
+    edited_attr = 'RELIC_edited'
+
+    for source_ref, src_path in iterateReferencePaths(all_references):
+        edits_relative_path = 'source_misc/' + src_path.name + '.' + EDIT_EXT
+        
+        for destination_ref, dst_path in iterateReferencePaths(all_references):
+            maya_edits_path = dst_path.parents(0) / edits_relative_path
+            edit_attr_exists = cmds.attributeQuery(edited_attr, node=source_ref, exists=1)
+            dst_relic_attr = cmds.attributeQuery('RELIC_type', node=destination_ref, exists=1)
+            if edit_attr_exists:
+                if dst_relic_attr:
+                    src_type = cmds.getAttr(source_ref + '.' + 'RELIC_type')
+                    dst_type = cmds.getAttr(destination_ref + '.' + 'RELIC_type')
+                    if src_type > dst_type:
+                        continue
+                else:
+                    continue
+            elif src_path.ext in ['.mb', '.ma']:
+                try:
+                    cmds.addAttr(source_ref, longName=edited_attr, attributeType='bool')
+                    cmds.setAttr(source_ref + '.' + edited_attr, True, edit=1)
+                except:pass
+
+            if maya_edits_path.exists:
+                LOG.debug('Maya Reference Offline Edits : {}\n\t\
+                    applyTo: {} using PlaceHolder: {}'.format(
+                   maya_edits_path, source_ref, destination_ref))
+                cmds.file(
+                    str(maya_edits_path),
+                    i=1, #Import
+                    #reference=1,
+                    type=EDIT_EXT,
+                    applyTo=source_ref,
+                    mapPlaceHolderNamespace=['<root>', destination_ref]
+                )
+            #file -r -type "editMA" -mapPlaceHolderNamespace "<root>" "PoleLanternBasicRN" -applyTo "LanternBasicRN" "C:/Users/Resartist/.relic/ingest/LanternBasic.editMA";

@@ -3,7 +3,6 @@
 import maya.cmds as cmds
 cmds.loadPlugin('relicMayaPlugin')
 cmds.loadPlugin('P:/Code/Relic/library/plugins/relicMaya/relicMayaPlugin.py')
-cmds.relic(export=True)
 """
 
 import sys
@@ -30,7 +29,7 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 
 # -- Globals --
-MENU_NAME = "Relic"
+MENU_NAME = 'Relic'
 TOKEN_REGEX = re.compile(r'\<\S+\>')
 ANUM_REGEX = re.compile(r"[^A-Za-z0-9]")
 IGNORE_PLUGINS = ['stereoCamera']
@@ -38,15 +37,14 @@ if not 'relicMixinWindow' in globals():
     relicMixinWindow = None
 
 # -- Module --
-sys.path.append('P:/Code/Relic/library/plugins/Lib')
-from relic_base import asset_views
-from relic_base import asset_classes
+#sys.path.append('P:/Code/Relic/library/plugins/Lib')
+from relic_base import asset_views, asset_classes
 from relic_base.ui.qtutil import updateWidgetProperty#, polymorphicItem
 from sequencePath import sequencePath as Path
-from relic_base.config import RELIC_PREFS, LOG, INGEST_PATH, INGEST_CLIENT, logFunction
 import relic_base.config as config
+from relic_base.config import RELIC_PREFS, LOG, INGEST_PATH, RELIC_CLIENT, logFunction
 #from OpenGL.GL import *
-from gltfExporterFloat import GLTFExport
+#from gltfExporterFloat import GLTFExport
 from relicDrop import RelicDropCallback
 from relicTranslator import getSelectionDependencies
 
@@ -70,15 +68,15 @@ def clearShading():
     """Removes all objects from Maya's shading groups / engines.
     """
     sel = cmds.ls(type='shadingEngine')
-    for x in sel:
-        if x not in ['initialShadingGroup', 'initialParticleSE']:
-            cmds.sets(e=1, clear=x)
+    for item in sel:
+        if item not in ['initialShadingGroup', 'initialParticleSE']:
+            cmds.sets(e=1, clear=item)
 
-def exportSelection():
+def exportSelection(asset_type):
     """Exports an asset/component from maya's selection into the library
     """
     results = []
-    original_selection = cmds.ls(sl=True)
+    original_selection = cmds.ls(selection=1)
     if not original_selection:
         cmds.confirmDialog(title="Make Selection", 
             message="Requires an object selection")
@@ -86,19 +84,24 @@ def exportSelection():
 
     for selected in original_selection:
         asset = asset_classes.tempasset()
-        asset.polycount = getPolyCount(selected)
         asset.name = selected.replace('|', '')
         asset.path = INGEST_PATH / asset.name / (asset.name + '.mb')
         asset.path.createParentFolders()
-        asset.type = 1 # Component
+        asset.type = asset_type
         asset.category = 1 # Modeling
 
+        setMeshMetadata(selected, asset)
         generateThumbnails(selected, asset.path)
 
         file_infos = cmds.fileInfo(q=1)
-        file_info = dict(zip(file_infos[::2], file_infos[1::2]))
+        file_info = {}
+        if file_infos:
+            file_info = dict(zip(file_infos[::2], file_infos[1::2]))
+
         plugin_infos = cmds.pluginInfo(q=1, pluginsInUse=1)
-        plugin_info = dict(zip(plugin_infos[::2], plugin_infos[1::2]))
+        plugin_info = {}
+        if plugin_infos:
+            plugin_info = dict(zip(plugin_infos[::2], plugin_infos[1::2]))
 
         asset.tags = []
         for plugin, version in plugin_info.items():
@@ -106,12 +109,16 @@ def exportSelection():
                 continue
             asset.tags.append({'name': '{}v{}'.format(plugin, version), 'type': 2})
 
-        product = re.sub(ANUM_REGEX, '', file_info.get('product'))
-        asset.tags.append({'name': product, 'type': 1})
+        mayaver = file_info.get('product')
+        if mayaver:
+            product = re.sub(ANUM_REGEX, '', mayaver)
+            asset.tags.append({'name': product, 'type': 1})
 
         # Export the files using relative file paths in an undo chunk.
         with UndoThis():
-            files, assets, assignment_map = getSelectionDependencies(selected)
+            # Get all dependent files and asset while assigning all other nodes
+            # a parent namespace to link maya edits to.
+            files, assets = getSelectionDependencies(selected)
             asset.dependencies = list(files)
             #asset.upstream = list(assets)
             asset.links = [x for x in assets.values()]
@@ -121,7 +128,6 @@ def exportSelection():
             materialx_path = asset.path.suffixed('', '.mtlx')
             cmds.file(str(materialx_path), exportSelected=1, type='MaterialX')
 
-            cmds.select(clear=1)    
             clearShading()
             cmds.select(selected, r=True)
             # Export the asset file.
@@ -133,7 +139,7 @@ def exportSelection():
         pprint(asset.__dict__)
         results.append(asset.__dict__)
 
-    INGEST_CLIENT.requestFileLoad(json.dumps(results))
+    RELIC_CLIENT.sendPayload(json.dumps(results))
 
     return results
 
@@ -182,90 +188,21 @@ def generateThumbnails(selection, file_path):
     cmds.delete('orbitCam')
 
 
-def getPolyCount(selection):
+def setMeshMetadata(selection, asset):
     meshes = []
-    polyCount = None
+    # Set the poly count
     if cmds.nodeType(selection) == "transform":
         meshes.extend(cmds.listRelatives(
             selection, allDescendents=True, type="mesh", fullPath=1))
 
     cmds.select(meshes, r=True)
-    polyCount = cmds.polyEvaluate(face=True)
+    asset.polycount = cmds.polyEvaluate(face=True)
 
-    return polyCount
-
-
-def doRepath(new_root, library_storage, unresolved=False):
-    cmds.filePathEditor(refresh=True)
-    if not unresolved:
-        replaceTokens()
-    # Gets all nodes with file inputs with unresolved switch.
-    node_list = cmds.filePathEditor(
-        query=True, attributeOnly=True, listFiles="", unresolved=unresolved
-    )
-    repath = alPath(new_root).parent
-    if node_list:
-        for x in node_list:
-            # if regular node path is a file attribute
-            try:
-                old_path = alPath(cmds.getAttr(x))
-            except: # Must be a reference file instead
-                old_path = cmds.referenceQuery(x, wcn=True, filename=True)
-
-            # If the file is from the library storage repath.
-            if str(old_path).startswith(str(library_storage)):
-                cmds.filePathEditor(x, repath=repath, force=True, recursive=True)
-            elif unresolved: # if maya can't find it and will use the repath
-                cmds.filePathEditor(x, repath=repath, force=True, recursive=True)
-    return True
-
-def replaceTokens():
-    # Gets all unresolved file input nodes.
-    node_list = cmds.filePathEditor(
-        q=True, attributeOnly=True, listFiles="", unresolved=True
-    )
-    if node_list:
-        for x in node_list:
-            try:
-                old_path = alPath(cmds.getAttr(x), checksequence=1)
-            except:
-                pass
-
-            # If the file is from the library storage repath.
-            if str(old_path).startswith(str(library_storage)) and old_path.sequence_path:
-                cmds.setAttr(x, str(old_path.sequence_path).replace('*', '1001'))
-
-    cmds.filePathEditor(refresh=True)
-    return True
-
-def applyRepath(new_root, library_storage=None):
-    log.debug('Applying Repath using root: {}, and library storage: {}'.format(new_root, library_storage))
-    utils.executeInMainThreadWithResult(doRepath, new_root, library_storage, unresolved=False)
-    # Loads the reference so we can apply the repath to new unresolved
-    # nodes with file paths
-    cmds.file(loadReference=str(new_root))
-    utils.executeInMainThreadWithResult(doRepath, new_root, library_storage, unresolved=True)
-
-@logFunction('Collecting Dependent Files')
-def iterateScenePaths():
-    """Iteratively Retrieves all paths in the current Maya Scene.
-    """
-    cmds.filePathEditor(refresh=True)
-    node_types = cmds.filePathEditor(q=True, attributeOnly=True, listFiles="")
-    if node_types:
-        for attr in node_types:
-            try:
-                # Replace UDIMs with first in sequence (Must start at 1001).
-                path = re.sub(TOKEN_REGEX, '1001', cmds.getAttr(attr))
-            except Exception:
-                # getAttr failed so it must be a reference node.
-                path = cmds.referenceQuery(attr, wcn=True, filename=True)
-            yield path, attr
-
-
-# Check if the path starts with the library storage root path.
-#if path.startswith(str(RELIC_PREFS.local_storage)):
-#result.append(path)
+    # set the bounding box
+    size3 = []
+    for axis in cmds.polyEvaluate(boundingBox=1):
+        size3.append(str(round(abs(axis[0]) + axis[1], 2)))
+    asset.resolution = ' x '.join(size3)
 
 
 def captureViewport(save=False):
@@ -285,6 +222,28 @@ class RelicPanel(MayaQWidgetDockableMixin, asset_views.RelicSceneForm):
         super(RelicPanel, self).__init__(parent=parent)
         self.setWindowTitle('Relic Assets')
 
+    def refreshSceneAssets(self):
+        all_nodes_iter = om.MItDependencyNodes()
+        dep_node = om.MFnDependencyNode()
+        while not all_nodes_iter.isDone():
+            dep_node.setObject(all_nodes_iter.thisNode())
+            if dep_node.hasAttribute('RELIC_id'):
+                nodename = dep_node.name()
+                cat_id = cmds.getAttr(nodename + '.RELIC_category')
+                constructor = asset_classes.getCategoryConstructor(cat_id)
+                asset = constructor(category=cat_id)
+                asset.name = str(nodename.split('RN')[0])
+                asset.id = cmds.getAttr(nodename + '.RELIC_id')
+                asset.filehash = cmds.getAttr(nodename + '.RELIC_hash')
+                asset.progress = [1,1]
+                if not self.group_widget.assetInModel(asset):
+                    asset.fetch(on_complete=partial(self.group_widget.addAsset, asset))
+
+            all_nodes_iter.next()
+
+    def show(self, *args, **kwargs):
+        self.refreshSceneAssets()
+        super(RelicPanel, self).show(*args, **kwargs)
 
 
 def DockableWidgetUIScript(restore=False):
@@ -324,50 +283,16 @@ def removeRelicMenus():
 def createRelicMenus():
     removeRelicMenus()
     relicMenu = cmds.menu(MENU_NAME, parent='MayaWindow', tearOff=True, label=MENU_NAME)
-    cmds.menuItem(parent=relicMenu, label="Relic Scene Assets", command=DockableWidgetUIScript)
-    export_cmd = lambda x : cmds.relic(export=1)
-    cmds.menuItem(parent=relicMenu, label="Export Selection As Asset", command=export_cmd)
-
-class RelicCmd(om.MPxCommand):
-    # -- Meta --
-    kName = 'relic'
-
-    # -- Flags --
-    kExportShort = '-ex'
-    kExportLong = '-export'
-    kCollectShort = '-cp'
-    kCollectLong = '-collect'
-
-    def __init__(self):
-        om.MPxCommand.__init__(self)
-
-    @staticmethod
-    def create():
-        return RelicCmd()
-
-    @staticmethod
-    def newSyntax():
-        syntax = om.MSyntax()
-        syntax.addFlag(RelicCmd.kExportShort, RelicCmd.kExportLong)
-        syntax.addFlag(RelicCmd.kCollectShort, RelicCmd.kCollectLong)
-        return syntax
-
-    def doIt(self, args):
-        parser = om.MArgParser(self.syntax(), args)
-        if parser.isFlagSet(self.kExportLong):
-            exportSelection()
-        elif parser.isFlagSet(self.kCollectLong):
-            for path, attr in iterateScenePaths():
-                print(path, attr)
-
+    cmds.menuItem(parent=relicMenu, label='Relic Scene Assets', command=DockableWidgetUIScript)
+    export_cmd = lambda x : exportSelection(1)
+    cmds.menuItem(parent=relicMenu, label='Export Asset', command=export_cmd)
+    variation_cmd = lambda x : exportSelection(5)
+    cmds.menuItem(parent=relicMenu, label='Export Variation', command=variation_cmd)
 
 
 def initializePlugin(obj):
     plugin = om.MFnPlugin(obj)
     try:
-        plugin.registerCommand(RelicCmd.kName,
-                               RelicCmd.create,
-                               RelicCmd.newSyntax)
         createRelicMenus()
         relicMixinWindow = DockableWidgetUIScript()
         RelicDropCallback.INSTANCE = RelicDropCallback(relicMixinWindow)
@@ -382,7 +307,6 @@ def initializePlugin(obj):
 def uninitializePlugin(obj):
     plugin = om.MFnPlugin(obj)
     try:
-        plugin.deregisterCommand(RelicCmd.kName)
         removeRelicMenus()
         omui.MExternalDropCallback.removeCallback(RelicDropCallback.INSTANCE)
         sys.stdout.write("Successfully deregistered RelicMayaPlugin\n")

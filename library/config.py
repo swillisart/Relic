@@ -5,7 +5,7 @@ import subprocess
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
 from sequencePath import sequencePath as Path
-from kohainetwork.client import KohaiClient
+from strand.client import StrandClient
 
 # -- Globals --
 NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL_PROBE, IES, _2D_ELEMENT, _3D_ELEMENT, REFERENCE, TOOL = range(12)
@@ -21,8 +21,8 @@ TOOLS_EXT = ['.nk', '.mel', '.py', '.hda', '.exe']
 GEO_EXT = ['.abc', '.fbx']
 TEXTURE_EXT = HDR_EXT + LDR_EXT
 
-KOHAI = KohaiClient()
-
+PEAK = StrandClient('peak')
+RELIC_HOST = 'http://localhost:8000/'
 INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 def getAssetSourceLocation(filepath):
@@ -43,38 +43,36 @@ def getAssetSourceLocation(filepath):
             return 'source_images'
     for extension in GEO_EXT:
         if str(filepath).endswith(extension):
-            return 'source_caches'        
+            return 'source_caches'
 
     return 'source_misc'
 
-def kohaiPreview(path):
-    KOHAI.requestFileLoad(str(path))
-    if KOHAI.errored:
-        cmd = [
-            os.getenv('kohai_path') or 'P:/Code/Kohai/Kohai.exe',
-            '--path', str(path),
-        ]
-        msg = str(cmd)
-        subprocess.Popen(cmd)
+def peakPreview(path):
+    path.checkSequence()
+    if path.sequence_path or path.ext in MOVIE_EXT:
+        path = path.suffixed('_proxy', '.mp4')
+    else:
+        path = path.suffixed('_proxy', '.jpg')
+    
+    PEAK.sendPayload(str(path))
+    if PEAK.errored:
+        cmd = f'start peak://{path}'
+        os.system(cmd)
 
-class pref(object):
-    def __init__(self, value, default, options):
-        self.value = value
-        self.default = default
-        self.options = options
 
 class Preferences(object):
 
     defaults = {
         'asset_preview_size': 288,
         'asset_preview_expand': True,
-        'assets_per_page': 45,
-        'local_storage': '',
-        'network_storage': '',
+        'assets_per_page': 30,
+        'local_storage': 'P:/Projects/Library/{project}',
+        'network_storage': 'E:/library',
         'project_variable': 'show',
         'render_using': '',
         'relic_plugins_path': '',
-        'edit_mode': True,
+        'edit_mode': False,
+        'view_scale': 2,
         'references_color': '168, 58, 58',
         'modeling_color': '156, 156, 156',
         'elements_color': '198, 178, 148',
@@ -119,8 +117,6 @@ class Preferences(object):
         return QSettings()
 
 RELIC_PREFS = Preferences()
-
-TRASH = Path(RELIC_PREFS.local_storage) / 'trash'
 
 # -- Logging --
 logging.basicConfig(

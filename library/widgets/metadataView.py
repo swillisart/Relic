@@ -7,8 +7,8 @@ from library.objectmodels import (allCategories, alusers, polymorphicItem,
 from library.config import RELIC_PREFS
 
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
-from PySide6.QtCore import QRect, QSize, Signal, Slot
-from PySide6.QtGui import QCursor, QIcon, QPainter, QStandardItemModel, Qt
+from PySide6.QtCore import QRect, QSize, Signal, Slot, QObject, QSignalBlocker
+from PySide6.QtGui import QCursor, QIcon, QPainter, QStandardItemModel, Qt, QTextDocument
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFrame,
                                QGridLayout, QLabel, QListView, QMenu,
                                QSizePolicy, QSpacerItem, QStyledItemDelegate,
@@ -19,10 +19,34 @@ TYPE_LABELS = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
 TYPE_ICONS = [QIcon(':/resources/asset_types/{}.svg'.format(x.lower())) for x in TYPE_LABELS]
 CATEGORY_ICONS = [QIcon(':/resources/categories/{}.svg'.format(x.lower())) for x in allCategories.__slots__]
 
+
+class UpdatableField(QObject):
+
+    @Slot()
+    def updateValue(self, value):
+        """If in edit mode updates the database using the fields class name 
+        minus the "Widget" suffix.
+
+        Parameters
+        ----------
+        value : serializable (str, int, list)  
+            the new field value 
+        """
+        if int(RELIC_PREFS.edit_mode):
+            field = self.__class__.__name__.replace('Widget', '')
+            for asset in self.parent().selected_assets:
+                if field == 'type':
+                    value = value + 1
+                setattr(asset, field, value)
+                asset.update(fields=[field])
+
+
 class MetaLabel(QLabel):
     pass
 
 class metadataFormView(QFrame):
+
+    openDescription = Signal(str)
 
     def __init__(self, *args, **kwargs):
         super(metadataFormView, self).__init__(*args, **kwargs)
@@ -56,12 +80,12 @@ class metadataFormView(QFrame):
             label_text = '{} : '.format(label)
         meta_label = MetaLabel(label_text.capitalize())
 
-
         return meta_widget, meta_label
 
-    def loadAsset(self, asset):
+    def loadAssets(self, assets):
         self.clearLayout()
-        self.selected_asset = asset
+        self.selected_assets = assets
+        asset = assets[-1]
         line_offset = 0
         for i, label, value in asset:
             try:
@@ -94,9 +118,7 @@ class metadataFormView(QFrame):
         spacer = QSpacerItem(10, 10, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.layout.addItem(spacer)
 
-class baseRating(QWidget):
-
-    ratingChanged = Signal(int)
+class baseRating(QWidget, UpdatableField):
 
     def __init__(self, *args, **kwargs):
         super(baseRating, self).__init__(*args, **kwargs)
@@ -143,9 +165,7 @@ class baseRating(QWidget):
                     new = i
                     self.rating = new
             if new != previous:
-                self.update()
-            else:
-                self.ratingChanged.emit(new)
+                self.updateValue(new)
 
     def paintEvent(self, event):
         super(baseRating, self).paintEvent(event)
@@ -174,6 +194,7 @@ class baseLabel(QLabel):
     
     def reset(self):
         self.clear()
+
 
 class dateLabel(baseLabel):
     def __init__(self, *args, **kwargs):
@@ -297,25 +318,26 @@ class metadataRelationView(QListView):
 
     @Slot()
     def linkItem(self, tag):
-        relation = relationships(
-            category_map=self.category_map,
-            category_id=tag.id,
-            link=self.parent().selected_asset.links,
-        )
-        relation.create()
+        for asset in self.parent().selected_assets:
+            relation = relationships(
+                category_map=self.category_map,
+                category_id=tag.id,
+                link=asset.links,
+            )
+            relation.create()
         self.addItems([polymorphicItem(fields=tag)])
 
     @Slot()
     def createNewItem(self, name):
         new_tag = tags(name=name)
         new_tag.create()
-
-        relation = relationships(
-            category_map=self.category_map,
-            category_id=new_tag.id,
-            link=self.parent().selected_asset.links,
-        )
-        relation.create()
+        for asset in self.parent().selected_assets:
+            relation = relationships(
+                category_map=self.category_map,
+                category_id=new_tag.id,
+                link=asset.links,
+            )
+            relation.create()
         self.addItems([polymorphicItem(fields=new_tag)])
 
     def _createContextMenus(self, value):
@@ -335,7 +357,7 @@ class metadataRelationView(QListView):
             relation = relationships(
                 category_map=self.category_map,
                 category_id=item.id,
-                link=self.parent().selected_asset.links,
+                link=self.parent().selected_assets[-1].links,
             )
             relation.fetch() # Need to fetch the relation id to remove it.
             relation.remove()
@@ -445,19 +467,47 @@ class descriptionWidget(QLabel):
         super(descriptionWidget, self).__init__(*args, **kwargs)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setWordWrap(True)
-        self.setTextInteractionFlags(Qt.LinksAccessibleByKeyboard|Qt.LinksAccessibleByMouse|Qt.TextBrowserInteraction|Qt.TextEditable|Qt.TextEditorInteraction|Qt.TextSelectableByKeyboard|Qt.TextSelectableByMouse)
-        self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 4px;')
-    
+        self.setTextInteractionFlags(
+            Qt.LinksAccessibleByKeyboard|Qt.LinksAccessibleByMouse|
+            Qt.TextBrowserInteraction|Qt.TextEditable|Qt.TextEditorInteraction|
+            Qt.TextSelectableByKeyboard|Qt.TextSelectableByMouse)
+        #self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 4px;')
+        self.linkActivated.connect(self.onActivated)
+        self.base_url = "<a style='color: rgb(92,108,245)' href=\"NONE\">{}</a>"
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._createContextMenus)
+
+    def _createContextMenus(self, value):
+        context_menu = QMenu(self)
+        if int(RELIC_PREFS.edit_mode):
+            update_action = context_menu.addAction("Update")
+            update_action.triggered.connect(self.update_asset)
+        context_menu.exec(QCursor.pos())
+
+    def update_asset(self):
+        doc = self.findChild(QTextDocument)
+        asset = self.parent().selected_assets[-1]
+        asset.description = doc.toPlainText()
+        asset.update(fields=['description'])
+
+    @Slot()
+    def onActivated(self, link_url):
+        parent = self.parent()
+        path = parent.selected_assets[-1].network_path.suffixed('_description', '.md')
+        parent.openDescription.emit(str(path))
+
     def setValue(self, value):
-        self.setText(value or 'No Description...')
+        url = self.base_url.format(value) 
+        self.setText(url)
 
     def sizeHint(self):
         return QSize(1920, 96)
 
     def reset(self):
+        self._value = ''
         self.setText('No Description...')
 
-class typeWidget(QComboBox):
+class typeWidget(QComboBox, UpdatableField):
 
     LABELS = TYPE_LABELS
     ICONS = TYPE_ICONS
@@ -465,17 +515,21 @@ class typeWidget(QComboBox):
     def __init__(self, *args, **kwargs):
         super(typeWidget, self).__init__(*args, **kwargs)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.setIconSize(QSize(24, 24))
+        self.setIconSize(QSize(22, 22))
         for index, icon in enumerate(self.ICONS):
             self.addItem(icon, self.LABELS[index])
+        self.currentIndexChanged.connect(self.updateValue)
 
     def setValue(self, value):
-        self.setCurrentIndex(int(value)-1)
+        with QSignalBlocker(self):
+            self.setCurrentIndex(int(value)-1)
 
     def reset(self):
-        self.setCurrentIndex(0)
+        with QSignalBlocker(self):
+            self.setCurrentIndex(0)
 
-class classWidget(QComboBox):
+
+class classWidget(QComboBox, UpdatableField):
 
     classifications = [
         '',
@@ -504,7 +558,8 @@ class classWidget(QComboBox):
         super(classWidget, self).__init__(*args, **kwargs)
         for x in self.classifications:
             self.addItem(x)
-    
+        self.currentIndexChanged.connect(self.updateValue)
+
     def enableClassBoxFilter(self, category_id):
 
         acceptable_items = self.class_by_category_id.get(category_id, 'Tool')
@@ -518,10 +573,12 @@ class classWidget(QComboBox):
                 item.setEnabled(0)
 
     def setValue(self, value):
-        self.setCurrentIndex(value)
+        with QSignalBlocker(self):
+            self.setCurrentIndex(value)
 
     def reset(self):
-        self.setCurrentIndex(0)
+        with QSignalBlocker(self):
+            self.setCurrentIndex(0)
 
 
 class datecreatedWidget(dateLabel):
@@ -551,10 +608,8 @@ class filesizeWidget(baseLabel):
 class filehashWidget(baseLabel):
     pass
 
-
 class proxyWidget(baseLabel):
     pass
-
 
 class dependenciesWidget(baseLabel):
     pass
@@ -564,7 +619,6 @@ class nodecountWidget(baseLabel):
 
 class idWidget(baseLabel):
     pass
-
 
 class linksWidget(baseLabel):
     pass
@@ -583,9 +637,10 @@ class categoryWidget(QComboBox):
 
     def __init__(self, *args, **kwargs):
         super(categoryWidget, self).__init__(*args, **kwargs)
-        self.setIconSize(QSize(24, 24))
+        self.setIconSize(QSize(22, 22))
         for index, icon in enumerate(self.ICONS):
             self.addItem(icon, self.LABELS[index].capitalize())
+        self.setEditable(False)
 
     def setValue(self, value):
         if value:
@@ -594,12 +649,14 @@ class categoryWidget(QComboBox):
     def reset(self):
         self.setCurrentIndex(0)
 
+
 class subcategoryWidget(QComboBox):
 
     def __init__(self, *args, **kwargs):
         super(subcategoryWidget, self).__init__(*args, **kwargs)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.setIconSize(QSize(20, 20))
+        self.setIconSize(QSize(22, 22))
+        self.setEditable(False)
 
     def setValue(self, value):
         self.clear()

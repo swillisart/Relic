@@ -1,0 +1,144 @@
+ocio_profile_version: 1
+
+search_path: luts
+strictparsing: true
+luma: [0.2126, 0.7152, 0.0722]
+
+roles:
+  color_picking: sRGB
+  color_timing: AlexaV3LogC
+  compositing_log: AlexaV3LogC
+  data: linear
+  default: linear
+  matte_paint: sRGB
+  reference: linear
+  scene_linear: linear
+  texture_paint: rec709
+
+displays:
+  default:
+    - !<View> {name: linear, colorspace: linear}
+    - !<View> {name: rec709, colorspace: rec709}
+    - !<View> {name: Log, colorspace: AlexaV3LogC}
+    - !<View> {name: sRGB, colorspace: sRGB}
+
+active_displays: [default]
+active_views: [linear, rec709, Log, sRGB]
+
+colorspaces:
+  - !<ColorSpace>
+    name: linear
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Scene-linear, high dynamic range. Used for rendering and compositing.
+    isdata: false
+    allocation: lg2
+    allocationvars: [-15, 6]
+
+  - !<ColorSpace>
+    name: sRGB
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Standard RGB Display Space
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: srgb.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: rec709
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Rec. 709 (Full Range) Display Space
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: rec709.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: Cineon
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Cineon (Log Film Scan)
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: cineon.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: REDLog
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      RED Log Space
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: redlog.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: AlexaV3LogC
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Alexa Log C
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: alexalogc.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: SLog3
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Sony SLog3
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: slog3.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: CLog
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Canon CLog
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.0684932, 1.08676]
+    to_reference: !<FileTransform> {src: clog.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: Protune
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      GoPro Protune
+    isdata: false
+    allocation: uniform
+    allocationvars: [-0.125, 1.125]
+    to_reference: !<FileTransform> {src: protune.spi1d, interpolation: linear}
+
+  - !<ColorSpace>
+    name: raw
+    family: ""
+    equalitygroup: ""
+    bitdepth: 32f
+    description: |
+      Raw Data. Used for normals, points, etc.
+    isdata: true
+    allocation: uniform

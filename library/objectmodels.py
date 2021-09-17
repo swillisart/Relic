@@ -1,5 +1,4 @@
 import sys
-from itertools import groupby
 
 from sequencePath import sequencePath as Path
 
@@ -8,9 +7,9 @@ from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QApplication
 
 from library.io.database import AssetDatabase
-from library.config import RELIC_PREFS
+from library.config import RELIC_PREFS, RELIC_HOST
 
-db = AssetDatabase('http://localhost:8000/')
+db = AssetDatabase(RELIC_HOST)
 
 RELATE_MAP = {
     # Data Tables
@@ -28,6 +27,9 @@ RELATE_MAP = {
     'mayatools': 10,
     'nuketools': 11,
 }
+ 
+LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
+NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
 
 class BaseFields(object):
     __slots__ = ()
@@ -101,8 +103,12 @@ class BaseFields(object):
             ids = (self.id, )
         else:
             ids = self.id
-        rc = 'removeAssets/{}'.format(self.categoryName)
-        db.accessor.doRequest(rc, ids)
+        can_delete = True
+        if hasattr(self, 'path'):
+            can_delete = db.accessor.doRequest('deleteAsset/{}'.format(str(self.relativePath.parent)))
+        if can_delete:
+            rc = 'removeAssets/{}'.format(self.categoryName)
+            db.accessor.doRequest(rc, ids)
 
     def fetch(self, id=False):
         rc = 'fetchAsset/{}'.format(self.categoryName)
@@ -123,6 +129,14 @@ class BaseFields(object):
         results = db.accessor.doRequest(rc)
         return results
 
+    def linkTo(self, asset):
+        relation = relationships(
+            category_map=self.relationMap,
+            category_id=self.id,
+            link=asset.links,
+        )
+        relation.create()
+    
     def related(self, noassets=False):
         rc = 'retrieveLinks/{}/{}'.format(self.links, int(noassets))
         related = db.accessor.doRequest(rc)
@@ -133,7 +147,7 @@ class BaseFields(object):
             for index, name in enumerate(allCategories.__slots__):
                 if category_name == name:
                     category_id = index 
-            asset_constructor = globals()[category_name]
+            asset_constructor = getCategoryConstructor(category_name)
             metadata_results = []
             for x in value:
                 asset_obj = asset_constructor(*x)
@@ -176,15 +190,26 @@ class BaseFields(object):
 
         old = old_category.data(polymorphicItem.Object)
         new = new_subcategory.data(polymorphicItem.Object)
+        if old == new:
+            return
+        stem = str(self.path).rsplit('/', 1)[-1]
+        folder = stem.split('.')[0]
+        # Tell the server to move/rename the on-disk files.
+        data = {
+            'source': self.categoryName + '/' + old.name + '/' + folder,
+            'destination': self.categoryName + '/' + new.name + '/' + folder
+        }
+        db.accessor.doRequest('moveAsset', data)
 
+        # Update the subcategory counts.
         old.count -= 1
         new.count += 1
         old.update(fields=['count'])
         new.update(fields=['count'])
-        # Update the relationship id to point to our new subcategory
+        # Update the relationship id to point to our new subcategory.
         subcategory_link.category_id = new_subcategory.id
         subcategory_link.update(fields=['category_id'])
-        stem = str(self.path).rsplit('/', 1)[-1]
+        # Update the asset path to point to the new subcategory.
         self.path = new.name + '/' + stem
         self.update(fields=['path'])
 
@@ -193,17 +218,11 @@ class BaseFields(object):
 
     @property
     def local_path(self):
-        path = Path(str(self.path))
-        storage = Path(RELIC_PREFS.local_storage)
-        category = self.categoryName
-        subcategory = str(path.parents(0))
-        return storage / category / subcategory / path.name / path.stem
+        return LOCAL_STORAGE / str(self.relativePath)
 
     @property
     def network_path(self):
-        storage = Path(RELIC_PREFS.network_storage)
-        subcategory = str(path.parents(0))
-        return storage / self.relativePath
+        return NETWORK_STORAGE / str(self.relativePath)
 
     @property
     def relativePath(self):
@@ -222,12 +241,9 @@ class BaseFields(object):
         db.accessor.videoStreamData.connect(slot)
         db.accessor.doRequest(rc)
 
-    def download(self):
-        #rc = '/downloadFile/{}'.format(self.relativePath)
-        #db.accessor.download(rc, self)
-        rc = '/downloadDependency/{}/{}/{}'.format(
-            self.relativePath.parent, 'source_images', 'T_LanternPole_a.png')
-        db.accessor.download(rc, self)
+    def busy(self):
+        status = db.accessor.response is not None
+        return status
 
     @property
     def export(self):
@@ -335,8 +351,8 @@ class Library(object):
                 category_int = int(category)
             except:
                 continue
-            obj_name = self.categories.getLabel(category_int)
-            asset_constructor = globals()[obj_name]
+
+            asset_constructor = getCategoryConstructor(category_int)
 
             for data in search_results[category]:
                 if len(data) == 3:
@@ -354,7 +370,7 @@ class Library(object):
         self.assets = sorted(self.assets, key=lambda x: len(x[2]), reverse=True)
         return True
 
-    def load(self, page, limit, categories):
+    def load(self, page, limit, categories, icons=True):
         selected_subcategories = []
         categories_to_search = self.validateCategories(categories).keys()
         for x in categories:
@@ -391,7 +407,8 @@ class Library(object):
                     asset.subcategory = subcategory
 
                 yield asset
-                asset.fetchIcon()
+                if icons and asset.path:
+                    asset.fetchIcon()
 
 
 class category(object):
@@ -433,7 +450,10 @@ class tags(BaseFields):
 
 
 class alusers(BaseFields):
-
+    """
+    >>> repr(alusers(name='swillis'))
+    "alusers(name='swillis', id=None, datecreated=None, type=None, links=None, )"
+    """
     __slots__ = (
         'name',
         'id',
@@ -655,3 +675,11 @@ class AttrDescriptor(object):
     @staticmethod
     def buildNodeAttr(cls, attr):
         setattr(cls, attr, AttrDescriptor(attr))
+
+def getCategoryConstructor(category):
+    if isinstance(category, int):
+        category_name = allCategories.__slots__[category]
+        constructor = globals()[category_name]
+    elif isinstance(category, str):
+        constructor = globals()[category]
+    return constructor

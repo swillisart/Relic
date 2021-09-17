@@ -1,5 +1,4 @@
 import os
-import json
 from functools import partial
 
 from sequencePath import sequencePath as Path
@@ -7,13 +6,13 @@ from sequencePath import sequencePath as Path
 from library.ui.ingestion import Ui_IngestForm
 from library.io.ingest import ConversionRouter, IngestionThread
 from library.objectmodels import (polymorphicItem, db, references, modeling,
-                                elements, lighting, shading, software, 
+                                elements, lighting, shading, software, alusers,
                                 mayatools, nuketools, relationships, temp_asset, tags)
 from library.widgets.assets import assetItemModel
 from library.widgets.util import ListViewFiltered
 
 from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT,
-                            LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT)
+                            LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT, RELIC_PREFS)
 
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,
@@ -80,9 +79,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.completedLabel.hide()
         self.keep_original_name = False 
 
-    def collectFromJson(self, data):
-        assets = json.loads(data)
-
+    def collectAssets(self, assets):
         self.categorizeTab.setEnabled(True)
         self.tabWidget.setCurrentIndex(1)
         self.keep_original_name = True
@@ -92,7 +89,8 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset.path = Path(asset.path)
             icon_path = asset.path.suffixed('_icon', ext='.jpg')
             asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
-            self.collectedListView.addItem(asset)
+            self.collectedListView.addAsset(asset)
+        self.updateLabelCounts(len(assets)-1)
 
     @Slot()
     def setIngestQueue(self, item):
@@ -113,11 +111,13 @@ class IngestForm(Ui_IngestForm, QDialog):
             primary_asset = asset_constructor(name=item.name, id=item.id)
             primary_asset.fetch()
             link_primary = True
-    
         for num, index in enumerate(collected_indices):
             temp_asset = index.data(polymorphicItem.Object)
-        
             asset = asset_constructor(*temp_asset.values)
+            for attr in temp_asset.attrs:
+                if hasattr(asset, attr):
+                    setattr(asset, attr, getattr(temp_asset, attr))
+
             asset.links = (subcategory.relationMap, subcategory.id)
 
             if num == 0 and isinstance(item, str):
@@ -126,10 +126,15 @@ class IngestForm(Ui_IngestForm, QDialog):
                 asset.type = 3 # Collection
                 #asset.dependencies = (total - 1)
                 link_primary = False
+                reverse_link = False
             else:
-                asset.name = '{}_{}'.format(primary_asset.name, num)
-                asset.type = 5 # Variant
-                link_primary = True
+                if not asset.type == 5:
+                    asset.name = '{}_{}'.format(primary_asset.name, num)
+                    asset.type = 5 # Variant
+                    link_primary = True
+                    reverse_link = False
+                else:
+                    reverse_link = True
             # store the associated temp on-disk location for copying.
             if not self.keep_original_name:
                 temp_filename = 'unsorted' + str(asset.id)
@@ -148,13 +153,10 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset.subcategory = subcategory
 
             if link_primary:
-                primary_relation = relationships(
-                    category_map=asset.relationMap,
-                    category_id=asset.id,
-                    link=primary_asset.links,
-                )
-                primary_relation.create()
-            
+                asset.linkTo(primary_asset)
+            if reverse_link:
+                primary_asset.linkTo(asset)
+
             if temp_asset.links:
                 for link in temp_asset.links:
                     link_relation = relationships(
@@ -170,16 +172,13 @@ class IngestForm(Ui_IngestForm, QDialog):
                     tag.id = tag.nameExists()
                     if not tag.id:
                         tag.create()
+                    tag.linkTo(asset)
 
-                    tag_relation = relationships(
-                        category_map=tag.relationMap,
-                        category_id=tag.id,
-                        link=int(asset.links),
-                    )
-                    tag_relation.create()
+            user = alusers(id=int(RELIC_PREFS.user_id))
+            user.linkTo(asset)
 
             self.collectedListView.setRowHidden(index.row(), True)
-            self.newAssetListView.addItem(asset)
+            self.newAssetListView.addAsset(asset)
             extra_files = temp_asset.dependencies
             self.ingest_thread.load([temp_filename, asset, extra_files])
 
@@ -187,6 +186,8 @@ class IngestForm(Ui_IngestForm, QDialog):
         subcategory.count += total
         if dependency := primary_asset.dependencies:
             dependency += total
+        elif reverse_link:
+            primary_asset.dependencies += total
         else:
             primary_asset.dependencies = (total - 1)
 
@@ -239,7 +240,7 @@ class IngestForm(Ui_IngestForm, QDialog):
     def receiveAsset(self, asset):
         if asset:
             asset.id = self.collect_item_model.rowCount()
-            self.collectedListView.addItem(asset)
+            self.collectedListView.addAsset(asset)
 
     def setCategoryView(self, dock, layout):
         self.categorizeFrame.layout().insertWidget(0, dock)

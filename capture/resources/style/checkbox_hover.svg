@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20000303 Stylable//EN"
+"http://www.w3.org/TR/2000/03/WD-SVG-20000303/DTD/svg-20000303-stylable.dtd">
+<!-- Generator: --> 
+<svg width="512pt" height="512pt" viewBox="0 0 512 512">
+	<g  id="FRAME_0" style="visibility:visible" fill-rule="evenodd">
+		<path style="fill:rgb(96,151,185);opacity:1;stroke-width:0"
+		 d="M449.600006,449.750000 L449.600006,61.349998 L61.349998,61.349998 L61.349998,449.750000 L449.600006,449.750000 M498.250000,498.250000 L12.750000,498.250000 L12.750000,12.850000 L498.250000,12.850000 L498.250000,498.250000 "/>
+		<path style="fill:rgb(50,50,50);opacity:1;stroke-width:0"
+		 d="M449.600006,449.750000 L61.349998,449.750000 L61.349998,61.349998 L449.600006,61.349998 L449.600006,449.750000 "/>
+		<path style="stroke:rgb(0,0,0);stroke-width:0.700000;stroke-linecap:round;stroke-linejoin:round;fill:none"
+		 d="M61.349998,449.750000 L61.349998,61.349998 L449.600006,61.349998 L449.600006,449.750000 L61.349998,449.750000 		"/>
+		<path style="stroke:rgb(0,0,0);stroke-width:0.700000;stroke-linecap:round;stroke-linejoin:round;fill:none"
+		 d="M12.750000,498.250000 L12.750000,12.850000 L498.250000,12.850000 L498.250000,498.250000 L12.750000,498.250000 		"/>
+	</g>
+</svg>

@@ -8,8 +8,8 @@ from functools import partial
 from sequencePath import sequencePath as Path
 
 # -- Module --
-from library.config import RELIC_PREFS, kohaiPreview, INGEST_PATH, TRASH
-from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset
+from library.config import RELIC_PREFS, peakPreview, INGEST_PATH
+from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor
 from library.ui.asset_delegate import Ui_AssetDelegate
 from library.ui.compact_delegate import Ui_CompactDelegate
 from library.widgets.util import updateWidgetProperty
@@ -19,15 +19,23 @@ from library.widgets.metadataView import (categoryWidget, classWidget,
 # -- Third-party --
 from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins,
                             QMimeData, QModelIndex, QObject, QPoint,
-                            QPropertyAnimation, QRect, QSize, Signal, Slot, QEvent, QTimer)
+                            QPropertyAnimation, QRect, QSize, Signal, Slot, QEvent, QTimer, QUrl)
 from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
                            QPainterPath, QPen, QPixmap, QRegion,
                            QStandardItemModel, Qt, QImage, QMouseEvent)
-from PySide6.QtWidgets import (QAbstractItemView,
+from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog,
                                QListView, QMenu, QStyle, QStyledItemDelegate,
                                QStyleOption, QWidget, QApplication, QCheckBox)
 
 ICON_SIZE = QSize(296, 239)
+
+def generateBlankImage():
+    blank = QPixmap(':resources/app/checker.png').scaled(
+        288, 192, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+    return blank
+
+NO_IMAGE = generateBlankImage()
 
 class assetItemModel(QStandardItemModel):
 
@@ -38,34 +46,57 @@ class assetItemModel(QStandardItemModel):
         try: parent.setModel(self)
         except: pass
 
+    def unpackAssetsDependencies(self, asset, unique_ids):
+        """Pre-processes with relative paths for upstream dependencies.
+
+        Parameters
+        ----------
+        asset : QModelIndex
+
+        Returns
+        -------
+        relic_asset
+        """
+        
+        # Get the assets upstream dependencies.
+        asset.related()
+        if asset.upstream:
+            # Yield the upstream dependencies.
+            for i, item in enumerate(asset.upstream):
+                upstream_asset = item.data(polymorphicItem.Object)
+                if upstream_asset.id not in unique_ids and upstream_asset.type != 5:
+                    unique_ids.append(upstream_asset.id)
+                    yield from self.unpackAssetsDependencies(upstream_asset, unique_ids)
+            asset.upstream = None
+        yield asset
+
     def mimeData(self, indexes):
         by_category = {}
+        unique_ids = []
 
         for index in indexes:
-            asset = copy.copy(index.data(polymorphicItem.Object))
-            asset.related()
-            if asset.upstream:
-                asset.upstream = tuple((x.id, str(x.path)) for x in asset.upstream)
-            asset.path = asset.local_path
-            key = allCategories.__slots__[asset.category]
-            existing = by_category.get(key)
-            if existing:
-                by_category[key].append(asset.export)
-            else:
-                by_category[key] = [asset.export]
-
+            primary_asset = copy.copy(index.data(polymorphicItem.Object))
+            if primary_asset.busy():
+                return
+            unique_ids.append(primary_asset.id)
+            for asset in self.unpackAssetsDependencies(primary_asset, unique_ids):
+                # Insert asset into the payload
+                key = allCategories.__slots__[asset.category]
+                if by_category.get(key):
+                    by_category[key].append(asset.export)
+                else:
+                    by_category[key] = [asset.export]
 
         payload = json.dumps(by_category)
-        plugin_path = RELIC_PREFS.relic_plugins_path
-        mimeText = "{}/asset_drop.pyw".format(
-            plugin_path, 
-        )
+
+        mimeText = 'relic://'
         mimeData = QMimeData()
         mimeData.setText(payload)
 
         itemData = QByteArray()
         mimeData.setData('application/x-relic', itemData)
-        mimeData.setUrls([mimeText])
+        url = QUrl.fromLocalFile(mimeText + str(payload))
+        mimeData.setUrls([url])
         drag = QDrag(self)
         drag.setMimeData(mimeData)
 
@@ -117,21 +148,12 @@ class assetListView(QListView):
         self.actionExploreLocation.triggered.connect(self.browseLocalAsset)
         self.actionDelete = QAction('Delete', self)
         self.actionDelete.triggered.connect(self.deleteAsset)
-        self.actionDownload = QAction('Download', self)
-        self.actionDownload.triggered.connect(self.downloadAsset)
         """
-        self.actionScreenshotIcon = context_menu.addAction('Upload Thumbnail')
-        self.actionScreenshotIcon.triggered.connect(self.uploadThumbnail)
         self.actionRegeneratePreview = context_menu.addAction('Regenerate Preview')
         self.actionRegeneratePreview.triggered.connect(self.regenPreview)
         """
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-    @Slot()
-    def downloadAsset(self, action):
-        for index in self.selectedIndexes():
-            asset = index.data(polymorphicItem.Object)
-            asset.download()
 
     def iconMode(self):
         self.compact_mode = False
@@ -152,7 +174,7 @@ class assetListView(QListView):
         self.model = model
         self.selmod = self.selectionModel()
 
-    def addItem(self, item):
+    def addAsset(self, item):
         asset_item = polymorphicItem(fields=item)
         asset_item.setCheckable(True)
         self.model.appendRow(asset_item)
@@ -172,6 +194,82 @@ class assetListView(QListView):
 
     def clear(self):
         self.model.clear()
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        mods = event.modifiers()
+        super(assetListView, self).keyPressEvent(event)
+        # Populate the clipboard with our copy/paste functionality
+        if mods == Qt.ControlModifier and key == Qt.Key_C:
+            self.clipboardCopy()
+        elif mods == Qt.ControlModifier and key == Qt.Key_V:
+            self.clipboardPaste()
+        elif mods == Qt.ControlModifier and key == Qt.Key_G:
+            self.groupSelectedItems()
+
+    def clipboardCopy(self):
+        clipboard = QApplication.clipboard()
+        if asset := self.getSelectedAsset():
+            id = asset.id
+            category = asset.category
+            name = asset.path
+            clipboard.setText(f'relic://{category}/{id}/{name}')
+        else:
+            clipboard.clear()
+
+    def clipboardPaste(self):
+        clipboard = QApplication.clipboard()
+        clip_img = clipboard.image()
+        if not int(RELIC_PREFS.edit_mode) or not clip_img:
+            return
+        if asset := self.getSelectedAsset():
+            out_path = asset.network_path.suffixed('_icon', ext='.jpg')
+            resize_img = clip_img.scaled(288, 192, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            out_img = resize_img.scaled(288, 192, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            out_img.save(str(out_path))
+            asset.fetchIcon()
+    
+    def groupSelectedItems(self):
+        """Creates a new collection asset and links all the selected
+        assets to it.
+        """
+        selection = self.selmod.selectedIndexes()
+        count = len(selection)
+        if not selection or count <= 1:
+            return
+        collection_name, ok = QInputDialog.getText(self, 'New Collection',
+                "Collection name:", QLineEdit.Normal)#, default_name)
+        if not ok:
+            return
+    
+        primary = selection[-1].data(polymorphicItem.Object)
+        constructor = getCategoryConstructor(primary.category)
+        subcategory = primary.subcategory.data(polymorphicItem.Object)
+        collection = constructor(
+            name=collection_name,
+            dependencies=count,
+            links=(subcategory.relationMap, subcategory.id),
+            type=3, # collection
+            )
+        collection.create()
+        collection.fetch(id=collection.id)
+        for item in selection:
+            asset = item.data(polymorphicItem.Object)
+            asset.linkTo(collection)
+
+    def getSelectedAsset(self):
+        selection = self.selmod.selectedIndexes()
+        if not selection:
+            return None
+        return selection[-1].data(polymorphicItem.Object)
+
+    def indexToItem(self, index, asset=False):
+        proxy_model = index.model()
+        remapped_index = proxy_model.mapToSource(index)
+        item = self.model.itemFromIndex(remapped_index)
+        if asset:
+            asset = index.data(polymorphicItem.Object)
+        return item
 
     def mouseMoveEvent(self, event):
         super(assetListView, self).mouseMoveEvent(event)
@@ -208,7 +306,7 @@ class assetListView(QListView):
         for index in selection:
             preview = INGEST_PATH / 'unsorted{}_proxy.jpg'.format(index.row())
             #asset = index.data(polymorphicItem.Object)
-            kohaiPreview(preview)
+            peakPreview(preview)
             break
 
     def mousePressEvent(self, event):
@@ -237,7 +335,6 @@ class assetListView(QListView):
         sender = self.sender()
         context_menu = QMenu(self)
         context_menu.addAction(self.actionExploreLocation)
-        context_menu.addAction(self.actionDownload)
 
         if bool(int(RELIC_PREFS.edit_mode)):
             self.delete_item = context_menu.addAction(self.actionDelete)
@@ -245,7 +342,7 @@ class assetListView(QListView):
         context_menu.exec(QCursor.pos())
 
     def deleteAsset(self, action):
-        """Item deletion into the trash.
+        """Item deletion.
         """
         update_list = []
         for index in self.selectedIndexes():
@@ -258,7 +355,6 @@ class assetListView(QListView):
                 update_list.append(subcategory.data())
 
             if not isinstance(asset, temp_asset):
-                asset.local_path.parents(0).moveTo(TRASH)
                 asset.remove()
             self.setRowHidden(index.row(), True)
             self.onDeleted.emit(index)
@@ -269,7 +365,7 @@ class assetListView(QListView):
     def browseLocalAsset(self, action):
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
-            winpath = asset.local_path.parent.replace('/', '\\')
+            winpath = asset.network_path.parent.replace('/', '\\')
             cmd = 'explorer /select, "{}"'.format(winpath)
             subprocess.Popen(cmd)
 
@@ -320,9 +416,13 @@ class AssetItemPaint:
             preview_img = self.label.pixmap()
         if preview_img:
             preview_img = preview_img.scaledToWidth(self.label.width(), Qt.SmoothTransformation)
+        else:
+            preview_img = NO_IMAGE
         img_rect = self.label.rect()
         b = self.label.mapTo(self, img_rect.topLeft())
         painter.translate(b)
+        if img_rect.width() > 128:
+            img_rect = img_rect + QMargins(0,1,0,1)
         painter.drawPixmap(img_rect, preview_img)
         painter.restore()
 
@@ -366,8 +466,8 @@ class AssetStyleDelegate(QStyledItemDelegate):
         asset = index.data(polymorphicItem.Object)
         widget = self.asset_widget
 
-        painter.setRenderHints(QPainter.SmoothPixmapTransform)
-        painter.setRenderHint(QPainter.Antialiasing, True)
+        #painter.setRenderHints(QPainter.SmoothPixmapTransform)
+        #painter.setRenderHint(QPainter.Antialiasing, True)
         # Paint Item State's
         widget.checkBox.setChecked(index.data(Qt.CheckStateRole))
         select_state = bool(option.state & QStyle.State_Selected)
@@ -454,7 +554,11 @@ class AssetEditor(AssetDelegateWidget):
         self.categoryIcon.setIcon(categoryWidget.ICONS[self.asset.category])
         color = self.colors[self.asset.category].getRgb()
         self.styledLine.setStyleSheet('background-color: rgb{};border: none'.format(color[:3]))
-        self.label.setPixmap(self.asset.icon)
+        if self.asset.icon:
+            self.label.setPixmap(self.asset.icon)
+        else:
+            self.label.setPixmap(NO_IMAGE)
+
         self.view = self.parent()
         try:
             item = index.model().itemFromIndex(index)
@@ -567,7 +671,10 @@ class CompactAssetEditor(CompactDelegateWidget):
         self.iconButton.setIcon(typeWidget.ICONS[self.asset.type-1])
         color = self.colors[self.asset.category].getRgb()
         self.styledLine.setStyleSheet('background-color: rgb{};border: none'.format(color[:3]))
-        preview_img = self.asset.icon.scaledToWidth(72, Qt.SmoothTransformation)
+        if self.asset.icon:
+            preview_img = self.asset.icon.scaledToWidth(72, Qt.SmoothTransformation)
+        else:
+            preview_img = NO_IMAGE.scaledToWidth(72, Qt.SmoothTransformation)
         self.label.setPixmap(preview_img)
         self.view = self.parent()
         try:

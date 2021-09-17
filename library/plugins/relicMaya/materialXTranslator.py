@@ -11,10 +11,43 @@ import maya.OpenMayaMPx as OpenMayaMPx
 # -- Third-Party --
 import MaterialX as mx
 
+
 # -- Globals --
+class Remap(object):
+    __slots__ = ['positions', 'values', 'interpolations', 'colors']
+    kPosition = 0
+    def __init__(self):
+        self.positions = []
+        self.values = []
+        self.colors = []
+        self.interpolations = []
+
+class Namespace(str):
+    """Convenience Namespace context manager
+    """
+    def __init__(self, namespace):
+        self._namespace = namespace
+    
+    def __str__(self):
+        return self._namespace
+
+    def __enter__(self):
+        # Set Maya's active namespace to relative asset 
+        cmds.namespace(relativeNames=1)
+        try:
+            cmds.namespace(set=self._namespace)
+        except:pass
+
+    def __exit__(self, x_type, x_value, x_tb):
+        # Set Maya's namespace back to aboslute root 
+        try:
+            cmds.namespace(set=':')
+        except:pass
+        cmds.namespace(relativeNames=0)
+
 kPluginTranslatorTypeName = 'MaterialX'
 
-class MaterialXTranslator(OpenMayaMPx.MPxFileTranslator):    
+class MaterialXTranslator(OpenMayaMPx.MPxFileTranslator):
 
     def __init__(self):
         OpenMayaMPx.MPxFileTranslator.__init__(self)
@@ -27,7 +60,7 @@ class MaterialXTranslator(OpenMayaMPx.MPxFileTranslator):
         return True
 
     def haveNamespaceSupport(self):
-        return True
+        return False
 
     def haveReferenceMethod(self):
         return False
@@ -154,12 +187,15 @@ def recurseUpstreamConnections(dep_node, visited, upstream, mx_graph):
 
         if mplug.isNull:#not mplug.isFreeToChange():
             continue
-        changed = mplug.getSetAttrCmds(valueSelector=om.MPlug.kNonDefault, useLongNames=1)#om.MPlug.kChanged)
+            
         try:
-            if mplug.parent().isConnected:
+            plug_parent = mplug.parent()
+            if plug_parent.isConnected or plug_parent.isChild:
                 continue
         except: # Plug is not a child of a compound parent.
             pass
+
+        changed = mplug.getSetAttrCmds(valueSelector=om.MPlug.kNonDefault, useLongNames=1)#om.MPlug.kChanged)
 
         if not changed and not mplug.isConnected:
             continue
@@ -181,20 +217,47 @@ def recurseUpstreamConnections(dep_node, visited, upstream, mx_graph):
 
         if mplug.isArray:
             #print('arrays', mplug.name())
+
+            remap = Remap()
             for el_index in range(mplug.numElements()):
-                w = mplug.elementByLogicalIndex(el_index)
-                #print('\t', w)
-                #print(absnode, attr.name)
-                #if w.isCompound:
-                #    for c_index in range(w.numChildren()):
-                #        pass
-                        #print('\t', w.child(c_index).asFloat())
+                knot = mplug.elementByLogicalIndex(el_index)
+                if knot.isCompound and knot.isElement:
+                    # Assume array is of position, float, and interpolation.
+                    # used by maya's "remap" nodes.
+                    for ch_index in range(knot.numChildren()):
+                        child_plug = knot.child(ch_index)
+                        plug_data = child_plug.asMDataHandle()
+                        plug_data_type = plug_data.numericType()
+
+                        if ch_index == remap.kPosition: # Positions always first
+                            remap.positions.append(child_plug.asFloat())
+                        elif plug_data_type == om.MFnData.kVectorArray: # 11
+                                val = plug_data.asFloat()
+                                remap.values.append(val)
+                        elif plug_data_type == om.MFnData.kComponentList: # 13
+                                val = plug_data.asFloat3()
+                                remap.colors.extend(val)
+                        elif plug_data_type == om.MFnData.kInvalid: # 0
+                            remap.interpolations.append(child_plug.asInt())
+                        #print('\t', child_plug.name(), plug_data_type)
+
+            attr_name = mplug.name().split('.')[1]
+            curve_node = mx_graph.addNode('curve', absnode+'.'+attr_name, "curve")
+            curve_node.setInputValue('position'.format(attr_name), remap.positions, 'floatarray')
+            if remap.colors:
+                curve_node.setInputValue('color'.format(attr_name), remap.colors, 'floatarray')
+            else:
+                curve_node.setInputValue('value'.format(attr_name), remap.values, 'floatarray')
+                curve_node.setInputValue('interpolation'.format(attr_name), remap.interpolations, 'integerarray')
             continue
         elif mplug.isCompound:
-            #print('compounds', mplug.name())
+            continue
+            print('compounds', mplug.name())
             attr_str = '{}.{}'.format(absnode, attr.name)
-            value = cmds.getAttr(attr_str)
-            xnode.setInputValue(attr.name, str(value[0])[1:-1], 'float3') #'color3')
+            try:
+                value = cmds.getAttr(attr_str)
+                xnode.setInputValue(attr.name, str(value[0])[1:-1], 'float3') #'color3')
+            except:pass
             #for plug_child_indice in range(mplug.numChildren()):
             #    child_plug = mplug.child(plug_child_indice)
             #    print('\tchild:', child_plug)
@@ -279,7 +342,7 @@ def exportMaterialX(selected, file_path):
     visited_nodes = []
     selectList =  om.MSelectionList()
 
-    descendents = cmds.listRelatives(selected, allDescendents=True, fullPath=1)
+    descendents = cmds.listRelatives(selected, allDescendents=True, fullPath=1) or []
     for node in descendents:
         selectList.add(node)
 
@@ -341,44 +404,128 @@ def exportMaterialX(selected, file_path):
     # Write MaterialX document with node graph and assignments.
     mx.writeToXmlFile(xdoc, file_path)
 
+def setColorCurveAttributes(elem, current_node):
+    positions = elem.getInput('position').getValue()
+    colors = elem.getInput('color').getValue()
+    remainder = int(len(colors) / len(positions))
+    check = '{node}[0].color_Position'.format(node=elem.getName())
+    try:
+        cmds.getAttr(check)
+        pos_attr = '.color_Position'
+        color_attr = '.color_Color'
+    except:
+        pos_attr = '.position'
+        color_attr = '.color'
+
+    for index in range(len(positions)):
+        source_attr = '{node}[{i}]'.format(node=elem.getName(), i=index)
+        cmds.setAttr(
+            source_attr + pos_attr,
+            positions[index],
+        )
+        indice = index*remainder
+        cmds.setAttr(
+            source_attr + color_attr,
+            colors[indice],
+            colors[indice+1],
+            colors[indice+2],
+            type="double3",
+        )
+
+def assignMaterials(xdoc, filename):
+    look = xdoc.getLook('standard')
+    mat_namespace = ':' + filename + '_mtlx'
+    with Namespace(filename):
+        for assignment in look.getMaterialAssigns():
+            material_name = assignment.getMaterial()
+            mx_geo = assignment.getCollection().getIncludeGeom().split(',')
+            try:
+                cmds.sets(mx_geo, e=1, fe=mat_namespace + material_name)
+            except Exception as exerr:
+                print('shader assignment error:', exerr)
+
 
 def loadMaterialX(file_path):
+    basepath, ext = os.path.splitext(file_path)
+    filename = os.path.basename(basepath)
     xdoc = mx.createDocument()
     mx.readFromXmlFile(xdoc, file_path)
+    mat_namespace = filename + '_mtlx:'
+    all_nodes = []
     for elem in xdoc.traverseTree():
-        if elem.isA(mx.Node):
-            #cmds.createNode(elem.getCategory(), name=elem.getName())
-            cmds.shadingNode(elem.getCategory(), name=elem.getName(), asShader=1)
+        if elem.isA(mx.Node) and elem.getType() == 'mayaNode':
+            category = elem.getCategory()
+            name = elem.getName()
+            if category == 'shadingEngine':
+                cmds.sets(name=name, empty=True, renderable=True, noSurfaceShader=True)
+            else:
+                cmds.shadingNode(category, name=name, asShader=1)
+            all_nodes.append(name)
+            # Maya does not automatically create these color management connections
+            if category == 'file': 
+                cmds.connectAttr(":defaultColorMgtGlobals.cme", "{}.cme".format(name))
+                cmds.connectAttr(":defaultColorMgtGlobals.cfe", "{}.cmcf".format(name))
+                cmds.connectAttr(":defaultColorMgtGlobals.cfp", "{}.cmcp".format(name))
+                cmds.connectAttr(":defaultColorMgtGlobals.wsn", "{}.ws".format(name))
 
     current_node = None
     for elem in xdoc.traverseTree():
-        if elem.isA(mx.Node):
+        if elem.isA(mx.Node) and elem.getType() == 'mayaNode':
             current_node = elem
+        elif elem.isA(mx.Node) and elem.getType() == 'curve':
+            colors = elem.getInput('color')
+            if colors:
+                setColorCurveAttributes(elem, current_node)
+                continue
+            
+            values = elem.getInput('value').getValue()
+            interpolations = elem.getInput('interpolation').getValue()
+            positions = elem.getInput('position').getValue()
+            for index in range(len(positions)):
+                source_attr = '{node}[{i}]'.format(node=elem.getName(), i=index)
+                cmds.setAttr(
+                    source_attr,
+                    positions[index],
+                    values[index],
+                    interpolations[index],
+                    type="double3",
+                )
+        elif elem.isA(mx.Input) and elem.getType().endswith('array'):
+            # Skip all array types
+            continue
         elif current_node and elem.getCategory() == 'input':
             upstream_node = elem.getConnectedNode()
             output_name = elem.getOutputString().replace('_out', '')
+            source_attr = '{node}.{attr}'.format(
+                node=current_node.getName(), attr=elem.getName())
             if upstream_node:
-                #for output in upstream_node.getOutputs():
                 destination_attr = '{node}.{attr}'.format(
                     node=upstream_node.getName(), attr=output_name)
-                source_attr = '{node}.{attr}'.format(
-                    node=current_node.getName(), attr=elem.getName())
                 cmds.connectAttr(destination_attr, source_attr)
             else:
-                attribute = '{node}.{attr}'.format(
-                    node=current_node.getName(), attr=elem.getName())
                 m_type = elem.getType()
                 m_value = elem.getValue()
                 cmd = 'setAttr "{attr}" -type "{type}" {val};'
                 if m_type == 'float3':
                     m_value = m_value.replace(',', '')
-                if m_type in ['short', 'float']:
+                if m_type in ['short', 'float', 'enum']:
                     cmd = 'setAttr "{attr}" {val};'.format(
-                            attr=attribute,
+                            attr=source_attr,
                             val=m_value,
                             )
                 elif m_type == 'string':
-                    cmd = cmd.format(attr=attribute, type=m_type, val='"{}"'.format(m_value))
+                    cmd = cmd.format(attr=source_attr, type=m_type, val='"{}"'.format(m_value))
+                elif m_type == 'bool':
+                    cmd = 'setAttr "{}" {};'.format(source_attr, int(bool(m_value)))
                 else:
-                    cmd = cmd.format(attr=attribute, type=m_type, val=m_value)
+                    cmd = cmd.format(attr=source_attr, type=m_type, val=m_value)
                 mel.eval(cmd)
+    for x in all_nodes:
+        try:
+            cmds.rename(x, mat_namespace+x)
+        except:pass
+    assignMaterials(xdoc, filename)
+
+if __name__ == '__main__':
+    exportMaterialX(cmds.ls(sl=1), 'P:/Projects/USD_Materialx_Scratchpad/materialx_test/compound_test.mtlx')
+    #loadMaterialX('P:/Projects/USD_Materialx_Scratchpad/materialx_test/compound_test.mtlx')

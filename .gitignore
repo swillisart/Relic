@@ -5,13 +5,11 @@ __pycache__
 *$py.class
 *.db
 *.log
-pypackages27
-pypackages39
 build
 pyenv.cfg
 dist
-bin
 *.spec
+*.exe
 python-3.9.2-embed-amd64
 Include
 Lib
@@ -19,4 +17,5 @@ Scripts
 relic_resources.py
 resources.py
 qtshare
-library/plugins/alNuke/Lib
+library/plugins/Lib
+library/plugins/Lib27

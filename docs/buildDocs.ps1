@@ -1,0 +1,1 @@
+C:\Users\Resartist\AppData\Local\Programs\Python\Python36\Scripts\sphinx-build.exe -b html .\source .\build

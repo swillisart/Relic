@@ -417,7 +417,7 @@ class DialogOverlay(QDialog):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+        #painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         painter.setBrush(QColor(10, 10, 10, self._opaque))
         painter.setPen(Qt.NoPen)
         painter.drawRect(self.geometry())

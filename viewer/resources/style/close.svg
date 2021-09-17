@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: -->
+
+<svg
+   width="512pt"
+   height="512pt"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg1016"
+   sodipodi:docname="close.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1020" />
+  <sodipodi:namedview
+     id="namedview1018"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="pt"
+     showgrid="false"
+     inkscape:zoom="0.38997906"
+     inkscape:cx="-250.01342"
+     inkscape:cy="73.080847"
+     inkscape:window-width="1920"
+     inkscape:window-height="1147"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1016" />
+  <g
+     id="FRAME_0"
+     style="visibility:visible"
+     fill-rule="evenodd"
+     transform="matrix(1.3604302,0,0,1.3604302,-92.076897,-92.103307)">
+    <path
+       style="opacity:1;fill:#999999;stroke-width:0;fill-opacity:1"
+       d="M 255.60001,221.10001 401.10001,75.5 q 8.5,-7.400002 17.5,-0.25 l 16.5,16.5 L 437.75,95 q 3.10001,5.85 0,12.1 L 436,109.5 289.85001,255.5 436,401.60001 q 6.85001,8.39999 -0.39999,17.25 l -17,17 -2.75,2 q -6.10001,3 -12.25,-0.25 L 255.60001,290 109.5,436 q -8.5,6.75 -17.150002,-0.14999 l -16.5,-16.5 -2.599998,-3.25 q -3.25,-6 0,-12.10001 L 75,401.60001 221.10001,255.75 221.25,255.5 75.099998,109.6 q -7,-8.25 0,-17.1 l 16.5,-16.5 3.25,-2.650002 q 5.900002,-3.25 12.250002,0 l 2.4,1.75 146.10001,146.000012"
+       id="path1009" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round"
+       d="M 221.10001,255.75 75,401.60001 73.25,404 q -3.25,6.10001 0,12.10001 l 2.599998,3.25 16.5,16.5 Q 101,442.75 109.5,436 l 146.10001,-146 -33,-33.14999 H 222.25 L 221.5,255.75 h -0.39999 L 221.25,255.5 75.099998,109.6 q -7,-8.25 0,-17.1 l 16.5,-16.5 3.25,-2.650002 q 5.900002,-3.25 12.250002,0 l 2.4,1.75 L 255.60001,221.10001 401.10001,75.5 q 8.5,-7.400002 17.5,-0.25 l 16.5,16.5 L 437.75,95 q 3.10001,5.85 0,12.1 l -1.75,2.4 -146.14999,146 -34.25,-34.39999"
+       id="path1011" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round"
+       d="M 289.85001,255.5 436,401.60001 q 6.85001,8.39999 -0.39999,17.25 l -17,17 -2.75,2 q -6.10001,3 -12.25,-0.25 L 255.60001,290"
+       id="path1013" />
+  </g>
+</svg>

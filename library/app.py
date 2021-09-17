@@ -12,14 +12,14 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon,
 
 # -- First-party --
 from sequencePath import sequencePath as Path
-from kohainetwork import server
-server.SERVER_NAME = 'relic_ingest'
+from strand import server
 
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
-from library.config import RELIC_PREFS, kohaiPreview
-from library.objectmodels import Library, db, polymorphicItem, temp_asset
+from library.config import RELIC_PREFS, peakPreview
+from library.objectmodels import Library, db, polymorphicItem, getCategoryConstructor, alusers
 from library.widgets.assets import assetItemModel, assetListView
+from library.asset_grid import AssetGridView
 from library.widgets.subcategoriesViews import ExpandableTab, CategoryManager
 from library.widgets.metadataView import metadataFormView
 from library.widgets.relationshipView import LinkViewWidget
@@ -27,103 +27,28 @@ from library.widgets.util import DialogOverlay
 from library.widgets.ingest import IngestForm
 
 
-raw_md = """
-Historical background and objectives
-================================================================================
-
-Historical background and objectives
-
-Closure mixture representation  
---------------------------------------------------------------------------------
-----
-Component              | Closure         | Description
------------------------|-----------------|-----------------------------------
-Transparency           | `transparency`  | simple pass-through (can be thought of as a delta BTDF)
-Coating                | `specular_brdf` | dielectric microfacet BRDF (GGX)
-Emission               | `emission`      | diffuse emission
-Metal                  | `metal_brdf`    | conductor microfacet BRDF (GGX)
-Specular reflection    | `specular_brdf` | dielectric microfacet BRDF (GGX)
-Specular transmission* | `specular_btdf` | dielectric microfacet BTDF (GGX)
-Sheen*                 | `sheen_brdf`    | retro-reflective dielectric microfacet BRDF [#Estevez2017]
-Subsurface scattering* | `subsurface`    | subsurface scattering (e.g. diffusion or random-walk)
-Diffuse transmission*  | `diffuse_btdf`  | diffuse microfacet BTDF (Oren-Nayar)
-Diffuse reflection     | `diffuse_brdf`  | diffuse microfacet BRDF (Oren-Nayar)
-Sean buddy     | did something cool  | 1. aaaaaa  
-
-` `
-
-Coating
---------------------------------------------------------------------------------
-----
-The topmost scattering layer is a dielectric coating with a GGX microfacet BRDF closure `coat_brdf`. As a dielectric, this BRDF is not energy preserving (i.e. its directional reflectance is generally less than one) as it obeys Fresnel reflection laws. The layer is assumed to be infinitely thin, and the remaining non-reflected light is passed directly to the underlying layer without refraction. The reflection color is fixed to white, though the coat medium color can be user controlled.
-
-` `
-
-The closure combination formula is
----------------------------------------
-----
-
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
-
-> 1. This is a complete item
-> 2.  fun
-> 3.  dead
-
-
-- [x] @mentions, #refs, [links](), **formatting**, and <del>tags</del> supported
-- [x] list syntax required (any unordered or ordered list supported)
-- [x] this is a complete item
-- [ ] this is an incomplete item
-- [ ]  gross
-
-###### This is a tiny tag
-
-
-_6/18/2021 1:14 AM_
---------------------------------------------------------------------------------
-
-Task     | Description
----------|-----------------------------------
-Completed stupid stuff which you have no idea about   | simple pass-through  of my not gaead dkajljsdfkljdkla fsdkjfkldasjfk ldasjfklasj;ldfkjas dklfjasdfkj dddlasjf;jsfkldsf jadklsfj  dsflasdkjf ldjasfkldjasfkldj asfkljasdf kljlasdfjkld asflkjas dflkjasdklf jasldfjd sfklasjdlfkja sdklfjdasfklas djflkja sdflkjasdf  sdjlafjdsa kl asdkl jkasdfkjads ladskfj asjkdf
-
-` `
-
-Reciprocity
---------------------------------------------------------------------------------
-
-A physically correct BSDF must satisfy reciprocity (i.e. symmetry under exchange of the incoming and outgoing directions). However, in our proposed model, even if the leaf-level BSDFs are reciprocal, the closure combination is *not*. This is due to the introduction of the `reflectance(...)` function which depends on the incoming direction only. This may present a problem if the shading model were to be incorporated in certain light transport algorithms, such as bidirectional path tracing, which typically rely on this property to hold.
-
-However, enforcing reciprocity would be likely to significantly complicate the mathematical form of our model, without producing a qualitatively better visual appearance. For many renderers, including Arnold -- a unidirectional path tracer, the physical constraint of reciprocity can be violated, even in the leaf BSDFs, without causing any real problems. Furthermore, enforcing reciprocity of a layered material in a truly physically correct manner [#Jakob2014] is currently too complicated and cumbersome to implement in a production renderer. Models in actual production use that achieve reciprocity, such as the coating scheme of Kulla and Estevez [#Kulla2017], do so by introducing drastic approximations with inaccuracy likely similar to the non-reciprocal approach described here.
-
-Therefore, for the time being we do not consider the incorporation of reciprocity in our model to be a strict necessity.
-
-` `
-
-Layering model
---------------------------------------------------------------------------------
-
-Our layering model ensures energy conservation by construction, and attempts also to ensure energy preservation where possible. However, as a relatively simple model which is simply a linear combination of closures with weights adjusted according to an approximate `reflectance(...)` function, it is not a physically accurate simulation of the light transport in the layers that we describe.
-
-A number of more accurate treatments of the full light transport in layered media have appeared recently [#Jakob2014] [#Belcour2018] [#Zeltner2018]. These models incorporate the effect of the various modes of reflection and transmission through the whole stack of layers, which generates a final BSDF (or in general BSSRDF) which is not a simple linear combination of the per-layer BSDFs. 
-
-In future, we would like to investigate transitioning to a more accurate model such as this. However, currently it seems all the available models are more expensive to compute and much more complex to implement. 
-
-We attempt at least in our model to incorporate some of the most important effects which arise due to the inter-layer interaction by hand. For example, we allow the roughness of the coating to affect the roughness of (some of) the underlying layers. 
-
-` `
-
-Surface orientation
---------------------------------------------------------------------------------
-
-In transmissive situations, light may be incident from above or below the surface normal. The transmission layer is sensitive to this and ensures that light correctly refracts through the interface. However, the other layers are oriented w.r.t. the *facing* normal, so the scattering behavior is the same when objects are hit from outside and from inside. This again is a non-physical approximation, which is useful in practice as it simplifies the logic without introducing obvious visual artifacts.
-
+description_style = """
+<style type="text/css">
+table {
+    border-width: 12px;
+    border-style: solid;
+    border-color: rgb(64,64,64);
+    border-collapse: collapse;
+    border-top: 2px solid #00cccc;
+}
+td, th {
+  padding: 6;
+  text-align: left;
+}
+body {
+  padding:50px;
+  margin:auto auto;
+}
+</style>
 """
 
 CATEGORIES = []
+PAGE_LIMIT = int(RELIC_PREFS.assets_per_page)
 
 class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -177,8 +102,15 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.asset_item_model = assetItemModel(self.assets_view)
         self.centralwidget.layout().insertWidget(2, self.assets_view)
 
+        self.assets_grid = AssetGridView(PAGE_LIMIT, 30, self)
+        self.assets_grid.base_model = self.asset_item_model
+        self.assets_grid.hide()
+        self.asset_item_model.rowsInserted.connect(self.assets_grid.onRowsInserted)
+        self.asset_item_model.modelReset.connect(self.assets_grid.clear)
+        self.centralwidget.layout().insertWidget(3, self.assets_grid)
         self.links_view = LinkViewWidget(self)
         self.metatdata_view = metadataFormView(self)
+        self.metatdata_view.openDescription.connect(self.showMarkdown)
         self.attributesLayout.addWidget(self.metatdata_view)
         #self.attributeDock.setWidget(self.metatdata_view)
         self.linksDock.setWidget(self.links_view)
@@ -188,7 +120,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.linkFilterBox.textChanged.connect(self.links_view.filterAll)
         self.actionPortal.toggled.connect(self.hideDocks)
         self.actionIngest.triggered.connect(self.beginIngest)
-        self.actionDocumentation.triggered.connect(self.showDocumentation)
+        self.descriptionCloseButton.clicked.connect(self.closeOverlay)
+        #relic_docs = lambda x: self.showMarkdown('blah')
+        #self.actionDocumentation.triggered.connect(relic_docs)
+
+        #self.actionDocumentation.triggered.connect(self.showMarkdown)
+
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
         self.assets_view.selmod.selectionChanged.connect(self.loadAssetData)
@@ -196,26 +133,63 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.backButton.clicked.connect(self.assetViewing)
         self.documentationFilterBox.textChanged.connect(self.searchPage)
         self.documentationFilterBox.returnPressed.connect(self.findNextInPage)
-
         self.viewScaleSlider.valueChanged.connect(self.scaleView)
         db.accessor.imageStreamData.connect(self.updateIcons)
+        self.viewScaleSlider.setValue(int(RELIC_PREFS.view_scale))
         self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
 
         self.documentationDock.setTitleBarWidget(self.documentationDockTitle)
         self.documentationDock.hide()
         self.documentationDock.setAutoFillBackground(True)
+        user = alusers(name=os.getenv('username'))
+        user_exists = RELIC_PREFS.user_id
+        if not user_exists: # user not cached local OR does not exist
+            user_id = user.nameExists()
+            if not user_id: # user has not been created yet
+                user.create()
+                RELIC_PREFS.user_id = user.id
+            else:
+                RELIC_PREFS.user_id = user_id
+
 
     @Slot()
     def scaleView(self, value):
+        if value == 0:
+            self.attributeDock.hide()
+            self.assets_view.hide()
+            self.assets_grid.show()
         if value == 1:
+            self.assets_view.show()
+            self.attributeDock.show()
             self.assets_view.compactMode()
+            grid_visible = self.assets_grid.isVisible()
+            self.assets_grid.hide()
+            if grid_visible:
+                self.updateAssetView()
         elif value == 2:
+            self.assets_grid.hide()
+            self.assets_view.show()
+            self.attributeDock.show()
             self.assets_view.iconMode()
 
-    @Slot()
-    def showDocumentation(self):
-        self.documentationTextBrowser.setMarkdown(raw_md)
-        DialogOverlay(self, self.documentationDock)
+        RELIC_PREFS.view_scale = value
+
+    @Slot(str)
+    def showMarkdown(self, md_path):
+        if not os.path.exists(md_path):
+            return
+        self.assets_view.hide()
+        with open(md_path, 'r') as md_text:
+            self.documentationTextBrowser.setMarkdown(md_text.read())
+        html_from_markdown = self.documentationTextBrowser.toHtml()
+        self.documentationTextBrowser.setHtml(description_style + html_from_markdown)
+        self.overlay = DialogOverlay(self, self.documentationDock)
+
+    def closeOverlay(self):
+        if self.overlay:
+            self.assets_view.show()
+            self.removeEventFilter(self.overlay)
+            self.overlay.close()
 
     @Slot()
     def searchPage(self, text):
@@ -240,9 +214,45 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         return ingest
 
     @Slot()
-    def externalCommand(self, asset_data):
+    def externalPluginCommand(self, asset_data):
         ingest = self.beginIngest()
-        ingest.collectFromJson(asset_data)
+        ingest.collectAssets(asset_data)
+
+    @Slot()
+    def browseTo(self, path):
+        """Auto browses to the path supplied through 3 sections,
+        Category / Subcategory / Asset
+
+        Parameters
+        ----------
+        path : str
+            relative path to asset EXAMPLE: "relic://4/cars/F150"
+        """
+        try:
+            _, _, _category, _id, subcategory, name = path.split('/')
+        except:
+            return
+        category_id = int(_category)
+        asset_id = int(_id)
+        # Set the UI to reflect our asset category.
+        for category in self.library.categories:
+            if category.id == category_id:
+                category.tab.expandState()
+                # Scroll to the subcategory tree item in UI.
+                category.tree.expandTo(subcategory)
+            else:
+                category.tab.collapseState()
+        self.assets_view.clear()
+
+        # construct our asset and add it to the main view. 
+        asset_constructor = getCategoryConstructor(category_id)
+        asset = asset_constructor()
+        asset.fetch(id=asset_id)
+        asset.category = category_id
+        self.assets_view.addAsset(asset)
+        asset.fetchIcon()
+        asset.related(noassets=True)
+        self.metatdata_view.loadAssets([asset])
 
     @Slot()
     def onIngestClosed(self, dock):
@@ -285,7 +295,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         # Only re-query the database if the searchbox has changed
         new_search = False
-        limit = int(RELIC_PREFS.assets_per_page)
 
         # Split text into list of search term keywords
         text = self.searchBox.text()
@@ -297,13 +306,13 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         if new_search or sender not in [self.searchBox, self.category_manager]:
             page = self.pageSpinBox.value()
-
-            for item in self.library.load(page, limit, categories):
-                self.assets_view.addItem(item)
+            skip_icons = not self.assets_grid.isVisible()
+            for asset in self.library.load(page, PAGE_LIMIT, categories, icons=skip_icons):
+                self.assets_view.addAsset(asset)
             asset_total = len(self.library.assets_filtered)
 
             self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
-        page_count = math.ceil(asset_total / limit) or 1
+        page_count = math.ceil(asset_total / PAGE_LIMIT) or 1
         self.pageSpinBox.setSuffix('/' + str(page_count))
         self.pageSpinBox.setMaximum(page_count)
         msg = 'Search results: {} Assets...'.format(asset_total)
@@ -312,18 +321,23 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def loadAssetData(self, selection):
         sender = self.sender()
-        indexes = selection.indexes()
+        if sender.parent().drag_select:
+            # Better multi-select performance
+            return
 
-        if indexes:
-            if sender.parent().drag_select:
-                # TODO: table / grid view for editing. 
-                return
-            asset = indexes[0].data(polymorphicItem.Object)
+        indexes = self.assets_view.selectedIndexes()
+
+        indexes = set(self.assets_view.selectedIndexes())
+        [indexes.add(x) for x in selection.indexes()]
+
+        assets = [x.data(polymorphicItem.Object) for x in indexes]
+        if assets:
+            asset = assets[-1] 
             asset.related(noassets=True)
-            self.metatdata_view.loadAsset(asset)
+            self.metatdata_view.loadAssets(assets)
             if self.previewCheckBox.isChecked():
-                path = str(asset.local_path)
-                kohaiPreview(path)
+                path = asset.network_path
+                peakPreview(path)
 
     @Slot()
     def loadLinkData(self, index):
@@ -359,14 +373,23 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         #TODO: query the databse for permissions level
         RELIC_PREFS.edit_mode = int(toggle)
 
+def onStateChange(state):
+    if state == Qt.ApplicationState.ApplicationActive:
+        db.accessor.makeConnection()
 
 def main(args):
     app = qApp or QApplication(sys.argv)
     ctypes.windll.kernel32.SetConsoleTitleW("Relic")
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic")
     window = RelicMainWindow()
-    ingest_server = server.KohaiServer()
-    ingest_server.incomingFile.connect(window.externalCommand)
+    # Startup the plugin server
+    ingest_server = server.StrandServer('relic')
+    ingest_server.incomingData.connect(window.externalPluginCommand)
+    ingest_server.incomingFile.connect(window.browseTo)
     window.resize(1600, 925)
     window.show()
+    if args:
+        if args.path:
+            window.browseTo(args.path)
+    app.applicationStateChanged.connect(onStateChange)
     sys.exit(app.exec_())

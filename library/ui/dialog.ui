@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1083</width>
+    <width>1130</width>
     <height>705</height>
    </rect>
   </property>
@@ -46,7 +46,6 @@ QWidget:disabled {
     background-color: rgb(43, 43, 43);
     color: rgb(92, 92, 92);
 }
-
 QMainWindow::separator {
   width: 0px;
   height: 0px;
@@ -266,12 +265,35 @@ QScrollBar::add-page:vertical,
 QScrollBar::sub-page:vertical  {
     background: none;
 }
-
+QTableCornerButton::section {
+    background-color: rgb(92, 92, 92);
+	border: 1px rgb(43,43,43);
+	border-radius: 0px;
+}
+QHeaderView {
+	background-color: rgb(68, 68, 68);
+	border: 0px transparent rgb(68,68,68);
+    padding: 0px;
+	margin: 1px;
+	border-radius: 0px;
+}
+QHeaderView::section {
+	background-color: rgb(92, 92, 92);
+	color: rgb(200,200,200);
+    border-bottom: 1px solid rgb(43,43,43);
+    border-right: 1px solid rgb(43,43,43);
+	border-radius: 0px;
+	text-align: center;
+}
+QHeaderView::section:vertical {
+	padding-left: 4px;
+}
 QListView,
 QTreeView,
 QTableView,
 QColumnView {
     border: none;
+	alternate-background-color: rgb(75,75,75);
 }
 QListView::item,
 QTreeView::item,
@@ -283,7 +305,6 @@ QColumnView::item {
     margin-top: 2px;
     margin-bottom: 2px;
 }
-
 QTreeView::branch {
     border-top: 0px solid rgb(43, 43, 43);
     border-bottom: 0px solid rgb(43, 43, 43);
@@ -2179,10 +2200,10 @@ QPushButton:checked {
            </spacer>
           </item>
           <item>
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="descriptionTitle">
             <property name="font">
              <font>
-              <pointsize>22</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="styleSheet">
@@ -2195,7 +2216,7 @@ QPushButton:checked {
              <enum>QFrame::Sunken</enum>
             </property>
             <property name="text">
-             <string>Autodesk Standard Surface</string>
+             <string>Description</string>
             </property>
            </widget>
           </item>
@@ -2213,7 +2234,20 @@ QPushButton:checked {
            </spacer>
           </item>
           <item>
-           <widget class="QToolButton" name="backButton_2">
+           <spacer name="horizontalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QToolButton" name="descriptionCloseButton">
             <property name="styleSheet">
              <string notr="true">QToolButton {
     padding: 0px;
@@ -2304,6 +2338,12 @@ QToolButton:hover {
         </item>
         <item>
          <widget class="QSlider" name="viewScaleSlider">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="styleSheet">
            <string notr="true"/>
           </property>
@@ -2466,7 +2506,7 @@ QPushButton:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1083</width>
+     <width>1130</width>
      <height>22</height>
     </rect>
    </property>

@@ -137,6 +137,7 @@ class subcategoryTreeView(QTreeView):
             self.selection_model.clearSelection()
 
         if pop and event.buttons() == Qt.LeftButton:
+            print(index, index.row(), index.column())
             self.selection_model.select(index, QItemSelectionModel.Deselect)
             self.update()
 
@@ -192,6 +193,33 @@ class subcategoryTreeView(QTreeView):
             item = self.model.itemFromIndex(index)
             if item.hasChildren():
                 self.setExpanded(proxy_index, True)
+
+    def expandTo(self, name):
+        """Override Qt to ignore expansion on items without children.
+        """
+        for i in range(self.model.rowCount()):
+            index = self.model.index(i, 0)
+            proxy_index = self.proxyModel.mapFromSource(index)
+            item = self.model.itemFromIndex(index)
+            self.setExpanded(proxy_index, True)
+            self.findInTree(name, item)
+            
+    def findInTree(self, name, item=None):
+        if item.hasChildren():
+            for i in range(item.rowCount()):
+                child_item = item.child(i, 0)
+                self.findInTree(name, child_item)
+        
+        index = item.index()
+        proxy_index = self.proxyModel.mapFromSource(index)
+        item = self.model.itemFromIndex(index)
+        self.setExpanded(proxy_index, True)
+        if item.name == name:
+            self.scrollTo(proxy_index)
+            # For some reason this doesn't w, ork
+            self.selection_model.select(proxy_index, QItemSelectionModel.ClearAndSelect)
+            self.update()
+            return
 
     def _createContextMenus(self, value):
         context_menu = QMenu(self)
@@ -332,8 +360,8 @@ class subcategoryTreeView(QTreeView):
 
         # Drag and drop re-categorization (from the asset list view)
         if mime.hasUrls() and index.isValid():
-            subcategory = self.indexToItem(index)
-            if not subcategory:
+            subcategory_item = self.indexToItem(index)
+            if not subcategory_item:
                 return event.reject()
             event.setDropAction(Qt.MoveAction)
             event.accept()
@@ -342,7 +370,7 @@ class subcategoryTreeView(QTreeView):
                 constructor = getattr(objectmodels, str(key))
                 for fields in values:
                     asset = constructor(**fields)
-                    asset.moveToSubcategory(subcategory)
+                    asset.moveToSubcategory(subcategory_item)
         else:
             # Apply subtractions regardless of destination.
             self.updateCounts()

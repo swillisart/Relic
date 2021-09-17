@@ -1,19 +1,20 @@
+import ctypes
+import glob
 import os
+import subprocess
 import sys
 import time
 from functools import partial
-import glob
-import ctypes
-import subprocess
 
 import libraw
 import numpy as np
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
-from library.config import log, logFunction, MOVIE_EXT, RELIC_PREFS, DCC_EXT, getAssetSourceLocation
+from library.config import (DCC_EXT, MOVIE_EXT, RELIC_PREFS, TOOLS_EXT,
+                            getAssetSourceLocation, log, logFunction)
 from library.objectmodels import BaseFields, relic_asset, temp_asset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
-                            QMargins, QMutex, QObject, QPoint, QMutexLocker,
+                            QMargins, QMutex, QMutexLocker, QObject, QPoint,
                             QPropertyAnimation, QRect, QRegularExpression,
                             QSize, QSortFilterProxyModel, Qt, QTextStream,
                             QThread, QWaitCondition, Signal, Slot)
@@ -169,6 +170,7 @@ class ConversionRouter(QObject):
                     asset = func()
                     self.progress.emit(asset)
                 except Exception as exerr:
+                    print(exerr)
                     log.error('conversion error: %s' % exerr)
                     #self.error.emit(exerr)
 
@@ -249,7 +251,7 @@ class ConversionRouter(QObject):
             '-an', # Flag to not try linking audio file
             '-pix_fmt', 'yuv422p',
             '-vcodec', 'h264',
-            '-crf', '26',
+            '-crf', '25',
             '-preset', 'medium',
             '-tune', 'fastdecode',
             '-movflags', '+faststart',
@@ -258,6 +260,7 @@ class ConversionRouter(QObject):
             '-vf', ','.join(FILTER_GRAPH_ICON),
             '-an',  # Flag to not try linking audio file
             '-vcodec', 'h264',
+            '-tune', 'fastdecode',
             '-movflags', '+faststart',
             str(out_img_path.suffixed('_icon', ext='.mp4'))
         ]
@@ -287,7 +290,7 @@ class ConversionRouter(QObject):
 
         pr.stdin.close()
         asset = assetFromStill(spec, icon_path, in_img_path)
-        asset.duration = framelength/24
+        asset.duration = int(framelength/24)
         return asset
 
     @staticmethod
@@ -442,7 +445,7 @@ class IngestionThread(QThread):
                 category = item.categoryName
                 subcategory = item.subcategory.name
                 item.path = Path(subcategory) / (item.name + in_path.ext)
-                out_path = item.local_path
+                out_path = item.network_path
 
                 files_map = {}
 
@@ -468,18 +471,27 @@ class IngestionThread(QThread):
                     for pair in formats:
                         suffix, ext = pair
                         src = in_path.suffixed(suffix, ext)
-                        dst = out_path.suffixed(suffix, ext)
-                        files_map[src] = dst
+                        if src.exists:
+                            dst = out_path.suffixed(suffix, ext)
+                            files_map[src] = dst
+                elif in_path.ext in TOOLS_EXT:
+                    in_icon = in_path.suffixed('_icon', ext='.jpg')
+                    if in_icon.exists:
+                        out_icon = out_path.suffixed('_icon', ext='.jpg')
+                        files_map[in_icon] = out_icon
                 elif in_path.sequence_path or in_path.ext in MOVIE_EXT:
                     in_proxy = temp_path.suffixed('_proxy', ext='.mp4')
+                    in_icon = temp_path.suffixed('_icon', ext='.jpg')
+                    out_icon = out_path.suffixed('_icon', ext='.jpg')
                     out_proxy = out_path.suffixed('_proxy', ext='.mp4')
-
                     # Movies have video icon preview's
                     in_icon_mov = temp_path.suffixed('_icon', ext='.mp4')
                     out_icon_mov = out_path.suffixed('_icon', ext='.mp4')
                     files_map[in_icon_mov] = out_icon_mov
                     files_map[in_icon] = out_icon
                     files_map[in_proxy] = out_proxy
+                    # Set the path to include the frame expression
+                    item.path = Path(subcategory) / (item.name + in_path.frame_expr + in_path.ext)
                 else: # Only single-frame images have proxy jpegs.
                     in_proxy = temp_path.suffixed('_proxy', ext='.jpg')
                     out_proxy = out_path.suffixed('_proxy', ext='.jpg')
@@ -491,6 +503,7 @@ class IngestionThread(QThread):
                     files_map[in_proxy] = out_proxy
 
                 for src, dst in files_map.items():
+                    src.checkSequence()
                     if src.sequence_path:
                         for seq_file in glob.glob(src.sequence_path):
                             frame = Path(seq_file).frame

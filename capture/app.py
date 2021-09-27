@@ -26,7 +26,7 @@ from strand.client import StrandClient
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
-OUT_FORMATS = ['.png', '.mp4', '.webp', 'gif']
+OUT_FORMATS = ['.png', '.mp4', '.webp', '.gif']
 PNG, MP4, WEBP, GIF = range(4)
 CREATE_NO_WINDOW = 0x08000000
 MOVIES = {}

@@ -36,7 +36,7 @@ SHADER_DESCRIPTION = {
     "functionName": "OCIODisplay",
     "lut3DEdgeLen": 32,
 }
-NUMPY_TEXTURE = {
+NP_TEXTURE_FORMAT = {
     'uint8': [GL_RGB8, GL_UNSIGNED_BYTE],
     'float16': [GL_RGB16F, GL_HALF_FLOAT],
     'float32': [GL_RGB32F, GL_FLOAT],
@@ -585,7 +585,7 @@ class ImageShader(BaseProgram):
 
 class ImagePlane(object):
 
-    def __init__(self, width, height, z=0, aspect=1, pixels=None, shader=None):
+    def __init__(self, width, height, z=0, aspect=1, pixels=None, shader=None, order='rgb'):
         if shader:
             self.shader = shader
         else:
@@ -596,7 +596,12 @@ class ImagePlane(object):
         self.shape = glm.vec3(width, height, z)
         self.aspect = aspect
         self.tile = 1
+        if order == 'rgb':
+            self.order = GL_RGB
+        else:
+            self.order = GL_BGR
         self.build(pixels)
+        self.no_annotation = True
 
     def build(self, pixels):
         x, y, z = self.shape
@@ -625,7 +630,7 @@ class ImagePlane(object):
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
-        self.gl_internal_format, self.gl_format = NUMPY_TEXTURE.get(str(pixels.dtype))
+        self.gl_internal_format, self.gl_format = NP_TEXTURE_FORMAT.get(str(pixels.dtype))
         # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
 
         self.f.glTexImage2D(
@@ -635,7 +640,7 @@ class ImagePlane(object):
             int(self.shape.x),
             int(self.shape.y),
             0,
-            GL_RGB,
+            self.order,
             self.gl_format,
             pixels,
         )
@@ -672,6 +677,7 @@ class ImagePlane(object):
         self.paint_canvas.fill(QColor(0, 0, 0, 0))
         pixels = np.ndarray(shape=(h, w, 3), buffer=self.paint_canvas.constBits(), dtype=np.uint8)
         self.updateAnnotation(pixels)
+        self.no_annotation = True
 
     def setAnnotation(self, img):
         pixels = np.ndarray(
@@ -693,7 +699,7 @@ class ImagePlane(object):
             0,
             self.shape.x,
             self.shape.y,
-            GL_RGB,
+            self.order,
             self.gl_format,#GL_HALF_FLOAT,
             pixels
         )

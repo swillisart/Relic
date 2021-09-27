@@ -68,7 +68,6 @@ def collectIfRef(dep_node, assets, files=None):
             filename = os.path.basename(basepath)
             ref_edit_path = 'C:/Users/Resartist/.relic/ingest/{}.editMB'.format(filename)
             exclusion = cmds.ls('{}_mtlx::*'.format(filename))
-            print('excluding', exclusion)
             cmds.exportEdits(ref_edit_path, orn=ref_node, f=1, type='editMB',
                 includeAnimation=1, includeShaders=1, includeSetAttrs=1,
                 excludeNode=exclusion)

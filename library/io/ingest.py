@@ -34,6 +34,21 @@ FILTER_GRAPH_PROXY = 'pad=ceil(iw/2)*2:ceil(ih/2)*2'
 
 SIZE = ImageDimensions(288, 192)
 
+PS_CMD = 'powershell -ExecutionPolicy bypass -command "{}"'
+
+EXE_ICON_CMD = """Add-Type -AssemblyName System.Drawing;
+$icon = [System.Drawing.Icon]::ExtractAssociatedIcon('{}');
+$icon.ToBitmap().Save('{}')"""
+
+NEAT_IMAGE_CMD = [
+    'E:/OneDrive/Apps/Neat Image v8 Standalone/NeatImageCL.exe', '"{}"',
+    '-sp',
+    '-ow',
+    '-e',
+    '-b=M',
+    '-s=',
+]
+
 def getMovInfo(fpath):
     """
     Gets Duration, Resolution and Framerate of supplied quicktime.
@@ -67,8 +82,8 @@ def generatePreviews(img_buf, path):
     icon_spec['compression'] = 'jpeg:40'
     icon_buf = oiio.ImageBuf(icon_spec)
 
-    oiio.ImageBufAlgo.resize(proxy_buf, img_buf, filtername='lanczos3')
-    oiio.ImageBufAlgo.fit(icon_buf, proxy_buf, filtername='lanczos3', exact=True)
+    oiio.ImageBufAlgo.resize(proxy_buf, img_buf, filtername='cubic')
+    oiio.ImageBufAlgo.fit(icon_buf, proxy_buf, filtername='cubic', exact=True)
 
     # add alpha channel if none exists
     #if spec.nchannels <= 3:
@@ -309,15 +324,40 @@ class ConversionRouter(QObject):
         return asset
 
     @staticmethod
-    @logFunction('')
+    @logFunction('Making preview from (TOOL)')
     def processTOOL(in_path, out_path):
         if in_path.ext == '.exe':
+            temp_path = out_path.suffixed('', '.bmp')
+            cmd = PS_CMD.format(EXE_ICON_CMD.format(in_path, temp_path))
+            subprocess.call(cmd)
+            out_img = QImage(SIZE.w, SIZE.h, QImage.Format_RGB888)
+            out_img.fill(QColor(65, 65, 65, 255))
+
+            src_img = QImage(str(temp_path))
+            scaled_img = src_img.scaled(SIZE.w, SIZE.h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            
+            painter = QPainter(out_img)
+            painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+            
+            # calculate size offset image to center it.
+            width_diff = int((SIZE.w - scaled_img.width()) / 2)
+
+            painter.drawImage(width_diff, 0, scaled_img)
+            painter.end()
+            icon = QPixmap.fromImage(out_img)
+            out_icon = out_path.suffixed('_icon', ext='.jpg')
+            icon.save(str(out_icon))
+
             with open(str(out_path), 'w') as fp:
                 fp.write(str(in_path))
 
-        icon = QPixmap.fromImage(QImage(':resources/icons/noicon.jpg'))
-        out_icon = out_path.suffixed('_icon', ext='.jpg')
-        icon.save(str(out_icon))
+            in_path = out_path
+
+        else:
+            icon = QPixmap.fromImage(QImage(':resources/icons/noicon.jpg'))
+            out_icon = out_path.suffixed('_icon', ext='.jpg')
+            icon.save(str(out_icon))
+
         asset = temp_asset(
             name=in_path.stem,
             category=5,
@@ -330,16 +370,7 @@ class ConversionRouter(QObject):
 
     @staticmethod
     @logFunction('Making preview from (RAW)')
-    def processRAW(in_img_path, out_img_path):
-        neat_image_cmd = [
-            'E:/OneDrive/Apps/Neat Image v8 Standalone/NeatImageCL.exe', '"{}"',
-            '-sp',
-            '-ow',
-            '-e',
-            '-b=M',
-            '-s=',
-        ]
-        #subprocess.call(neat_image_cmd, stdout=subprocess.DEVNULL)
+    def processRAW(in_img_path, out_img_path, denoise=True):
         proc = libraw.LibRaw()
 
         # Read RAW data
@@ -370,6 +401,35 @@ class ConversionRouter(QObject):
 
         out_img_path.ext = '.exr' # Raw is always converted to exr.
         in_img_path.ext = '.exr' # Raw is always converted to exr.
+        if denoise:
+            denoise_path = out_img_path.suffixed('_dn', '.tif')
+            tif_path = out_img_path.suffixed('_orig', '.tif')
+
+            tifbuf = oiio.ImageBuf(
+                oiio.ImageSpec(spec.width, spec.height, 3, oiio.UINT16)
+            )
+            offset = 0.01
+            buf = oiio.ImageBufAlgo.add(buf, offset)
+            oiio.ImageBufAlgo.pow(tifbuf, buf, (0.227, 0.227, 0.227))
+
+            tifbuf.write(str(denoise_path))
+            NEAT_IMAGE_CMD[1] = '"{}"'.format(str(denoise_path))
+            subprocess.call(' '.join(NEAT_IMAGE_CMD), stdout=subprocess.DEVNULL)
+
+            denoise_buf = oiio.ImageBuf(str(denoise_path))
+            denoise_buf = oiio.ImageBufAlgo.pow(denoise_buf, (4.4, 4.4, 4.4))
+            tifbuf = oiio.ImageBufAlgo.pow(tifbuf, (4.4, 4.4, 4.4))
+
+            dn = (denoise_buf.get_pixels(oiio.FLOAT) - offset)
+            og = (tifbuf.get_pixels(oiio.FLOAT) - offset)
+
+            noise = og - dn
+            out_denoised = (buf.get_pixels() - offset) - noise
+            buf.set_pixels(buf.spec().roi, out_denoised)
+            buf.specmod().attribute('compression', 'dwaa:15')
+            os.remove(str(denoise_path))
+
+
         buf.write(str(out_img_path))
 
         formatted = oiio.ImageBuf(
@@ -449,9 +509,11 @@ class IngestionThread(QThread):
 
                 files_map = {}
 
-                temp_path = ingest_path / temp_filename
-
-                files_map[in_path] = out_path
+                temp_path = ingest_path / (temp_filename + in_path.ext)
+                if temp_path.exists:
+                    files_map[temp_path] = out_path
+                else:
+                    files_map[in_path] = out_path
 
                 # Add extra auxillary files to the packaged content.
                 if extra_files:
@@ -491,7 +553,8 @@ class IngestionThread(QThread):
                     files_map[in_icon] = out_icon
                     files_map[in_proxy] = out_proxy
                     # Set the path to include the frame expression
-                    item.path = Path(subcategory) / (item.name + in_path.frame_expr + in_path.ext)
+                    if in_path.sequence_path:
+                        item.path = Path(subcategory) / (item.name + in_path.frame_expr + in_path.ext)
                 else: # Only single-frame images have proxy jpegs.
                     in_proxy = temp_path.suffixed('_proxy', ext='.jpg')
                     out_proxy = out_path.suffixed('_proxy', ext='.jpg')

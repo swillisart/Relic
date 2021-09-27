@@ -46,8 +46,7 @@ class QuicktimeThread(QThread):
                 if self.index <= self.frame:
                     ret, frame = self.cap.read()
                     if ret:
-                        img_array = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        self.loadedImage.emit(img_array)
+                        self.loadedImage.emit(frame)
                     self.index += 1
                 else:
                     self.msleep(10)

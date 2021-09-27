@@ -7,9 +7,9 @@ from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QApplication
 
 from library.io.database import AssetDatabase
-from library.config import RELIC_PREFS, RELIC_HOST
+from library.config import RELIC_PREFS
 
-db = AssetDatabase(RELIC_HOST)
+db = AssetDatabase(RELIC_PREFS.host)
 
 RELATE_MAP = {
     # Data Tables
@@ -80,8 +80,8 @@ class BaseFields(object):
 
     def create(self):
         data = {self.categoryName: self.export}
-        self.id = db.accessor.doRequest('createAsset', data)
-    
+        self.id = db.accessor.doRequestWithResult('createAsset', data)
+
     def update(self, fields=None):
         data = self.export
         export_data = {}
@@ -96,7 +96,7 @@ class BaseFields(object):
 
     def nameExists(self):
         rc = 'nameExists/{}/{}'.format(self.categoryName, self.name)
-        return db.accessor.doRequest(rc)
+        return db.accessor.doRequestWithResult(rc)
 
     def remove(self):
         if isinstance(self.id, int):
@@ -105,7 +105,7 @@ class BaseFields(object):
             ids = self.id
         can_delete = True
         if hasattr(self, 'path'):
-            can_delete = db.accessor.doRequest('deleteAsset/{}'.format(str(self.relativePath.parent)))
+            can_delete = db.accessor.doRequestWithResult('deleteAsset/{}'.format(str(self.relativePath.parent)))
         if can_delete:
             rc = 'removeAssets/{}'.format(self.categoryName)
             db.accessor.doRequest(rc, ids)
@@ -114,9 +114,9 @@ class BaseFields(object):
         rc = 'fetchAsset/{}'.format(self.categoryName)
         if id:
             rc = 'getAssetById/{}'.format(self.categoryName)
-            result = db.accessor.doRequest(rc, [id])
+            result = db.accessor.doRequestWithResult(rc, [id])
         else:
-            result = db.accessor.doRequest(rc, self.export)
+            result = db.accessor.doRequestWithResult(rc, self.export)
 
         for i, x in enumerate(self.__slots__):
             try:
@@ -126,7 +126,7 @@ class BaseFields(object):
 
     def search(self, text):
         rc = 'searchCategory/{}/{}'.format(self.categoryName, text)
-        results = db.accessor.doRequest(rc)
+        results = db.accessor.doRequestWithResult(rc)
         return results
 
     def linkTo(self, asset):
@@ -139,7 +139,7 @@ class BaseFields(object):
     
     def related(self, noassets=False):
         rc = 'retrieveLinks/{}/{}'.format(self.links, int(noassets))
-        related = db.accessor.doRequest(rc)
+        related = db.accessor.doRequestWithResult(rc)
         self.upstream = []
         if not related or isinstance(related, list):
             return False
@@ -304,7 +304,7 @@ class allCategories(object):
         return setattr(self, self.__slots__[i], data)
     
     def fetch(self):
-        data = db.accessor.doRequest('getCategories')
+        data = db.accessor.doRequestWithResult('getCategories')
         # fill empty categories
         for i in allCategories.slot_range:
             self.set(i, category(self.getLabel(i), i))
@@ -337,11 +337,11 @@ class Library(object):
         categories_to_search = self.validateCategories(categories)
         if text:
             categories_to_search['k'] = text
-            search_results = db.accessor.doRequest('searchKeywords', categories_to_search)
+            search_results = db.accessor.doRequestWithResult('searchKeywords', categories_to_search)
         else:
             if not categories:
                 return False
-            search_results = db.accessor.doRequest('searchCategories', categories_to_search)
+            search_results = db.accessor.doRequestWithResult('searchCategories', categories_to_search)
             
         self.assets = []
         if not search_results:
@@ -393,9 +393,9 @@ class Library(object):
         search_data = search_data[offset:(offset+limit)]
         filtered = self.assets_filtered[offset:(offset+limit)]
     
-        data = db.accessor.doRequest('retrieveAssets', search_data)
+        data = db.accessor.doRequestWithResult('retrieveAssets', search_data)
 
-        if data: # ( 9 items per page [5 pages])
+        if data:
             for i, x in enumerate(data):
                 category, _id, tags, subcategory, asset_constructor = filtered[i]
                 x.extend([tags, []])
@@ -407,8 +407,8 @@ class Library(object):
                     asset.subcategory = subcategory
 
                 yield asset
-                if icons and asset.path:
-                    asset.fetchIcon()
+                #if icons and asset.path:
+                #    asset.fetchIcon()
 
 
 class category(object):
@@ -476,7 +476,7 @@ class relationships(BaseFields):
     )
 
     def create(self):
-        self.link = db.accessor.doRequest(
+        self.link = db.accessor.doRequestWithResult(
             'createRelationship',
             [self.link, self.category_map, self.category_id]
         )

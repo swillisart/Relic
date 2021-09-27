@@ -163,7 +163,7 @@ class ClipA(object):
         self.first = 1
         self.last = int(calc_duration)
         self.framerate = float(framerate)
-        self.geometry = ImagePlane(width, height, aspect=aspect,
+        self.geometry = ImagePlane(width, height, aspect=aspect, order='bgr',
             pixels=np.zeros(shape=(height, width, 3), dtype=np.uint8)
         )
 

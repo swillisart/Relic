@@ -251,13 +251,13 @@ def recurseUpstreamConnections(dep_node, visited, upstream, mx_graph):
                 curve_node.setInputValue('interpolation'.format(attr_name), remap.interpolations, 'integerarray')
             continue
         elif mplug.isCompound:
-            continue
-            print('compounds', mplug.name())
+            #print('compounds', mplug.name())
             attr_str = '{}.{}'.format(absnode, attr.name)
             try:
                 value = cmds.getAttr(attr_str)
                 xnode.setInputValue(attr.name, str(value[0])[1:-1], 'float3') #'color3')
-            except:pass
+            except Exception as exerr:
+                print(exerr)
             #for plug_child_indice in range(mplug.numChildren()):
             #    child_plug = mplug.child(plug_child_indice)
             #    print('\tchild:', child_plug)

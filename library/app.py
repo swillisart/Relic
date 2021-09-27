@@ -3,9 +3,10 @@ import math
 import os
 import sys
 from functools import partial
+import webbrowser
 
 # -- Third-party --
-from PySide6.QtCore import Slot, QPoint, QModelIndex
+from PySide6.QtCore import Slot, QPoint, QModelIndex, QThreadPool
 from PySide6.QtGui import QPixmap, QImage, QFontDatabase, QFont, QIcon, QColor, Qt, QTextDocument, QTextCursor
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon,
     QMenu, QWidget, QSizePolicy,QFrame, QGraphicsDropShadowEffect, QLabel, QTextBrowser)
@@ -25,6 +26,7 @@ from library.widgets.metadataView import metadataFormView
 from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.util import DialogOverlay
 from library.widgets.ingest import IngestForm
+from library.io.database import LocalThumbnail
 
 
 description_style = """
@@ -58,6 +60,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.tray = QSystemTrayIcon(self.app_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
+        self.pool = QThreadPool.globalInstance()
         #self.tray.showMessage('Relic', 'Relic is now running...', self.app_icon, 2)
         # Assign the dock's title bar to search widget 
         # then set the dock's widget to an empty widget so separators disappear
@@ -121,10 +124,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.actionPortal.toggled.connect(self.hideDocks)
         self.actionIngest.triggered.connect(self.beginIngest)
         self.descriptionCloseButton.clicked.connect(self.closeOverlay)
-        #relic_docs = lambda x: self.showMarkdown('blah')
-        #self.actionDocumentation.triggered.connect(relic_docs)
-
-        #self.actionDocumentation.triggered.connect(self.showMarkdown)
+        self.actionDocumentation.triggered.connect(self.browseDocumentation)
 
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
@@ -288,6 +288,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def updateAssetView(self, obj=None):
         sender = self.sender()
+        if self.assets_view.editor:
+            self.assets_view.editor.close()
+        self.pool.clear()
         if isinstance(obj, dict):
             categories = obj.copy()
         else:
@@ -308,6 +311,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             page = self.pageSpinBox.value()
             skip_icons = not self.assets_grid.isVisible()
             for asset in self.library.load(page, PAGE_LIMIT, categories, icons=skip_icons):
+                on_complete = partial(setattr, asset, 'icon')
+                if skip_icons:
+                    worker = LocalThumbnail(asset.network_path.suffixed('_icon', '.jpg'), on_complete)
+                    self.pool.start(worker)
                 self.assets_view.addAsset(asset)
             asset_total = len(self.library.assets_filtered)
 
@@ -372,6 +379,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def toggleAdminMode(self, toggle):
         #TODO: query the databse for permissions level
         RELIC_PREFS.edit_mode = int(toggle)
+
+    @Slot()
+    def browseDocumentation(self):
+        site = RELIC_PREFS.host
+        url = f'{site}documentation/index.html'
+        webbrowser.open(url)
 
 def onStateChange(state):
     if state == Qt.ApplicationState.ApplicationActive:

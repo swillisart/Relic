@@ -8,9 +8,11 @@ from functools import partial
 from sequencePath import sequencePath as Path
 
 # -- Module --
-from library.config import RELIC_PREFS, peakPreview, INGEST_PATH
+import library.config as config
+from library.io.ingest import ConversionRouter
 from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor
 from library.ui.asset_delegate import Ui_AssetDelegate
+from library.qt_objects import AbstractDoubleClick
 from library.ui.compact_delegate import Ui_CompactDelegate
 from library.widgets.util import updateWidgetProperty
 from library.widgets.metadataView import (categoryWidget, classWidget,
@@ -116,7 +118,6 @@ class assetItemModel(QStandardItemModel):
 class assetListView(QListView):
 
     onSelection = Signal(QModelIndex)
-    ondoubleClick = Signal(QModelIndex)
     onLinkLoad = Signal(QModelIndex)
     onDeleted = Signal(QModelIndex)
 
@@ -144,14 +145,14 @@ class assetListView(QListView):
         self.editor = None
         self.drag_select = False
         # Actions
+        self.actionPreview = QAction('Peak Preview', self)
+        self.actionPreview.triggered.connect(self.assetPreview)
         self.actionExploreLocation = QAction('Browse File Location', self)
         self.actionExploreLocation.triggered.connect(self.browseLocalAsset)
         self.actionDelete = QAction('Delete', self)
         self.actionDelete.triggered.connect(self.deleteAsset)
-        """
-        self.actionRegeneratePreview = context_menu.addAction('Regenerate Preview')
-        self.actionRegeneratePreview.triggered.connect(self.regenPreview)
-        """
+        self.actionGeneratePreview =  QAction('Generate Preview', self)
+        self.actionGeneratePreview.triggered.connect(self.generatePreview)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
 
@@ -220,7 +221,7 @@ class assetListView(QListView):
     def clipboardPaste(self):
         clipboard = QApplication.clipboard()
         clip_img = clipboard.image()
-        if not int(RELIC_PREFS.edit_mode) or not clip_img:
+        if not int(config.RELIC_PREFS.edit_mode) or not clip_img:
             return
         if asset := self.getSelectedAsset():
             out_path = asset.network_path.suffixed('_icon', ext='.jpg')
@@ -288,7 +289,7 @@ class assetListView(QListView):
             else:
                 asset = index.data(polymorphicItem.Object)
                 self.editor = AssetEditor(self, index)
-                if hasattr(asset, 'duration'):
+                if hasattr(asset, 'duration') and asset.duration:
                     asset.stream_video_to(self.editor.updateSequence)
     
             self.editor.dragIt.connect(self.enterDrag)
@@ -298,16 +299,6 @@ class assetListView(QListView):
             self.editor.setFocus()
         else:
             self.lastIndex = index
-
-    def mouseDoubleClickEvent(self, event):
-        super(assetListView, self).mousePressEvent(event)
-        selection = [x for x in self.selectedIndexes()]
-
-        for index in selection:
-            preview = INGEST_PATH / 'unsorted{}_proxy.jpg'.format(index.row())
-            #asset = index.data(polymorphicItem.Object)
-            peakPreview(preview)
-            break
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
@@ -335,14 +326,17 @@ class assetListView(QListView):
         sender = self.sender()
         context_menu = QMenu(self)
         context_menu.addAction(self.actionExploreLocation)
-
-        if bool(int(RELIC_PREFS.edit_mode)):
+        context_menu.addAction(self.actionPreview)
+    
+        if bool(int(config.RELIC_PREFS.edit_mode)):
             self.delete_item = context_menu.addAction(self.actionDelete)
+            self.genpreviews_item = context_menu.addAction(self.actionGeneratePreview)
 
         context_menu.exec(QCursor.pos())
 
     def deleteAsset(self, action):
-        """Item deletion.
+        """Asset deletion. Iterates selected items to delete,
+        and updates the items parent subcategory counts.
         """
         update_list = []
         for index in self.selectedIndexes():
@@ -362,12 +356,34 @@ class assetListView(QListView):
         # Update the subcategories with new counts
         [x.update(fields=['count']) for x in update_list]
 
+    def generatePreview(self, action):
+        for index in self.selectedIndexes():
+            asset = index.data(polymorphicItem.Object)
+            path = asset.network_path
+            if asset.path == '' or not path.parents(0).exists:
+                continue
+            path.checkSequence()
+            if path.sequence_path:
+                ConversionRouter.processSEQ(path, path)
+            elif path.ext in config.LDR_EXT:
+                ConversionRouter.processLDR(path, path)
+            elif path.ext in config.HDR_EXT:
+                ConversionRouter.processHDR(path, path)
+            elif path.ext in config.MOVIE_EXT:
+                ConversionRouter.processMOV(path, path)
+
     def browseLocalAsset(self, action):
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
             winpath = asset.network_path.parent.replace('/', '\\')
             cmd = 'explorer /select, "{}"'.format(winpath)
             subprocess.Popen(cmd)
+    
+    def assetPreview(self, action):
+        index = self.selectedIndexes()[-1]
+        asset = index.data(polymorphicItem.Object)
+        config.peakPreview(asset.network_path)
+
 
     def leaveEvent(self, event):
         self.lastIndex = None
@@ -435,7 +451,6 @@ class AssetItemPaint:
 
         painter.fillRect(line_rect, self.colors[asset.category])
         painter.restore()
-
 
 
 class AssetDelegateWidget(AssetItemPaint, Ui_AssetDelegate, QWidget):
@@ -529,21 +544,18 @@ class AssetCompactDelegate(AssetStyleDelegate):
     def setModelData(self, widget, model, index):
         pass
 
-class AssetEditor(AssetDelegateWidget):
+
+class BaseAssetEditor(AbstractDoubleClick):
 
     dragIt = Signal(object)
     loadLinks = Signal(QModelIndex)
-    #opened = Signal()
 
     def __init__(self, parent, index):
-        super(AssetEditor, self).__init__(parent)
-        self.setMouseTracking(True)
-        #self.setAutoFillBackground(True)
-        self.sequence = []
+        super(BaseAssetEditor, self).__init__(parent)
         self.index = index
+        self.setMouseTracking(True)
         self._click_startpos = None
-        self.xpos = 0
-        self.image = None
+
         self.asset = self.index.data(polymorphicItem.Object)
         if link_count := self.asset.dependencies:
             self.linksButton.setText(str(link_count))
@@ -554,11 +566,6 @@ class AssetEditor(AssetDelegateWidget):
         self.categoryIcon.setIcon(categoryWidget.ICONS[self.asset.category])
         color = self.colors[self.asset.category].getRgb()
         self.styledLine.setStyleSheet('background-color: rgb{};border: none'.format(color[:3]))
-        if self.asset.icon:
-            self.label.setPixmap(self.asset.icon)
-        else:
-            self.label.setPixmap(NO_IMAGE)
-
         self.view = self.parent()
         try:
             item = index.model().itemFromIndex(index)
@@ -573,11 +580,73 @@ class AssetEditor(AssetDelegateWidget):
         unchk = partial(item.setCheckState, Qt.Unchecked)
         setit = lambda x : check() if x == 2 else unchk()
         self.checkBox.stateChanged.connect(setit)
+        self.linksButton.clicked.connect(partial(self.loadLinks.emit, self.index))
+        self.aDoubleClicked.connect(self.onDoubleClick)
+
+    @Slot()
+    def onDoubleClick(self):
+        asset = self.index.data(polymorphicItem.Object)
+        filepath = asset.network_path
+        row = self.index.row()
+        ext = filepath.ext.lower()
+        if ext == '.exe':
+            # Launch software executable
+            with open(str(filepath), 'r') as fp:
+                subprocess.Popen('"{}"'.format(fp.read()))
+            return
+        ingest_filename = f'unsorted{row}{ext}'
+        preview_path = config.INGEST_PATH / ingest_filename
+
+        if not config.peakPreview(preview_path):
+            config.peakPreview(filepath)
+        
+
+    def snapToSize(self):
+        r = self.parent().visualRect(self.index)
+        edit_rect = QRect(r.topLeft(), QSize(r.width(), r.height()))
+        self.setGeometry(edit_rect)
+
+    def mousePressEvent(self, event):
+        self.snapToSize()
+        self._click_startpos = event.pos()
+        # close & open context menu
+        pos = self.mapTo(self.parent(), event.pos())
+        if Qt.RightButton == event.buttons():
+            self.view.selmod.select(self.index, QItemSelectionModel.Select)
+            self.view.showContextMenus(None)
+            self.view.update()
+            self.close()
+            return
+        elif Qt.LeftButton == event.buttons():
+            timediff = -(self.last_clicked - time.time())
+            if float(timediff) > float(0.25):
+                _event = QMouseEvent(QEvent.MouseButtonPress, pos, event.button(),
+                    event.buttons(), event.modifiers())
+                self.parent().mousePressEvent(_event)
+        super(BaseAssetEditor, self).mousePressEvent(event)
+
+    def leaveEvent(self, event):
+        super(BaseAssetEditor, self).leaveEvent(event)
+        self.view.setFocus()
+        self.close()
+
+
+class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
+
+    def __init__(self, parent, index):
+        super(AssetEditor, self).__init__(parent, index)
+        self.sequence = []
+        self.xpos = 0
+        self.image = None
+        if self.asset.icon:
+            self.label.setPixmap(self.asset.icon)
+        else:
+            self.label.setPixmap(NO_IMAGE)
+
         if isinstance(self.view, assetListView):
             self.selected = bool(index in self.view.selmod.selectedIndexes())
         else:
             self.selected = True
-        self.linksButton.clicked.connect(partial(self.loadLinks.emit, self.index))
 
     @property
     def selected(self):
@@ -596,22 +665,8 @@ class AssetEditor(AssetDelegateWidget):
         self.sequence.append(img)
 
     def mousePressEvent(self, event):
-        self._click_startpos = event.pos()
-        # close & open context menu
-        pos = self.mapTo(self.parent(), event.pos())
-        if Qt.RightButton == event.buttons():
-            self.view.selmod.select(self.index, QItemSelectionModel.Select)
-            self.view.showContextMenus(None)
-            self.view.update()
-            self.close()
-            return
-        elif Qt.LeftButton == event.buttons():
-            _event = QMouseEvent(QEvent.MouseButtonPress, pos, event.button(),
-                event.buttons(), event.modifiers())
-            self.parent().mousePressEvent(_event)
-
-        self.selected = not self.selected
         super(AssetEditor, self).mousePressEvent(event)
+        self.selected = not self.selected
 
     def mouseMoveEvent(self, event):
         self.snapToSize()
@@ -624,7 +679,8 @@ class AssetEditor(AssetDelegateWidget):
         if self.sequence:
             self.xpos = event.pos().x()
             duration = len(self.sequence)
-            pos_idx = int(self.xpos * duration / self.width()) + 1
+            w = self.width() or 1
+            pos_idx = int(self.xpos * duration / w) + 1
             if 0 <= pos_idx < duration:
                 self.label.setPixmap(self.sequence[pos_idx])
                 self.update()
@@ -640,76 +696,18 @@ class AssetEditor(AssetDelegateWidget):
         self.snapToSize()
         self.deferred_snap = QTimer.singleShot(100, self.snapToSize)
 
-    def snapToSize(self):
-        r = self.parent().visualRect(self.index)
-        edit_rect = QRect(r.topLeft(), QSize(r.width(), r.height()))
-        self.setGeometry(edit_rect)
 
-    def leaveEvent(self, event):
-        super(AssetEditor, self).leaveEvent(event)
-        self.view.setFocus()
-        self.close()
-
-
-class CompactAssetEditor(CompactDelegateWidget):
-
-    dragIt = Signal(object)
-    loadLinks = Signal(QModelIndex)
+class CompactAssetEditor(BaseAssetEditor, CompactDelegateWidget):
 
     def __init__(self, parent, index):
-        super(CompactAssetEditor, self).__init__(parent)
-        self.setMouseTracking(True)
-        self.index = index
-        self._click_startpos = None
-        self.asset = self.index.data(polymorphicItem.Object)
-        if link_count := self.asset.dependencies:
-            self.linksButton.setText(str(link_count))
-        else:
-            self.linksButton.hide()
-        self.nameLabel.setText(self.asset.name)
-        self.categoryIcon.setIcon(categoryWidget.ICONS[self.asset.category])
-        self.iconButton.setIcon(typeWidget.ICONS[self.asset.type-1])
-        color = self.colors[self.asset.category].getRgb()
-        self.styledLine.setStyleSheet('background-color: rgb{};border: none'.format(color[:3]))
+        super(CompactAssetEditor, self).__init__(parent, index)
         if self.asset.icon:
             preview_img = self.asset.icon.scaledToWidth(72, Qt.SmoothTransformation)
         else:
             preview_img = NO_IMAGE.scaledToWidth(72, Qt.SmoothTransformation)
         self.label.setPixmap(preview_img)
-        self.view = self.parent()
-        try:
-            item = index.model().itemFromIndex(index)
-        except:
-            model = index.model()
-            source_model = model.sourceModel()
-            item = source_model.itemFromIndex(model.mapToSource(index))
-
-        state = item.checkState()
-        self.checkBox.setCheckState(state)
-        check = partial(item.setCheckState, Qt.Checked)
-        unchk = partial(item.setCheckState, Qt.Unchecked)
-        setit = lambda x : check() if x == 2 else unchk()
-        self.checkBox.stateChanged.connect(setit)
-        self.linksButton.clicked.connect(partial(self.loadLinks.emit, self.index))
         updateWidgetProperty(self.HeaderFrame, "selected", True)
         updateWidgetProperty(self.frame, "selected", True)
-
-    def mousePressEvent(self, event):
-        self.snapToSize()
-        self._click_startpos = event.pos()
-        # close & open context menu
-        pos = self.mapTo(self.parent(), event.pos())
-        if Qt.RightButton == event.buttons():
-            self.view.selmod.select(self.index, QItemSelectionModel.Select)
-            self.view.showContextMenus(None)
-            self.view.update()
-            self.close()
-            return
-        elif Qt.LeftButton == event.buttons():
-            _event = QMouseEvent(QEvent.MouseButtonPress, pos, event.button(),
-                event.buttons(), event.modifiers())
-            self.parent().mousePressEvent(_event)
-        super(CompactAssetEditor, self).mousePressEvent(event)
 
 
     def mouseMoveEvent(self, event):
@@ -722,13 +720,3 @@ class CompactAssetEditor(CompactDelegateWidget):
                 self.close()
 
         super(CompactAssetEditor, self).mouseMoveEvent(event)
-
-    def snapToSize(self):
-        r = self.parent().visualRect(self.index)
-        edit_rect = QRect(r.topLeft(), QSize(r.width(), r.height()))
-        self.setGeometry(edit_rect)
-
-    def leaveEvent(self, event):
-        super(CompactAssetEditor, self).leaveEvent(event)
-        self.view.setFocus()
-        self.close()

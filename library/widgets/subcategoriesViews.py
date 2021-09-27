@@ -137,7 +137,6 @@ class subcategoryTreeView(QTreeView):
             self.selection_model.clearSelection()
 
         if pop and event.buttons() == Qt.LeftButton:
-            print(index, index.row(), index.column())
             self.selection_model.select(index, QItemSelectionModel.Deselect)
             self.update()
 

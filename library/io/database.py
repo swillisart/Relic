@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import math
+import requests
 from subprocess import PIPE, Popen
 from functools import partial
 
@@ -9,7 +10,7 @@ from functools import partial
 import cv2
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtCore import QTimer, Signal, Slot, QUrl, QObject, QEventLoop, QSaveFile, QIODevice, QFile
+from PySide6.QtCore import QTimer, Signal, Slot, QUrl, QObject, QEventLoop, QSaveFile, QIODevice, QFile, QRunnable
 from PySide6.QtNetwork import (
     QNetworkReply,
     QNetworkRequest,
@@ -21,7 +22,7 @@ from sequencePath import sequencePath as Path
 
 # -- Globals --
 DEVNULL = open(os.devnull, "w")
-
+session = requests.session()
 
 class libraryNetwork(QObject):
     
@@ -39,6 +40,15 @@ class libraryNetwork(QObject):
         if hostname:
             self.hostname = hostname
         self.netman.connectToHost('localhost', port=8000)
+
+    def doRequestWithResult(self, url, data=None):
+        if data:
+            data = json.dumps(data)
+            r = session.post(self.hostname + url, data=data)
+        else:
+            r = session.get(self.hostname + url)
+
+        return r.json()
 
     def doRequest(self, url, data=None):
         self.makeConnection()
@@ -131,3 +141,16 @@ class AssetDatabase(object):
     def __init__(self, database):
         self.accessor = libraryNetwork()
         self.accessor.makeConnection(database)
+
+
+class LocalThumbnail(QRunnable):
+    
+    def __init__(self, img, signal):
+        super(LocalThumbnail, self).__init__(signal)
+        self.signal = signal
+        self.img = img
+
+    def run(self):
+        if self.img.exists:
+            image = QPixmap(str(self.img))
+            self.signal(image)

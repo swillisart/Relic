@@ -152,7 +152,7 @@ def generateThumbnails(selection, file_path):
     cmds.rename(orbitCamera, "orbitCam")
     mel.eval("lookThroughModelPanel orbitCam modelPanel4;")
     cmds.setAttr("hardwareRenderingGlobals.multiSampleEnable", 1)
-    cmds.viewFit(selection)
+    cmds.viewFit(selection, f=0.9)
     center = cmds.objectCenter(selection, gl=True)
     cmds.move(
         center[0], center[1], center[2], "orbitCam.rotatePivot", absolute=True

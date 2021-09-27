@@ -102,38 +102,24 @@ class RelicDropCallback(omui.MExternalDropCallback):
         #LOG.debug("Processing item {} in plugin".format(asset))
         class_index = getattr(asset, 'class')
         asset_path = asset.local_path
-        '''
+        active_renderer = cmds.getAttr('defaultRenderGlobals.currentRenderer')
+
         if class_index == config.AREA_LIGHT:
-            light = cmds.shadingNode("VRayLightRectShape", asLight=True)
-            light.setAttr("useRectTex", 1)
-            texture = cmds.shadingNode("file", asTexture=True)
-            texture.setAttr("fileTextureName", asset.path)
-            cmds.connectAttr(
-                texture.name() + ".outColor", light.name() + ".rectTex", force=True
-            )
-            #light.select()
-
+            if active_renderer == 'vray':
+                vrayRectLight(asset_path)
         elif class_index == config.IES:
-            light = cmds.shadingNode("VRayLightIESShape", asLight=True)
-            light.setAttr("iesFile", asset.path.replace("/", "\\"))
-            #light.select()
-
-        elif class_index == config. :
-            light = cmds.shadingNode("VRayLightDomeShape", asLight=True)
-            light.setAttr("useDomeTex", 1)
-            texture = cmds.shadingNode("file", asTexture=True)
-            texture.setAttr("fileTextureName", asset.path)
-            cmds.connectAttr(
-                texture.name() + ".outColor", light.name() + ".domeTex", force=True
-            )
-            light.select()
-        '''
+            if renderer == 'vray':
+                vrayIESLight(asset_path)
+        elif class_index == config.IBL:
+            if renderer == 'vray':
+                vrayDomeLight(asset_path)
+    
         if class_index == config.MODEL:
             createMayaReference(asset, asset_path)
 
-        elif class_index == config.TEXTURE:
-            texture = cmds.shadingNode("file", asTexture=True)
-            texture.setAttr("fileTextureName", asset.path)
+        elif class_index == config.TEXTURE or asset_path.ext in config.TEXTURE_EXT:
+            texture = cmds.shadingNode('file', asTexture=1)
+            cmds.setAttr(texture + '.fileTextureName', str(asset_path), type='string')
 
         elif asset.path.endswith('.mel'):
             mel.eval('source "{}";'.format(filepath))
@@ -214,3 +200,28 @@ def applyLinkedEdits():
                     mapPlaceHolderNamespace=['<root>', destination_ref]
                 )
             #file -r -type "editMA" -mapPlaceHolderNamespace "<root>" "PoleLanternBasicRN" -applyTo "LanternBasicRN" "C:/Users/Resartist/.relic/ingest/LanternBasic.editMA";
+
+def vrayTexturedLight(light, attr, path):
+    texture = cmds.shadingNode('file', asTexture=1)
+    cmds.setAttr(texture + '.fileTextureName', str(path), type='string')
+    cmds.connectAttr(
+        texture.name() + '.outColor',
+        light + attr,
+        force=1
+    )
+    cmds.select(light, r=1)
+
+def vrayDomeLight(path):
+    light = cmds.shadingNode('VRayLightDomeShape', asLight=1)
+    cmds.setAttr(light + '.useDomeTex', 1)
+    vrayTexturedLight(light, '.domeTex', path)
+
+def vrayRectLight(path):
+    light = cmds.shadingNode(light_type, asLight=1)
+    cmds.setAttr(light + '.useRectTex', 1)
+    vrayTexturedLight(light, '.rectTex', path)
+
+def vrayIESLight(path):
+    light = cmds.shadingNode('VRayLightIESShape', asLight=1)
+    cmds.setAttr(light + '.iesFile', str(path).replace('/', '\\'))
+    cmds.select(light, r=1)

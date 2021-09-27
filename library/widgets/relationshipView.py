@@ -1,12 +1,14 @@
-from PySide6.QtCore import Signal, Slot, QRect, Qt, QSize, QPoint, QSortFilterProxyModel
+from functools import partial
+
+from PySide6.QtCore import QThreadPool, Signal, Slot, QRect, Qt, QSize, QPoint, QSortFilterProxyModel
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QVBoxLayout, QLayout, QSizePolicy, QWidget
 
 from library.objectmodels import db
 from library.widgets.metadataView import typeWidget
 from library.widgets.assets import assetItemModel, assetListView, polymorphicItem
-#from library.widgets.util import ListViewFiltered
 from library.ui.expandableTabs import Ui_ExpandableTabs
+from library.io.database import LocalThumbnail
 
 class assetTypeFilter(QSortFilterProxyModel):
     def __init__(self, attr, parent=None):
@@ -108,21 +110,26 @@ class LinkViewWidget(QWidget):
             tab.model = proxyModel
             self.all_tabs.append(tab)
             self.inactive_layout.addWidget(tab)
+        self.clear()
 
     def clear(self):
         self.model.clear()
         self.asset_type_counter = {}
+        self.updateGroups([])
 
     def updateGroups(self, assets):
+        pool = QThreadPool.globalInstance()
         for asset in assets:
             asset.setTextAlignment(Qt.AlignLeft | Qt.AlignTop)
             asset.setCheckable(True)
             self.model.appendRow(asset)
             type_count = self.asset_type_counter.get(asset.type) or 0
             self.asset_type_counter[asset.type] = type_count + 1
-
             asset_obj = asset.data(polymorphicItem.Object)
-            asset_obj.fetchIcon()
+            on_complete = partial(setattr, asset, 'icon')
+            worker = LocalThumbnail(asset_obj.network_path.suffixed('_icon', '.jpg'), on_complete)
+            pool.start(worker)
+            #asset_obj.fetchIcon()
 
         for index, tab in enumerate(self.all_tabs):
             count = self.asset_type_counter.get(index+1) or 0
@@ -131,10 +138,6 @@ class LinkViewWidget(QWidget):
             else:
                 tab.countSpinBox.setValue(count)
                 tab.show()
-            """
-            layout_grp.delegatedListView.doubleClicked.connect(self.parent().loadInViewer)
-            layout_grp.delegatedListView.copy.connect(self.parent().copyLibraryPath)
-            """
 
     @Slot(bool)
     def shuffleActiveLayouts(self, state):

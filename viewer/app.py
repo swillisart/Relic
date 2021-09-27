@@ -209,6 +209,7 @@ class PlayerAppWindow(QMainWindow):
         self.viewport.makeCurrent()
         annotation_img = clip.loadAnnotation(frame)
         clip.geometry.setAnnotation(annotation_img)
+        clip.geometry.no_annotation = False
         self.viewport.update()
 
     def fullscreen(self):
@@ -274,9 +275,6 @@ class PlayerAppWindow(QMainWindow):
             self.player.play.setChecked(True)
         self.timeline.controller.play()
         self.viewport.makeCurrent()
-        if self.viewport.image_plane:
-            self.viewport.image_plane.resetAnnotation()
-
 
     @Slot()
     def loadFrames(self, frame, clip, graph):
@@ -285,6 +283,8 @@ class PlayerAppWindow(QMainWindow):
 
         self.viewport.makeCurrent()
         self.viewport.image_plane = clip.geometry
+        if not clip.geometry.no_annotation:
+            clip.geometry.resetAnnotation()
 
         if clip.type == clip.MOVIE:
             local_frame = clip.mapToLocalFrame(frame)

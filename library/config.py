@@ -8,8 +8,9 @@ from sequencePath import sequencePath as Path
 from strand.client import StrandClient
 
 # -- Globals --
-NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL_PROBE, IES, _2D_ELEMENT, _3D_ELEMENT, REFERENCE, TOOL = range(12)
-# Valid Extensions
+NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL, IES, _2D_ELEMENT, _3D_ELEMENT, REFERENCE, TOOL = range(12)
+
+# Valid Extensions in an exclusive list
 MOVIE_EXT = ['.mov', '.mxf', '.mp4', '.mkv']
 SHADER_EXT = ['.mtlx', '.osl', '.sbsar']
 RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3']
@@ -22,7 +23,6 @@ GEO_EXT = ['.abc', '.fbx']
 TEXTURE_EXT = HDR_EXT + LDR_EXT
 
 PEAK = StrandClient('peak')
-RELIC_HOST = 'http://localhost:8000/'
 INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 def getAssetSourceLocation(filepath):
@@ -53,11 +53,15 @@ def peakPreview(path):
         path = path.suffixed('_proxy', '.mp4')
     else:
         path = path.suffixed('_proxy', '.jpg')
+
+    if not path.exists:
+        return False
     
     PEAK.sendPayload(str(path))
     if PEAK.errored:
         cmd = f'start peak://{path}'
         os.system(cmd)
+    return True
 
 
 class Preferences(object):
@@ -65,9 +69,10 @@ class Preferences(object):
     defaults = {
         'asset_preview_size': 288,
         'asset_preview_expand': True,
-        'assets_per_page': 30,
+        'assets_per_page': 25,
         'local_storage': 'P:/Projects/Library/{project}',
         'network_storage': 'E:/library',
+        'host': 'http://localhost:8000/',
         'project_variable': 'show',
         'render_using': '',
         'relic_plugins_path': '',
@@ -84,6 +89,7 @@ class Preferences(object):
     }
 
     options = {
+        'host': ['http://localhost:8000/', 'https://yoursite.shotgunstudio.com/api/v1/'],
         'asset_preview_size': [192, 288, 384],
     }
 

@@ -62,6 +62,26 @@
     <file>resources/style/stylesheet-vline.png</file>
     <file>resources/style/treeExpand.svg</file>
     <file>resources/style/treeCollapse.svg</file>
+    <file>resources/subcategories/3D.png</file>
+    <file>resources/subcategories/Bifrost.png</file>
+    <file>resources/subcategories/Channel.png</file>
+    <file>resources/subcategories/Color.png</file>
+    <file>resources/subcategories/Deep.png</file>
+    <file>resources/subcategories/Draw.png</file>
+    <file>resources/subcategories/Filter.png</file>
+    <file>resources/subcategories/Generators.png</file>
+    <file>resources/subcategories/Image.png</file>
+    <file>resources/subcategories/Keying.png</file>
+    <file>resources/subcategories/Mash.png</file>
+    <file>resources/subcategories/Maya.png</file>
+    <file>resources/subcategories/Merge.png</file>
+    <file>resources/subcategories/Misc.png</file>
+    <file>resources/subcategories/Nuke.png</file>
+    <file>resources/subcategories/PaintEffects.png</file>
+    <file>resources/subcategories/Particles.png</file>
+    <file>resources/subcategories/Time.png</file>
+    <file>resources/subcategories/Transform.png</file>
+    <file>resources/subcategories/Views.png</file>
   </qresource>
 </RCC>
 

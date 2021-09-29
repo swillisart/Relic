@@ -128,6 +128,7 @@ class subcategoryTreeView(QTreeView):
         self.actionRename.triggered.connect(self.listViewRenameMode)
         self.actionDelete = QAction('Remove Selected', self)
         self.actionDelete.triggered.connect(self.removeSubcategory)
+        self.folder_icon = QIcon(':resources/general/folder.svg')
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
@@ -162,12 +163,11 @@ class subcategoryTreeView(QTreeView):
         model_root_item = self.model.invisibleRootItem()
         count = 0
 
+        # Assign an subcategory icon from resource file.
         for x in data:
             tree_item = data[x]
-            # Assign an icon from file.
-            tmp = 'E:/OneDrive/Documents/Scripts/standalone_apps/asset_library_packaged/asset_management2/asset_library/plugins/alNuke/icons'
-            fp = '{}/{}.png'.format(tmp, tree_item.name)
-            tree_icon = QIcon(fp) if QFile.exists(fp) else QIcon(':resources/general/folder.svg')
+            fp = ':resources/subcategories/{}.png'.format(tree_item.name)
+            tree_icon = QIcon(fp) if QFile.exists(fp) else self.folder_icon
             tree_item.setIcon(tree_icon)
 
             # If the subcategory does not have a link-to-parent relationship

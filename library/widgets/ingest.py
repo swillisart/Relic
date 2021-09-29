@@ -2,7 +2,7 @@ import os
 from functools import partial
 
 from sequencePath import sequencePath as Path
-
+from pprint import pprint
 from library.ui.ingestion import Ui_IngestForm
 from library.io.ingest import ConversionRouter, IngestionThread
 from library.objectmodels import (polymorphicItem, db, references, modeling,
@@ -94,13 +94,13 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     @Slot()
     def setIngestQueue(self, item):
-        subcategory = self.selectedSubcategory
+        subcategory_index = self.selectedSubcategory
         collected_indices = self.collectedListView.selectedIndexes()
-        if not subcategory or not collected_indices:
+        if not subcategory_index or not collected_indices:
             msg = 'Selection of a Subcategory & collected Asset is requried.'
             QMessageBox.information(self, 'Empty Selection', msg)
             return
-
+        subcategory = subcategory_index.data(polymorphicItem.Object)
         self.collectedListView.clearSelection()
 
         category_name = self.categoryComboBox.currentText().lower()
@@ -184,6 +184,7 @@ class IngestForm(Ui_IngestForm, QDialog):
 
         # Update counts on assets and subcategory
         subcategory.count += total
+        self.updateSubcategoryCounts(subcategory_index)
         if dependency := primary_asset.dependencies:
             dependency += total
         elif reverse_link:
@@ -198,8 +199,12 @@ class IngestForm(Ui_IngestForm, QDialog):
     def selectedSubcategory(self):
         tab = self.category_widgets[self.categoryComboBox.currentIndex()]
         if selection := tab.category.tree.selectedIndexes():
-            #item = tab.category.tree.indexToItem(selection[0])
-            return selection[0].data(polymorphicItem.Object)
+            return selection[-1]
+
+    def updateSubcategoryCounts(self, index):
+        tab = self.category_widgets[self.categoryComboBox.currentIndex()]
+        item = tab.category.tree.indexToItem(index)
+        tab.category.tree.updateSubcategoryCounts(item)
 
     @Slot()
     def nextStage(self):

@@ -239,7 +239,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             if category.id == category_id:
                 category.tab.expandState()
                 # Scroll to the subcategory tree item in UI.
-                category.tree.expandTo(subcategory)
+                category.tree.findInTree(subcategory)
             else:
                 category.tab.collapseState()
         self.assets_view.clear()

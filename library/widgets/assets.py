@@ -10,7 +10,7 @@ from sequencePath import sequencePath as Path
 # -- Module --
 import library.config as config
 from library.io.ingest import ConversionRouter
-from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor
+from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor, Library
 from library.ui.asset_delegate import Ui_AssetDelegate
 from library.qt_objects import AbstractDoubleClick
 from library.ui.compact_delegate import Ui_CompactDelegate
@@ -347,6 +347,9 @@ class assetListView(QListView):
             elif subcategory:
                 subcategory.count = (subcategory.count - 1)
                 update_list.append(subcategory.data())
+                category = Library.categories.get(asset.category)
+                item = category.tree.findInTree(subcategory.id, variable='id')
+                category.tree.updateSubcategoryCounts(item, offset=-1)
 
             if not isinstance(asset, temp_asset):
                 asset.remove()

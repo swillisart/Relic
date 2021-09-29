@@ -184,7 +184,7 @@ class subcategoryTreeView(QTreeView):
         return count
 
     def expandAll(self):
-        """Override Qt to ignore expansion on items without children.
+        """Visual expansion of all items with children.
         """
         for i in range(self.model.rowCount()):
             index = self.model.index(i, 0)
@@ -193,32 +193,51 @@ class subcategoryTreeView(QTreeView):
             if item.hasChildren():
                 self.setExpanded(proxy_index, True)
 
-    def expandTo(self, name):
-        """Override Qt to ignore expansion on items without children.
+    def findInTree(self, attr, variable='name'):
+        """Finds an item in the tree by the attribute value.
         """
         for i in range(self.model.rowCount()):
             index = self.model.index(i, 0)
             proxy_index = self.proxyModel.mapFromSource(index)
             item = self.model.itemFromIndex(index)
             self.setExpanded(proxy_index, True)
-            self.findInTree(name, item)
-            
-    def findInTree(self, name, item=None):
-        if item.hasChildren():
-            for i in range(item.rowCount()):
-                child_item = item.child(i, 0)
-                self.findInTree(name, child_item)
-        
+            if found := self.recurseFindTreeItem(attr, item, variable):
+                return found
+
+    def recurseFindTreeItem(self, attr, item, variable):
+        """Iterates the tree attempting to find an item attribute value
+        matching the provided variable.
+
+        Parameters
+        ----------
+        attr : value of attribute
+            Could be name or id
+        item : QStandardItem
+            the item to recurse through
+        variable : str
+            the name of the attribute (variable)
+
+        Returns
+        -------
+        QStandardItem or None
+            The found item which matches the attribute value.
+        """
         index = item.index()
         proxy_index = self.proxyModel.mapFromSource(index)
         item = self.model.itemFromIndex(index)
         self.setExpanded(proxy_index, True)
-        if item.name == name:
+        if getattr(item, variable) == attr:
             self.scrollTo(proxy_index)
-            # For some reason this doesn't w, ork
+            # For some reason this doesn't work...
             self.selection_model.select(proxy_index, QItemSelectionModel.ClearAndSelect)
             self.update()
-            return
+            return item
+
+        if item.hasChildren():
+            for i in range(item.rowCount()):
+                child_item = item.child(i, 0)
+                if found := self.recurseFindTreeItem(attr, child_item, variable):
+                    return found
 
     def _createContextMenus(self, value):
         context_menu = QMenu(self)
@@ -432,6 +451,24 @@ class subcategoryTreeView(QTreeView):
             super(subcategoryTreeView, self).dropEvent(event)
             del self.drag_item
 
+    def updateSubcategoryCounts(self, item, offset=None):
+        """Updates related subcategory tree using the base items
+        count attribute or a direct offset.
+
+        Parameters
+        ----------
+        item : QStandardItem.
+            The base QItemd to modify hierarchically. 
+        offset : int, optional
+            if subtracting put a negative offset, by default None
+        """
+        item_parent = item.parent()
+        if item_parent: # Apply additions or subtractions to related subcategories.
+            self.getCounts(item_parent)
+            offset = offset or item.count
+
+            self.counts = {k: offset for k, v in self.counts.items()}
+            self.updateCounts()
 
     def getItemRelativePosition(self, pos, rect):
         r = QAbstractItemView.OnViewport

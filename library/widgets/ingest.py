@@ -1,10 +1,11 @@
 import os
+import json
 from functools import partial
 
+from colorcheckerDetection import detectColorChecker
 from sequencePath import sequencePath as Path
-from pprint import pprint
 from library.ui.ingestion import Ui_IngestForm
-from library.io.ingest import ConversionRouter, IngestionThread
+from library.io.ingest import ConversionRouter, IngestionThread, INGEST_PATH, applyImageModifications
 from library.objectmodels import (polymorphicItem, db, references, modeling,
                                 elements, lighting, shading, software, alusers,
                                 mayatools, nuketools, relationships, temp_asset, tags)
@@ -53,6 +54,15 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.next_enabled = partial(self.nextButton.setEnabled, True)
         self.next_disabled = partial(self.nextButton.setEnabled, False)
         self.collectedListView.compactMode()
+        self.actionGetMatrix = QAction('Get Color Matrix', self)
+        self.actionSetMatrix = QAction('Set Color Matrix', self)
+        self.actionApplyMods = QAction('Apply Image Modifications', self)
+        self.actionApplyMods.triggered.connect(self.applyImageModifications)
+        self.actionGetMatrix.triggered.connect(self.getColorMatrix)
+        self.actionSetMatrix.triggered.connect(self.setColorMatrix)
+
+        self.collectedListView.additional_actions.extend(
+            [self.actionGetMatrix, self.actionSetMatrix, self.actionApplyMods])
         self.newAssetListView.compactMode()
 
         self.collect_item_model = assetItemModel(self.collectedListView)
@@ -344,3 +354,38 @@ class IngestForm(Ui_IngestForm, QDialog):
                 asset_item = polymorphicItem(fields=asset_obj)
                 self.existingNamesList.itemModel.appendRow(asset_item)
 
+    def getCollectedPath(self, index):
+        temp_asset = index.data(polymorphicItem.Object)
+        temp_path = INGEST_PATH / 'unsorted{}{}'.format(
+            temp_asset.id, temp_asset.path.ext)
+        return temp_path, temp_asset
+
+    @Slot()
+    def applyImageModifications(self):
+        for index in self.collectedListView.selectedIndexes():
+            temp_path, temp_asset = self.getCollectedPath(index)
+            applyImageModifications(temp_path, temp_asset)
+
+    @Slot()
+    def setColorMatrix(self):
+        clipboard = QApplication.clipboard()
+        for index in self.collectedListView.selectedIndexes():
+            temp_path, temp_asset = self.getCollectedPath(index)
+            ccm = json.loads(clipboard.text())
+            if ccm:
+                temp_asset.colormatrix = ccm
+            else:
+                msg = 'Was unable to auto-detect a colorchecker within the selected image.'
+                QMessageBox.information(self, 'Detection Failed', msg)
+
+    @Slot()
+    def getColorMatrix(self):
+        index = self.collectedListView.selectedIndexes()[-1]
+        temp_path, temp_asset = self.getCollectedPath(index)
+        ccm = detectColorChecker(str(temp_path))
+
+        clipboard = QApplication.clipboard()
+        if ccm:
+            clipboard.setText(json.dumps(ccm))
+        else:
+            clipboard.clear()

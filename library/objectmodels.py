@@ -551,13 +551,14 @@ class relic_asset:
 
 class temp_asset(BaseFields):
     """used to house all possible attributes for constructing an asset
-    which does not exist in the library.
+    which does not yet exist in the library.
     """
     attrs = [
         'duration',
         'framerate',
         'polycount',
         'textured',
+        'colormatrix'
     ]
     __slots__ = tuple(
         relic_asset.base + attrs + relic_asset.extra

@@ -8,6 +8,7 @@ from functools import partial
 
 import libraw
 import numpy as np
+import cv2
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
 from library.config import (DCC_EXT, MOVIE_EXT, RELIC_PREFS, TOOLS_EXT,
@@ -27,6 +28,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget)
 from sequencePath import sequencePath as Path
+
+INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 CREATE_NO_WINDOW = 0x08000000
 
@@ -131,7 +134,7 @@ class ConversionRouter(QObject):
         self.function_map = function_map
         
         # Ensure our local ingest location exists
-        self.ingest_path = Path(os.getenv('userprofile')) / '.relic/ingest'
+        self.ingest_path = INGEST_PATH
         if not self.ingest_path.exists:
             self.ingest_path.path.mkdir(parents=True)
 
@@ -426,9 +429,8 @@ class ConversionRouter(QObject):
             noise = og - dn
             out_denoised = (buf.get_pixels() - offset) - noise
             buf.set_pixels(buf.spec().roi, out_denoised)
-            buf.specmod().attribute('compression', 'dwaa:15')
+            #buf.specmod().attribute('compression', 'dwaa:15')
             os.remove(str(denoise_path))
-
 
         buf.write(str(out_img_path))
 
@@ -452,6 +454,40 @@ class ConversionRouter(QObject):
         icon_path = generatePreviews(imgbuf, out_img_path)
         asset = assetFromStill(spec, icon_path, in_img_path)
         return asset
+
+
+def applyImageModifications(img_path, temp_asset):
+    img_buf = oiio.ImageBuf(str(img_path))
+    spec = img_buf.spec()
+    if temp_asset.colormatrix:
+        img_buf = oiio.ImageBufAlgo.colormatrixtransform(img_buf, temp_asset.colormatrix)
+
+    # Crop using annotation BoundingBox
+    annotated = img_path.parents(0) / 'annotations' / (img_path.name + '_proxy.1.png')
+    if annotated.exists:
+        anno_buf = oiio.ImageBuf(str(annotated))
+        anno_buf = oiio.ImageBufAlgo.pow(anno_buf, (2.2, 2.2, 2.2))
+
+        alpha = anno_buf.get_pixels(oiio.UINT8)[:, :, 3]
+        alpha = cv2.Canny(alpha, 2, 48)
+        contours, _hierarchy = cv2.findContours(alpha, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        for i, cnt in enumerate(contours):
+            x, y, w, h = cv2.boundingRect(cnt)
+            img_buf = oiio.ImageBufAlgo.cut(img_buf, roi=oiio.ROI(x, (x + w), y, (y + h)))
+            spec = img_buf.spec()
+            break
+        os.remove(str(annotated))
+
+    img_buf.specmod().attribute('compression', 'dwaa:15')
+    img_buf.write(str(img_path))
+
+    # generate new previews from modified image.
+    formatted = oiio.ImageBuf(
+        oiio.ImageSpec(spec.width, spec.height, 3, oiio.UINT8)
+    )
+    oiio.ImageBufAlgo.pow(formatted, img_buf, (0.454, 0.454, 0.454))
+    icon_path = generatePreviews(formatted, img_path)
+    temp_asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
 
 
 class IngestionThread(QThread):

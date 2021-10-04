@@ -154,7 +154,7 @@ class assetListView(QListView):
         self.actionGeneratePreview =  QAction('Generate Preview', self)
         self.actionGeneratePreview.triggered.connect(self.generatePreview)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
+        self.additional_actions = []
 
     def iconMode(self):
         self.compact_mode = False
@@ -329,8 +329,11 @@ class assetListView(QListView):
         context_menu.addAction(self.actionPreview)
     
         if bool(int(config.RELIC_PREFS.edit_mode)):
-            self.delete_item = context_menu.addAction(self.actionDelete)
-            self.genpreviews_item = context_menu.addAction(self.actionGeneratePreview)
+            context_menu.addAction(self.actionDelete)
+            context_menu.addAction(self.actionGeneratePreview)
+
+        for action in self.additional_actions:
+            context_menu.addAction(action)
 
         context_menu.exec(QCursor.pos())
 

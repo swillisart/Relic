@@ -23,7 +23,8 @@ GEO_EXT = ['.abc', '.fbx']
 TEXTURE_EXT = HDR_EXT + LDR_EXT
 
 PEAK = StrandClient('peak')
-INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
+USERPROFILE = os.getenv('userprofile')
+INGEST_PATH = Path(USERPROFILE) / '.relic/ingest'
 
 def getAssetSourceLocation(filepath):
     """Given a filepath this deterimines the relative subfolder location of the 
@@ -112,13 +113,13 @@ class Preferences(object):
 
     def user_settings(self):
         QCoreApplication.setOrganizationName(os.getenv('username'))
-        path = Path(os.getenv('userprofile')) / '.relic/settings/'
+        path = Path(USERPROFILE) / '.relic/settings/'
         QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(path))
         return QSettings()
 
     def shared_settings(self):
         QCoreApplication.setOrganizationName('ResArts')
-        path = Path(os.getenv('userprofile')) / '.relic/shared_settings/'
+        path = Path(USERPROFILE) / '.relic/shared_settings/'
         QSettings.setPath(QSettings.IniFormat, QSettings.SystemScope, str(path))
         return QSettings()
 
@@ -126,7 +127,7 @@ RELIC_PREFS = Preferences()
 
 # -- Logging --
 logging.basicConfig(
-    filename='relic.log',
+    filename=f'{USERPROFILE}/.relic/relic.log',
     format='%(asctime)-10s %(filename)s: %(funcName)10s %(message)s'
 )
 log = logging.getLogger(__name__)

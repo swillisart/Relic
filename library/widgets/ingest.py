@@ -78,8 +78,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.todo = 0
         self.done = 0
         self.ingest_thread = IngestionThread(self)
-        inplace_update = lambda x: x.update() 
-        self.ingest_thread.itemDone.connect(inplace_update)
+        self.ingest_thread.itemDone.connect(self.assetIngested)
         self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
         self.loading_movie = QMovie(':resources/general/load_wheel_24.webp')
         self.loading_movie.setCacheMode(QMovie.CacheAll)
@@ -87,7 +86,27 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.loadingLabel.setMovie(self.loading_movie)
         self.loadingLabel.hide()
         self.completedLabel.hide()
+        self.processLoadingLabel.setMovie(self.loading_movie)
+        self.processLoadingLabel.hide()
+        self.processCompleteLabel.hide()
         self.keep_original_name = False 
+
+    @Slot()
+    def assetIngested(self, asset):
+        # Update the asset's fields in the database 
+        asset.update()
+
+        # Check if all the other background copy operations have completed.
+        if len(self.ingest_thread.queue) == 0:
+            # Allow the user to finish.
+            self.processLoadingLabel.hide()
+            self.processCompleteLabel.show()
+            if self.done == self.todo:
+                self.nextButton.setText('Finish')
+                self.next_enabled()
+        else:
+            # Still processing
+            self.processLoadingLabel.show()
 
     def collectAssets(self, assets):
         self.categorizeTab.setEnabled(True)
@@ -279,9 +298,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedLabel.setText(collect_msg)
         assets_msg = 'Processed : {}/{}'.format(self.done, self.todo)
         self.newAssetsLabel.setText(assets_msg)
-        if self.done == self.todo:
-            self.nextButton.setText('Finish')
-            self.next_enabled()
 
 
     def getConversionMap(self):

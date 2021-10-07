@@ -28,12 +28,11 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget)
 from sequencePath import sequencePath as Path
+from colorcheckerDetection import autoExpose
 
 INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 CREATE_NO_WINDOW = 0x08000000
-
-FILTER_GRAPH_PROXY = 'pad=ceil(iw/2)*2:ceil(ih/2)*2'
 
 SIZE = ImageDimensions(288, 192)
 
@@ -204,9 +203,17 @@ class ConversionRouter(QObject):
         icon_path = out_img_path.suffixed('_icon', ext='.jpg')
         w, h = SIZE.w, SIZE.h
         FILTER_GRAPH_ICON = [
-            f'setpts=PTS/{pts}', 
+            f'setpts=PTS/{pts}',
             f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
             f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
+
+        ow = w + (w % 16)
+        oh = h - (h % 16)
+
+        FILTER_GRAPH_PROXY = [
+            f'scale=w={ow}:h={oh}:force_original_aspect_ratio=decrease',
+            f'pad={ow}:{oh}:(ow-iw)/2:(oh-ih)/2'
+        ]
 
         cmd = [
             'ffmpeg',
@@ -219,7 +226,7 @@ class ConversionRouter(QObject):
             '-preset', 'medium',
             '-tune', 'fastdecode',
             '-movflags', '+faststart',
-            '-vf', FILTER_GRAPH_PROXY,
+            '-vf', ','.join(FILTER_GRAPH_PROXY),
             str(out_img_path.suffixed('_proxy', ext='.mp4')),
             '-r', '24',
             '-vf', ','.join(FILTER_GRAPH_ICON),
@@ -233,7 +240,7 @@ class ConversionRouter(QObject):
             '-vframes', '1',
             str(icon_path),
         ]
-        subprocess.call(cmd, stdout=subprocess.DEVNULL)
+        subprocess.call(cmd, stdout=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
 
         spec = oiio.ImageSpec(int(width), int(height), 3, oiio.UINT8)
         asset = assetFromStill(spec, icon_path, in_img_path)
@@ -256,6 +263,15 @@ class ConversionRouter(QObject):
             f'setpts=PTS/{pts}', 
             f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
             f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
+
+        ow = w + (w % 16)
+        oh = h - (h % 16)
+
+        FILTER_GRAPH_PROXY = [
+            f'scale=w={ow}:h={oh}:force_original_aspect_ratio=decrease',
+            f'pad={ow}:{oh}:(ow-iw)/2:(oh-ih)/2'
+        ]
+
         command = [
             'ffmpeg',
             '-loglevel', 'error',
@@ -273,7 +289,7 @@ class ConversionRouter(QObject):
             '-preset', 'medium',
             '-tune', 'fastdecode',
             '-movflags', '+faststart',
-            '-vf', FILTER_GRAPH_PROXY,
+            '-vf', ','.join(FILTER_GRAPH_PROXY),
             str(out_img_path.suffixed('_proxy', ext='.mp4')),
             '-vf', ','.join(FILTER_GRAPH_ICON),
             '-an',  # Flag to not try linking audio file
@@ -417,7 +433,7 @@ class ConversionRouter(QObject):
 
             tifbuf.write(str(denoise_path))
             NEAT_IMAGE_CMD[1] = '"{}"'.format(str(denoise_path))
-            subprocess.call(' '.join(NEAT_IMAGE_CMD), stdout=subprocess.DEVNULL)
+            subprocess.call(' '.join(NEAT_IMAGE_CMD), stdout=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
 
             denoise_buf = oiio.ImageBuf(str(denoise_path))
             denoise_buf = oiio.ImageBufAlgo.pow(denoise_buf, (4.4, 4.4, 4.4))
@@ -477,6 +493,8 @@ def applyImageModifications(img_path, temp_asset):
             spec = img_buf.spec()
             break
         os.remove(str(annotated))
+    elif not temp_asset.colormatrix:
+        img_buf = autoExpose(img_buf)
 
     img_buf.specmod().attribute('compression', 'dwaa:15')
     img_buf.write(str(img_path))
@@ -608,9 +626,9 @@ class IngestionThread(QThread):
                             frame = Path(seq_file).frame
                             src.frame = frame
                             dst.frame = frame
-                            src.copyTo(dst)
+                            src.moveTo(dst)
                     else:
-                        src.copyTo(dst)
+                        src.moveTo(dst)
                 item.filehash = out_path.parents(0).hash
                 item.filesize = out_path.parents(0).size
                 # Clear the Id to allow for database creation

@@ -16,7 +16,7 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QIcon,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
                                QMessageBox, QStyledItemDelegate, QTreeView,
-                               QWidget)
+                               QWidget, QInputDialog, QLineEdit)
 
 
 class recursiveTreeFilter(QSortFilterProxyModel):
@@ -128,7 +128,10 @@ class subcategoryTreeView(QTreeView):
         self.actionRename.triggered.connect(self.listViewRenameMode)
         self.actionDelete = QAction('Remove Selected', self)
         self.actionDelete.triggered.connect(self.removeSubcategory)
+        self.actionRecount = QAction('Re-synchronize Count', self)
+        self.actionRecount.triggered.connect(self.resyncSubcategoryCount)
         self.folder_icon = QIcon(':resources/general/folder.svg')
+
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
@@ -247,6 +250,7 @@ class subcategoryTreeView(QTreeView):
         collapse.triggered.connect(self.collapseAll)
         
         if bool(int(RELIC_PREFS.edit_mode)):
+            context_menu.addAction(self.actionRecount)
             context_menu.addAction(self.actionCreate)
             context_menu.addAction(self.actionRename)
             context_menu.addAction(self.actionDelete)
@@ -291,6 +295,38 @@ class subcategoryTreeView(QTreeView):
         item.setData(name, Qt.DisplayRole)
         item.name = name
         subcategory(id=item.id,name=item.name).update(fields=['name'])
+        self.modifications.emit(True)
+
+    @Slot()
+    def resyncSubcategoryCount(self):
+        """Removes the treeView's selected category
+        """
+        selection = self.selectedIndexes()
+        new_count, ok = QInputDialog.getInt(self, 'Update Count',
+                "Count :")#, default_name)
+        if not ok:
+            return
+
+        for i, index in enumerate(selection):
+            item = self.indexToItem(index)
+            difference = new_count - item.count
+            self.category.count += difference
+            asset = index.data(polymorphicItem.Object)
+            asset.count = new_count
+            asset.update(fields=['count'])
+            """
+            # Use the recursive nature of getCounts to fetch tree descendent ids.
+            self.counts = {}
+            self.recursiveCountCursor(item, collect=True, up=False, down=True)
+            [ids.append(x) for x in self.counts]
+            if item:
+                self.category.count += -(item.count)
+                item_removal = item.parent()
+                if item_removal is None:
+                    item_removal = self.model.invisibleRootItem()
+                item_removal.takeRow(item.index().row() - i)
+            """
+            self.updateSubcategoryCounts(item)
         self.modifications.emit(True)
 
     @Slot()
@@ -381,6 +417,15 @@ class subcategoryTreeView(QTreeView):
             subcategory_item = self.indexToItem(index)
             if not subcategory_item:
                 return event.reject()
+
+            dst = subcategory_item.name
+            accepted_item, ok = QInputDialog.getItem(self,
+                'Re-parent Asset',
+                'Move the assets subcategory into "{}"?'.format(dst),
+                ['Move Assets'], True)
+            if not ok:
+                return
+
             event.setDropAction(Qt.MoveAction)
             event.accept()
             payload = json.loads(mime.text())
@@ -390,6 +435,20 @@ class subcategoryTreeView(QTreeView):
                     asset = constructor(**fields)
                     asset.moveToSubcategory(subcategory_item)
         else:
+            # Re-parenting a subcategory check if user wants to move.
+            src = self.drag_item.name
+            if index.isValid():
+                dst = self.indexToItem(index).name
+            else:
+                dst = 'Root'
+            accepted_item, ok = QInputDialog.getItem(self,
+                'Re-parent Subcategory',
+                'Move the item from "{}" to "{}"?'.format(src, dst),
+                [self.drag_item.name], True)
+
+            if not ok:
+                return
+
             # Apply subtractions regardless of destination.
             self.updateCounts()
 

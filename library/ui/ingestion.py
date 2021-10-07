@@ -17,12 +17,13 @@ from library.widgets.util import AssetNameListView
 from library.widgets.metadataView import categoryWidget
 
 import resources_rc
+import resources_rc
 
 class Ui_IngestForm(object):
     def setupUi(self, IngestForm):
         if not IngestForm.objectName():
             IngestForm.setObjectName(u"IngestForm")
-        IngestForm.resize(797, 468)
+        IngestForm.resize(857, 517)
         IngestForm.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"
@@ -559,7 +560,6 @@ class Ui_IngestForm(object):
 "")
         self.verticalLayout_3 = QVBoxLayout(IngestForm)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.verticalLayout_3.setContentsMargins(0, -1, 0, 0)
         self.frame_4 = QFrame(IngestForm)
         self.frame_4.setObjectName(u"frame_4")
         self.frame_4.setFrameShape(QFrame.StyledPanel)
@@ -870,11 +870,37 @@ class Ui_IngestForm(object):
         self.verticalLayout_6 = QVBoxLayout(self.frame_6)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
         self.verticalLayout_6.setContentsMargins(-1, 0, -1, 0)
-        self.newAssetsLabel = QLabel(self.frame_6)
+        self.frame_7 = QFrame(self.frame_6)
+        self.frame_7.setObjectName(u"frame_7")
+        self.frame_7.setFrameShape(QFrame.StyledPanel)
+        self.frame_7.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_8 = QHBoxLayout(self.frame_7)
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.horizontalLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.processLoadingLabel = QLabel(self.frame_7)
+        self.processLoadingLabel.setObjectName(u"processLoadingLabel")
+        self.processLoadingLabel.setPixmap(QPixmap(u":/resources/general/load_wheel_24.webp"))
+
+        self.horizontalLayout_8.addWidget(self.processLoadingLabel)
+
+        self.processCompleteLabel = QLabel(self.frame_7)
+        self.processCompleteLabel.setObjectName(u"processCompleteLabel")
+        self.processCompleteLabel.setPixmap(QPixmap(u":/resources/general/check_green.png"))
+
+        self.horizontalLayout_8.addWidget(self.processCompleteLabel)
+
+        self.newAssetsLabel = QLabel(self.frame_7)
         self.newAssetsLabel.setObjectName(u"newAssetsLabel")
         self.newAssetsLabel.setFont(font)
 
-        self.verticalLayout_6.addWidget(self.newAssetsLabel)
+        self.horizontalLayout_8.addWidget(self.newAssetsLabel)
+
+        self.horizontalSpacer_5 = QSpacerItem(10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_8.addItem(self.horizontalSpacer_5)
+
+
+        self.verticalLayout_6.addWidget(self.frame_7)
 
         self.line_4 = QFrame(self.frame_6)
         self.line_4.setObjectName(u"line_4")
@@ -977,6 +1003,8 @@ class Ui_IngestForm(object):
         self.collectedLabel.setText(QCoreApplication.translate("IngestForm", u"Collected : 0/0 ", None))
         self.label_4.setText(QCoreApplication.translate("IngestForm", u"Naming :", None))
         self.label_5.setText(QCoreApplication.translate("IngestForm", u" Provide a new name or re-use an existing name from the list below.", None))
+        self.processLoadingLabel.setText("")
+        self.processCompleteLabel.setText("")
         self.newAssetsLabel.setText(QCoreApplication.translate("IngestForm", u"Processed : 0/0", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.categorizeTab), QCoreApplication.translate("IngestForm", u"2. Categorize", None))
         self.nextButton.setText(QCoreApplication.translate("IngestForm", u"Next", None))

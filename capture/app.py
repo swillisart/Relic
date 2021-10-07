@@ -22,7 +22,8 @@ from sequencePath import sequencePath as Path
 import capture.resources
 from capture.ui.dialog import Ui_ScreenCapture
 from capture.io import AudioRecord
-from strand.client import StrandClient
+from strand2.client import StrandClient
+from strand2.server import StrandServer
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
@@ -604,6 +605,8 @@ def main(args):
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic-peak-capture")
     app.processEvents()
     window.show()
+    server = StrandServer('capture')
+    server.incomingFile.connect(window.performScreenshot)
     sys.exit(app.exec_())
 
 

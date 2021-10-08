@@ -10,7 +10,7 @@ from library.objectmodels import (polymorphicItem, db, references, modeling,
                                 elements, lighting, shading, software, alusers,
                                 mayatools, nuketools, relationships, temp_asset, tags)
 from library.widgets.assets import assetItemModel
-from library.widgets.util import ListViewFiltered
+from library.widgets.util import ListViewFiltered, SimpleAsset
 
 from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT,
                             LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT, RELIC_PREFS)
@@ -35,13 +35,6 @@ The remaining unprocessed files will be lost.
 
 Are you sure you want to cancel and close?
 """
-
-class SimpleAsset(object):
-    __slots__ = ['name', 'id']
-    def __init__(self, name, id):
-        self.name = name
-        self.id = id
-
 
 class IngestForm(Ui_IngestForm, QDialog):
 
@@ -137,9 +130,13 @@ class IngestForm(Ui_IngestForm, QDialog):
         asset_constructor = globals()[category_name]
         total = len(collected_indices)
         if isinstance(item, SimpleAsset): # Linking to an existing item
-            primary_asset = asset_constructor(name=item.name, id=item.id)
-            primary_asset.fetch()
+            primary_asset = asset_constructor(name=item.name) 
+            primary_asset_id = item.id
+            if not primary_asset_id:
+                primary_asset_id = primary_asset.nameExists()
+            primary_asset.fetch(id=primary_asset_id)
             link_primary = True
+            total += 1
         for num, index in enumerate(collected_indices):
             temp_asset = index.data(polymorphicItem.Object)
             asset = asset_constructor(*temp_asset.values)
@@ -150,12 +147,28 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset.links = (subcategory.relationMap, subcategory.id)
 
             if num == 0 and isinstance(item, str):
-                primary_asset = asset
                 asset.name = item
-                asset.type = 3 # Collection
-                #asset.dependencies = (total - 1)
-                link_primary = False
-                reverse_link = False
+                exists = asset.nameExists()
+                if exists:
+                    if '_' in item:
+                        name, num = item.split('_')
+                        upnumber = int(num) + 1
+                        asset.name = f'{name}_{upnumber}'
+                    else:
+                        asset.name = f'{item}_1'
+
+                    self.existingNamesList.addItem(asset.name, exists)
+                    asset.type = 5 # Variant
+                    primary_asset = asset_constructor(name=item, id=exists)
+                    primary_asset.fetch(id=exists)
+                    total += 1
+                    link_primary = True
+                    reverse_link = False
+                else:
+                    primary_asset = asset
+                    asset.type = 3 # Collection
+                    link_primary = False
+                    reverse_link = False
             else:
                 if not asset.type == 5:
                     asset.name = '{}_{}'.format(primary_asset.name, num)
@@ -220,7 +233,6 @@ class IngestForm(Ui_IngestForm, QDialog):
             primary_asset.dependencies += total
         else:
             primary_asset.dependencies = (total - 1)
-
         primary_asset.update()
         subcategory.update(fields=['count'])
 
@@ -298,7 +310,9 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedLabel.setText(collect_msg)
         assets_msg = 'Processed : {}/{}'.format(self.done, self.todo)
         self.newAssetsLabel.setText(assets_msg)
-
+        if len(self.ingest_thread.queue) == 0 and self.done == self.todo:
+            self.nextButton.setText('Finish')
+            self.next_enabled()
 
     def getConversionMap(self):
         """Setup an file-extension based conversion map
@@ -366,9 +380,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.existingNamesList.itemModel.clear()
         if assets:
             for asset in assets:
-                asset_obj = SimpleAsset(*asset)
-                asset_item = polymorphicItem(fields=asset_obj)
-                self.existingNamesList.itemModel.appendRow(asset_item)
+                self.existingNamesList.addItem(*asset)
 
     def getCollectedPath(self, index):
         temp_asset = index.data(polymorphicItem.Object)
@@ -380,6 +392,8 @@ class IngestForm(Ui_IngestForm, QDialog):
     def applyImageModifications(self):
         for index in self.collectedListView.selectedIndexes():
             temp_path, temp_asset = self.getCollectedPath(index)
+            if not temp_path.exists:
+                temp_asset.path.copyTo(temp_path)
             applyImageModifications(temp_path, temp_asset)
 
     @Slot()

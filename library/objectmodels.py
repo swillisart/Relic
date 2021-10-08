@@ -639,7 +639,7 @@ class polymorphicItem(QStandardItem):
 
     def __init__(self, parent=None, fields=None):
         super(polymorphicItem, self).__init__(parent)
-        self.setData(fields.name.capitalize(), Qt.DisplayRole)
+        self.setData(fields.name, Qt.DisplayRole)
         self.setData(fields, polymorphicItem.Object)
         for x in fields.__slots__:
             AttrDescriptor.buildNodeAttr(self.__class__, x)

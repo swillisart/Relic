@@ -47,8 +47,11 @@ class libraryNetwork(QObject):
             r = session.post(self.hostname + url, data=data)
         else:
             r = session.get(self.hostname + url)
-
-        return r.json()
+        try:
+            result = r.json()
+        except:
+            result = None
+        return result
 
     def doRequest(self, url, data=None):
         self.makeConnection()

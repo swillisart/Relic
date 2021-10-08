@@ -89,6 +89,7 @@ class LinkViewWidget(QWidget):
         self.setLayout(self.main_layout)
         self.model = assetItemModel(self)
         self.createGroups()
+        self.pool = QThreadPool.globalInstance()
         self.asset_type_counter = {}
 
     def createGroups(self):
@@ -115,10 +116,12 @@ class LinkViewWidget(QWidget):
     def clear(self):
         self.model.clear()
         self.asset_type_counter = {}
-        self.updateGroups([])
 
-    def updateGroups(self, assets):
-        pool = QThreadPool.globalInstance()
+    def updateGroups(self, assets, clear=False):
+        if clear:
+            self.pool.clear()
+            self.clear()
+
         for asset in assets:
             asset.setTextAlignment(Qt.AlignLeft | Qt.AlignTop)
             asset.setCheckable(True)
@@ -128,7 +131,7 @@ class LinkViewWidget(QWidget):
             asset_obj = asset.data(polymorphicItem.Object)
             on_complete = partial(setattr, asset, 'icon')
             worker = LocalThumbnail(asset_obj.network_path.suffixed('_icon', '.jpg'), on_complete)
-            pool.start(worker)
+            self.pool.start(worker)
             #asset_obj.fetchIcon()
 
         for index, tab in enumerate(self.all_tabs):

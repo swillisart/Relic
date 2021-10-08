@@ -207,8 +207,8 @@ class ConversionRouter(QObject):
             f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
             f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
 
-        ow = w + (w % 16)
-        oh = h - (h % 16)
+        ow = int(width) + (int(width) % 16)
+        oh = int(height) - (int(height) % 16)
 
         FILTER_GRAPH_PROXY = [
             f'scale=w={ow}:h={oh}:force_original_aspect_ratio=decrease',
@@ -244,7 +244,7 @@ class ConversionRouter(QObject):
 
         spec = oiio.ImageSpec(int(width), int(height), 3, oiio.UINT8)
         asset = assetFromStill(spec, icon_path, in_img_path)
-        asset.duration = duration
+        asset.duration = int(duration)
         asset.framerate = framerate
 
         return asset
@@ -259,13 +259,15 @@ class ConversionRouter(QObject):
         a_input.close()
         pts = ((framelength * 24) / 100) / 24
         w, h = SIZE.w, SIZE.h
+        width = spec.width
+        height = spec.height 
         FILTER_GRAPH_ICON = [
             f'setpts=PTS/{pts}', 
             f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
             f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
 
-        ow = w + (w % 16)
-        oh = h - (h % 16)
+        ow = width + (width % 16)
+        oh = height - (height % 16)
 
         FILTER_GRAPH_PROXY = [
             f'scale=w={ow}:h={oh}:force_original_aspect_ratio=decrease',
@@ -278,7 +280,7 @@ class ConversionRouter(QObject):
             '-y',
             '-f', 'rawvideo',
             '-vcodec', 'rawvideo',
-            '-s', '{}x{}'.format(spec.width, spec.height),
+            '-s', f'{width}x{height}',
             '-pix_fmt', 'rgb24',
             '-i', '-',  # Input comes from a pipe
             '-r', '24',  # fps
@@ -300,7 +302,11 @@ class ConversionRouter(QObject):
         ]
 
         pipe = subprocess.PIPE
-        pr = subprocess.Popen(command, stdout=subprocess.DEVNULL, stdin=pipe)
+        pr = subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stdin=pipe,
+            creationflags=CREATE_NO_WINDOW)
 
         i = 0
         while frames:

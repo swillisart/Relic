@@ -9,7 +9,7 @@ from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
                             QSortFilterProxyModel, Qt, QTextStream, Signal,
                             Slot, QPropertyAnimation, Property)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
-                           QIcon, QPainter, QPixmap,
+                           QIcon, QPainter, QPixmap, QStandardItem,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -78,6 +78,11 @@ def modifySVG(file_path, find, replace, regex=False, size_override=False):
     painter.end()
     return image
 
+class SimpleAsset(object):
+    __slots__ = ['name', 'id']
+    def __init__(self, name, id):
+        self.name = name
+        self.id = id
 
 class compactLayout(QBoxLayout):
 
@@ -277,6 +282,12 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
             text, QRegularExpression.CaseInsensitiveOption)
         self.proxyModel.setFilterRegularExpression(regex)
 
+    def addItem(self, name, id):
+        asset_obj = SimpleAsset(name=name, id=id)
+        item = polymorphicItem(fields=asset_obj)
+        self.itemModel.appendRow(item)
+        return item
+
     @Slot()
     def onViewReturn(self):
         try:
@@ -285,12 +296,16 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
             index = self.proxyModel.index(0, 0)
 
         if index.data():
-            self.linkItem.emit(index.data(polymorphicItem.Object))
+            asset = index.data(polymorphicItem.Object)
+            if not asset.id:
+                asset = asset.name
+            self.linkItem.emit(asset)
         else:
             if self.rename_mode:
                 self.renameItem.emit(str(self.searchBox.text()))
             else:
-                self.newItem.emit(str(self.searchBox.text()))
+                item = self.addItem(str(self.searchBox.text()), None)
+                self.newItem.emit(item.name)
 
         self.searchBox.setFocus()
         self.hide()

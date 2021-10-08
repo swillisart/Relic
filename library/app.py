@@ -357,15 +357,18 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         """
 
         self.assets_view.hide()
-        self.linksDock.show()
 
         indices = set(self.assets_view.selectedIndexes())
         indices.add(index)
 
+        linked_assets = []
         for index in indices:
             asset = index.data(polymorphicItem.Object)
             asset.related()
-            self.links_view.updateGroups(asset.upstream)
+            linked_assets.extend(asset.upstream)
+
+        self.links_view.updateGroups(linked_assets, clear=True)
+        self.linksDock.show()
 
     @Slot()
     def toggleVisibility(self, reason):

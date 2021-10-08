@@ -26,6 +26,8 @@ PEAK = StrandClient('peak')
 USERPROFILE = os.getenv('userprofile')
 INGEST_PATH = Path(USERPROFILE) / '.relic/ingest'
 
+INGEST_PATH.path.mkdir(parents=True, exist_ok=True)
+
 def getAssetSourceLocation(filepath):
     """Given a filepath this deterimines the relative subfolder location of the 
     unique dependency for this asset.

@@ -101,8 +101,9 @@ class libraryNetwork(QObject):
             self.imageStreamData.emit((img, id))
         elif content_type == 'video/mp4':
             w, h, c = (288, 192, 3)
-            local_mp4 = os.getenv('USERPROFILE').replace('\\', '/') + "/in_pipe"
-            with open(local_mp4, "wb") as in_pipe:
+            userp = os.getenv('USERPROFILE').replace('\\', '/')
+            local_mp4 = f'{userp}/.relic/pipe_mp4_preview'
+            with open(local_mp4, 'wb') as in_pipe:
                 in_pipe.write(data)
  
             cap = cv2.VideoCapture(local_mp4)
@@ -114,6 +115,7 @@ class libraryNetwork(QObject):
                     px = QPixmap.fromImageInPlace(img.rgbSwapped())
                     self.videoStreamData.emit(px)
             cap.release()
+            os.remove(local_mp4)
 
         if self.response:
             self.response = None

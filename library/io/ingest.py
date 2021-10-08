@@ -134,8 +134,6 @@ class ConversionRouter(QObject):
         
         # Ensure our local ingest location exists
         self.ingest_path = INGEST_PATH
-        if not self.ingest_path.exists:
-            self.ingest_path.path.mkdir(parents=True)
 
     def addToQueue(self, folders):
         if hasattr(self, 'queued_folders'):

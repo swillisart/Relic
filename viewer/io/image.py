@@ -19,25 +19,23 @@ def read_file(image_in, subimage=(0,3)):
     if not image_in:
         return None, None
     spec = image_in.spec()
-    if type(subimage) is int:
+    display_r = oiio.get_roi_full(spec)
+    data_r = spec.roi
+    if isinstance(subimage, int):
         image_in.seek_subimage(subimage, 0)
         data = image_in.read_image(oiio.UNKNOWN)
-
-    if type(subimage) is tuple:
+    elif isinstance(subimage, tuple):
         start, end = subimage
-        data = image_in.read_scanlines(
-            spec.y, (spec.y + spec.height), spec.full_z, start, end + 1, oiio.UNKNOWN
-        )
-        #if start == end:
-        #    data = np.stack((data,) / 3, -1)
+        data = image_in.read_image(start, end + 1, oiio.UNKNOWN)
+        if start == end:
+            data = np.stack((data,) / 3, -1)
 
     # If display window is not the same as data window pad the pixels with zeros
-    if spec.height != spec.full_height or spec.width != spec.full_width:
-        xpad = spec.x
-        ypad = spec.y
-        padded = np.zeros((spec.full_width, spec.full_height, 3), dtype=data.dtype)
-        padded[ypad:data.shape[0]+ypad, xpad:data.shape[1]+xpad] = data
-        data = padded
+    if spec.height < display_r.height or spec.width < display_r.width:
+        display = np.zeros((display_r.height, display_r.width, 3), dtype=data.dtype)
+        display[data_r.ybegin:data_r.yend, data_r.xbegin:data_r.xend, :] = data
+        data = display
+    
     image_in.close()
 
     return data, spec

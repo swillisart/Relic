@@ -257,8 +257,8 @@ class ConversionRouter(QObject):
         a_input.close()
         pts = ((framelength * 24) / 100) / 24
         w, h = SIZE.w, SIZE.h
-        width = spec.width
-        height = spec.height 
+        width = spec.full_width
+        height = spec.full_height 
         FILTER_GRAPH_ICON = [
             f'setpts=PTS/{pts}', 
             f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
@@ -313,15 +313,18 @@ class ConversionRouter(QObject):
             buf = oiio.ImageBuf(str(frame))
             spec = buf.spec()
             r = spec.roi
-            rgb_roi = oiio.ROI(r.xbegin, r.xend, r.ybegin, r.yend, 0, 1, 0, 3)
 
             buf = oiio.ImageBufAlgo.colorconvert(buf, "Linear", "sRGB")
-
             # Write Icon from center of range
             if i == int(framelength / 2):
                 icon_path = generatePreviews(buf, out_img_path)
+    
+            data = buf.get_pixels(format=oiio.UINT8)
 
-            data = buf.get_pixels(format=oiio.UINT8, roi=rgb_roi)
+            if spec.height != spec.full_height or spec.width != spec.full_width:
+                full_pixels = np.zeros((spec.full_height, spec.full_width, 3), dtype=np.uint8)
+                full_pixels[r.ybegin:r.yend, r.xbegin:r.xend, :] = data[:, :, :3]
+                data = full_pixels
 
             pr.stdin.write(data.tobytes())
             pr.stdin.flush()

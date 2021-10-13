@@ -27,7 +27,7 @@ session = requests.session()
 class libraryNetwork(QObject):
     
     imageStreamData = Signal(tuple)
-    videoStreamData = Signal(object)
+    videoStreamData = Signal(list)
 
     def __init__(self, *args, **kwargs):
         super(libraryNetwork, self).__init__(*args, **kwargs)
@@ -108,12 +108,14 @@ class libraryNetwork(QObject):
  
             cap = cv2.VideoCapture(local_mp4)
             ret = True
+            frames = []
             while ret:
                 ret, frame = cap.read()
                 if ret:
                     img = QImage(frame, w, h, QImage.Format_RGB888)
                     px = QPixmap.fromImageInPlace(img.rgbSwapped())
-                    self.videoStreamData.emit(px)
+                    frames.append(px)
+            self.videoStreamData.emit(frames)
             cap.release()
             os.remove(local_mp4)
 

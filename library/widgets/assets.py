@@ -667,8 +667,8 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
         self._selected = state
 
     @Slot()
-    def updateSequence(self, img):
-        self.sequence.append(img)
+    def updateSequence(self, frames):
+        self.sequence = frames
 
     def mousePressEvent(self, event):
         super(AssetEditor, self).mousePressEvent(event)
@@ -689,7 +689,6 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
             pos_idx = int(self.xpos * duration / w) + 1
             if 0 <= pos_idx < duration:
                 self.label.setPixmap(self.sequence[pos_idx])
-                self.update()
             else:
                 self.label.setPixmap(self.sequence[0])
             self.progressBar.setMaximum(duration)

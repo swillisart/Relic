@@ -148,9 +148,11 @@ class ClipA(object):
         frames = sorted(glob.glob(file_path.sequence_path))
         self.first = int(re.search(file_path.SEQUENCE_REGEX, frames[0]).group(1))
         self.last = self.first + len(frames)
-        width, height, aspect = io.image.getImageResolution(frames[0])
+        width, height, channels, aspect = io.image.getImageResolution(frames[0])
+        if channels > 4:
+            channels = 4
         self.geometry = ImagePlane(width, height, aspect=aspect,
-            pixels=np.zeros(shape=(height, width, 3), dtype=np.float16)
+            pixels=np.zeros(shape=(height, width, channels), dtype=np.float16)
         )
 
     def loadMovieFile(self, file_path):

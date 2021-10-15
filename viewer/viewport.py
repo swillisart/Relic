@@ -26,7 +26,6 @@ from viewer.gl.shading import BaseProgram
 from viewer.gl.primitives import Circle, ColorWheel, Line, LineRect, Ellipse
 from viewer.gl.text import glyphContainer, TextShader, createFontAtlas
 from viewer.ui.widgets import colorSampler, PaintDockWidget
-from viewer.io.image import read_file
 # -- Globals --
 NOPE = 0
 OVERSCAN = 1
@@ -37,11 +36,25 @@ SHADER_DESCRIPTION = {
     "lut3DEdgeLen": 32,
 }
 NP_TEXTURE_FORMAT = {
-    'uint8': [GL_RGB8, GL_UNSIGNED_BYTE],
-    'float16': [GL_RGB16F, GL_HALF_FLOAT],
-    'float32': [GL_RGB32F, GL_FLOAT],
+    'uint8': GL_UNSIGNED_BYTE,
+    'float16': GL_HALF_FLOAT,
+    'float32': GL_FLOAT,
 }
-
+RGB_CHANNELS = {
+    GL_UNSIGNED_BYTE: GL_RGB8,
+    GL_HALF_FLOAT: GL_RGB16F,
+    GL_FLOAT: GL_RGB32F
+}
+RGBA_CHANNELS = {
+    GL_UNSIGNED_BYTE: GL_RGBA8,
+    GL_HALF_FLOAT: GL_RGBA16F,
+    GL_FLOAT: GL_RGBA32F
+}
+R_CHANNEL = {
+    GL_UNSIGNED_BYTE: GL_R8,
+    GL_HALF_FLOAT: GL_R16F,
+    GL_FLOAT: GL_R32F
+}
 
 class BrushStroke(QObject):
 
@@ -597,9 +610,15 @@ class ImagePlane(object):
         self.aspect = aspect
         self.tile = 1
         if order == 'rgb':
-            self.order = GL_RGB
+            if pixels.shape[2] == 4:
+                self.order = GL_RGBA
+            else:    
+                self.order = GL_RGB
         else:
-            self.order = GL_BGR
+            if pixels.shape[2] == 4:
+                self.order = GL_BGRA
+            else:    
+                self.order = GL_BGR
         self.build(pixels)
         self.no_annotation = True
 
@@ -630,7 +649,13 @@ class ImagePlane(object):
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
-        self.gl_internal_format, self.gl_format = NP_TEXTURE_FORMAT.get(str(pixels.dtype))
+        self.gl_format = NP_TEXTURE_FORMAT.get(str(pixels.dtype))
+        if pixels.shape[2] == 4:    
+            self.gl_internal_format = RGBA_CHANNELS.get(self.gl_format)
+        elif pixels.shape[2] == 3:
+            self.gl_internal_format = RGB_CHANNELS.get(self.gl_format)
+        elif pixels.shape[2] == 1:
+            self.gl_internal_format = R_CHANNEL.get(self.gl_format)
         # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
 
         self.f.glTexImage2D(

@@ -126,7 +126,7 @@ class ImageLoader(PixelLoader):
         if not clip_frame:
             return None
         fp = clip.path.padSequence(clip_frame)
-        data, spec = image.read_file(fp, subimage=(0, 2))
+        data, spec = image.read_file(fp)
         return data
 
     def run(self):

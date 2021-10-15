@@ -150,13 +150,7 @@ class IngestForm(Ui_IngestForm, QDialog):
                 asset.name = item
                 exists = asset.nameExists()
                 if exists:
-                    if '_' in item:
-                        name, num = item.split('_')
-                        upnumber = int(num) + 1
-                        asset.name = f'{name}_{upnumber}'
-                    else:
-                        asset.name = f'{item}_1'
-
+                    asset.name = self.numberedName(item)
                     self.existingNamesList.addItem(asset.name, exists)
                     asset.type = 5 # Variant
                     primary_asset = asset_constructor(name=item, id=exists)
@@ -164,19 +158,34 @@ class IngestForm(Ui_IngestForm, QDialog):
                     total += 1
                     link_primary = True
                     reverse_link = False
+                elif total > 1:
+                    asset.name = self.numberedName(item)
+                    primary_asset = asset_constructor(
+                        name=item,
+                        category=category_id,
+                        subcategory=subcategory,
+                        type=3,
+                        path=f'{item}/{item}',
+                        links=(subcategory.relationMap, subcategory.id),
+                    )
+                    primary_asset.create()
+                    primary_asset.fetch(id=primary_asset.id)
+                    asset.type = 5 # Variant
+                    link_primary = True
+                    reverse_link = False
                 else:
-                    primary_asset = asset
-                    asset.type = 3 # Collection
+                    asset.type = 3 # Asset
                     link_primary = False
                     reverse_link = False
             else:
                 if not asset.type == 5:
-                    asset.name = '{}_{}'.format(primary_asset.name, num)
+                    asset.name = '{}_{}'.format(primary_asset.name, num + 1)
                     asset.type = 5 # Variant
                     link_primary = True
                     reverse_link = False
                 else:
                     reverse_link = True
+
             # store the associated temp on-disk location for copying.
             if not self.keep_original_name:
                 temp_filename = 'unsorted' + str(asset.id)
@@ -232,9 +241,18 @@ class IngestForm(Ui_IngestForm, QDialog):
         elif reverse_link:
             primary_asset.dependencies += total
         else:
-            primary_asset.dependencies = (total - 1)
+            primary_asset.dependencies = total
         primary_asset.update()
         subcategory.update(fields=['count'])
+
+    @staticmethod
+    def numberedName(item):
+        if '_' in item:
+            name, num = item.split('_')
+            upnumber = int(num) + 1
+            return f'{name}_{upnumber}'
+        else:
+            return f'{item}_1'
 
     @property
     def selectedSubcategory(self):

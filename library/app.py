@@ -74,6 +74,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.category_manager.onSelection.connect(self.updateAssetView)
         self.searchBox.returnPressed.connect(self.updateAssetView)
         self.pageSpinBox.valueChanged.connect(self.updateAssetView)
+        self.buttonGroup.buttonClicked.connect(self.updateAssetView)
 
         category_widgets = self.category_manager.assembleCategories(self.library.categories)
         for index, category in enumerate(category_widgets):
@@ -299,10 +300,14 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         # Only re-query the database if the searchbox has changed
         new_search = False
 
+        categories_to_search = self.library.validateCategories(categories)
         # Split text into list of search term keywords
         text = self.searchBox.text()
-        terms = text.split(' ') if text else None
-        new_search = self.library.search(terms, categories)
+        if text:
+            categories_to_search['keywords'] = text.split(' ')
+        use_collections = self.collectionRadioButton.isChecked()
+        categories_to_search['exclude_type'] = 5 if use_collections else 3
+        new_search = self.library.search(categories_to_search)
         asset_total = len(self.library.assets)
             
         self.assets_view.clear()

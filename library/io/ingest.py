@@ -108,7 +108,7 @@ def generatePreviews(img_buf, path):
 
 def assetFromStill(spec, icon_path, in_img_path):
     icon = QPixmap.fromImage(QImage(str(icon_path)))
-    res = '{}x{}x{}'.format(spec.width, spec.height, spec.nchannels)
+    res = '{}x{}x{}'.format(spec.full_width, spec.full_height, spec.nchannels)
     asset = temp_asset(
         name=in_img_path.stem,
         category=0,
@@ -557,7 +557,7 @@ class IngestionThread(QThread):
                     return
 
                 self.mutex.lock()
-                temp_filename, item, extra_files = self.queue.pop(0)
+                temp_filename, item, extra_files = self.queue[0]
                 ingest_path = self.ingest_path
                 self.mutex.unlock()
 
@@ -639,6 +639,7 @@ class IngestionThread(QThread):
                 item.filehash = out_path.parents(0).hash
                 item.filesize = out_path.parents(0).size
                 # Clear the Id to allow for database creation
+                self.queue.pop(0)
                 self.itemDone.emit(item)
 
             self.mutex.lock()

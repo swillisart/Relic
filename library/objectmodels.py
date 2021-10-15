@@ -333,13 +333,11 @@ class Library(object):
             categories = dict.fromkeys(self.categories.slot_range)
         return categories
 
-    def search(self, text, categories, filters=None, image=None):
-        categories_to_search = self.validateCategories(categories)
-        if text:
-            categories_to_search['k'] = text
+    def search(self, categories_to_search, filters=None, image=None):
+        if categories_to_search.get('keywords'):
             search_results = db.accessor.doRequestWithResult('searchKeywords', categories_to_search)
         else:
-            if not categories:
+            if not categories_to_search:
                 return False
             search_results = db.accessor.doRequestWithResult('searchCategories', categories_to_search)
             
@@ -374,7 +372,7 @@ class Library(object):
         selected_subcategories = []
         categories_to_search = self.validateCategories(categories).keys()
         for x in categories:
-            if x != 'k':
+            if x not in ['keywords', 'exclude_type']:
                 selected_subcategories.extend(categories[x])
 
         self.assets_filtered = []
@@ -396,10 +394,11 @@ class Library(object):
         data = db.accessor.doRequestWithResult('retrieveAssets', search_data)
 
         if data:
-            for i, x in enumerate(data):
-                category, _id, tags, subcategory, asset_constructor = filtered[i]
-                x.extend([tags, []])
-                asset = asset_constructor(*x)
+            for i, x in enumerate(filtered):
+                category, _id, tags, subcategory, asset_constructor = x
+                asset_fields = data[i]
+                asset_fields.extend([tags, []])
+                asset = asset_constructor(*asset_fields)
                 asset.category = category
                 category_obj = self.categories.get(category)
                 if category_obj:

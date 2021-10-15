@@ -11,7 +11,7 @@ def getImageResolution(image_in):
         return None
     spec = image_in.spec()
     aspect = spec.get_float_attribute("PixelAspectRatio")
-    return (spec.full_width, spec.full_height, aspect)
+    return (spec.full_width, spec.full_height, spec.nchannels, aspect)
 
 
 def read_file(image_in, subimage=(0,3)):
@@ -27,15 +27,12 @@ def read_file(image_in, subimage=(0,3)):
     elif isinstance(subimage, tuple):
         start, end = subimage
         data = image_in.read_image(start, end + 1, oiio.UNKNOWN)
-        if start == end:
-            data = np.stack((data,) / 3, -1)
-
     # If display window is not the same as data window pad the pixels with zeros
     if spec.height < display_r.height or spec.width < display_r.width:
-        display = np.zeros((display_r.height, display_r.width, 3), dtype=data.dtype)
+        display = np.zeros((display_r.height, display_r.width, data.shape[2]), dtype=data.dtype)
         display[data_r.ybegin:data_r.yend, data_r.xbegin:data_r.xend, :] = data
         data = display
-    
+
     image_in.close()
 
     return data, spec

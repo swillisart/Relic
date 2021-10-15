@@ -581,7 +581,24 @@ class Ui_RelicMainWindow(object):
 "    border-top-right-radius: 3px;\n"
 "    border-top: 1px solid rgb(43, 43, 43);\n"
 "}\n"
-"")
+"\n"
+"QRadioButton::indicator {\n"
+"    width:                  8px;\n"
+"    height:                 8px;\n"
+"    border-radius:          6px;\n"
+"}\n"
+"QRadioButton::indicator:checked {\n"
+"   "
+                        " background-color:       gray;\n"
+"    border:                 2px solid rgb(43,43,43);\n"
+"}\n"
+"QRadioButton::indicator:unchecked {\n"
+"    background-color:       rgb(43,43,43);\n"
+"    border:                 2px solid rgb(43,43,43);\n"
+"}\n"
+"QRadioButton:indicator:hover {\n"
+"    border: 2px solid rgb(150, 146, 137);\n"
+"}")
         RelicMainWindow.setAnimated(True)
         RelicMainWindow.setDockNestingEnabled(True)
         self.actionPreferences = QAction(RelicMainWindow)
@@ -1451,7 +1468,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 74, 558))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 78, 527))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1487,24 +1504,6 @@ class Ui_RelicMainWindow(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(2)
         self.gridLayout.setContentsMargins(6, 0, 6, 0)
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.gridLayout.addItem(self.horizontalSpacer_2, 0, 4, 1, 1)
-
-        self.line = QFrame(self.searchDockWidgetContents)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line, 1, 2, 1, 1)
-
-        self.line_2 = QFrame(self.searchDockWidgetContents)
-        self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.HLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line_2, 1, 4, 1, 1)
-
         self.searchFrame = QFrame(self.searchDockWidgetContents)
         self.searchFrame.setObjectName(u"searchFrame")
         sizePolicy3.setHeightForWidth(self.searchFrame.sizePolicy().hasHeightForWidth())
@@ -1558,6 +1557,28 @@ class Ui_RelicMainWindow(object):
 
         self.gridLayout.addWidget(self.searchFrame, 0, 2, 1, 1)
 
+        self.line_2 = QFrame(self.searchDockWidgetContents)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.HLine)
+        self.line_2.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.line_2, 1, 5, 1, 1)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.gridLayout.addItem(self.horizontalSpacer, 0, 0, 1, 1)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.gridLayout.addItem(self.horizontalSpacer_2, 0, 5, 1, 1)
+
+        self.line = QFrame(self.searchDockWidgetContents)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.line, 1, 2, 1, 1)
+
         self.line_3 = QFrame(self.searchDockWidgetContents)
         self.line_3.setObjectName(u"line_3")
         self.line_3.setFrameShape(QFrame.HLine)
@@ -1565,9 +1586,48 @@ class Ui_RelicMainWindow(object):
 
         self.gridLayout.addWidget(self.line_3, 1, 0, 1, 1)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4.setSpacing(3)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_4.setContentsMargins(6, 0, 6, 0)
+        self.collectionRadioButton = QRadioButton(self.searchDockWidgetContents)
+        self.buttonGroup = QButtonGroup(RelicMainWindow)
+        self.buttonGroup.setObjectName(u"buttonGroup")
+        self.buttonGroup.addButton(self.collectionRadioButton)
+        self.collectionRadioButton.setObjectName(u"collectionRadioButton")
+        self.collectionRadioButton.setMaximumSize(QSize(16777215, 16))
+        icon10 = QIcon()
+        icon10.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.collectionRadioButton.setIcon(icon10)
+        self.collectionRadioButton.setChecked(True)
 
-        self.gridLayout.addItem(self.horizontalSpacer, 0, 0, 1, 1)
+        self.verticalLayout_4.addWidget(self.collectionRadioButton)
+
+        self.variationRadioButton = QRadioButton(self.searchDockWidgetContents)
+        self.buttonGroup.addButton(self.variationRadioButton)
+        self.variationRadioButton.setObjectName(u"variationRadioButton")
+        sizePolicy6 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.variationRadioButton.sizePolicy().hasHeightForWidth())
+        self.variationRadioButton.setSizePolicy(sizePolicy6)
+        self.variationRadioButton.setMaximumSize(QSize(16777215, 16))
+        self.variationRadioButton.setBaseSize(QSize(0, 0))
+        icon11 = QIcon()
+        icon11.addFile(u":/resources/asset_types/variant.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.variationRadioButton.setIcon(icon11)
+
+        self.verticalLayout_4.addWidget(self.variationRadioButton)
+
+
+        self.gridLayout.addLayout(self.verticalLayout_4, 0, 4, 1, 1)
+
+        self.line_7 = QFrame(self.searchDockWidgetContents)
+        self.line_7.setObjectName(u"line_7")
+        self.line_7.setFrameShape(QFrame.HLine)
+        self.line_7.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.line_7, 1, 4, 1, 1)
 
         self.searchDock.setWidget(self.searchDockWidgetContents)
         RelicMainWindow.addDockWidget(Qt.TopDockWidgetArea, self.searchDock)
@@ -1622,7 +1682,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 558))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 527))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)
@@ -1711,6 +1771,8 @@ class Ui_RelicMainWindow(object):
         self.searchDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Search", None))
         self.searchButton.setText("")
         self.searchBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Search...", None))
+        self.collectionRadioButton.setText(QCoreApplication.translate("RelicMainWindow", u"Collections", None))
+        self.variationRadioButton.setText(QCoreApplication.translate("RelicMainWindow", u"Variations", None))
         self.attributeDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Attributes", None))
     # retranslateUi
 

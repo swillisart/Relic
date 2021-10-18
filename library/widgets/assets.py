@@ -227,9 +227,10 @@ class assetListView(QListView):
             out_path = asset.network_path.suffixed('_icon', ext='.jpg')
             resize_img = clip_img.scaled(288, 192, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
             out_img = resize_img.scaled(288, 192, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            out_path.path.parent.mkdir(parents=True, exist_ok=True)
             out_img.save(str(out_path))
-            asset.fetchIcon()
-    
+            #asset.fetchIcon()
+
     def groupSelectedItems(self):
         """Creates a new collection asset and links all the selected
         assets to it.

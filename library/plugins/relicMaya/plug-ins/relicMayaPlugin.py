@@ -136,7 +136,6 @@ def exportSelection(asset_type):
             #GLTFExport(str(asset.path.suffixed('_preview', '.gltf')))
 
         asset.path = str(asset.path)
-        pprint(asset.__dict__)
         results.append(asset.__dict__)
 
     RELIC_CLIENT.sendPayload(json.dumps(results))
@@ -298,6 +297,7 @@ def initializePlugin(obj):
         RelicDropCallback.INSTANCE = RelicDropCallback(relicMixinWindow)
         omui.MExternalDropCallback.addCallback(RelicDropCallback.INSTANCE)
         sys.stdout.write("Successfully registered RelicMayaPlugin\n")
+        cmds.loadPlugin('materialXTranslator')
     except Exception:
         relicMixinWindow = None
         sys.stderr.write("Failed to register RelicMayaPlugin\n")
@@ -310,6 +310,7 @@ def uninitializePlugin(obj):
         removeRelicMenus()
         omui.MExternalDropCallback.removeCallback(RelicDropCallback.INSTANCE)
         sys.stdout.write("Successfully deregistered RelicMayaPlugin\n")
+        cmds.unloadPlugin('materialXTranslator')
     except Exception:
         relicMixinWindow = None
         sys.stderr.write("Failed to deregister RelicMayaPlugin\n")

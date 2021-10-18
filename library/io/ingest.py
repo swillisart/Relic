@@ -326,7 +326,7 @@ class ConversionRouter(QObject):
                 full_pixels[r.ybegin:r.yend, r.xbegin:r.xend, :] = data[:, :, :3]
                 data = full_pixels
 
-            pr.stdin.write(data.tobytes())
+            pr.stdin.write(data[:, :, :3].tobytes())
             pr.stdin.flush()
 
         pr.stdin.close()

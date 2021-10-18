@@ -165,7 +165,7 @@ class IngestForm(Ui_IngestForm, QDialog):
                         category=category_id,
                         subcategory=subcategory,
                         type=3,
-                        path=f'{item}/{item}',
+                        path='{}/{}'.format(subcategory.name, item),
                         links=(subcategory.relationMap, subcategory.id),
                     )
                     primary_asset.create()
@@ -174,6 +174,7 @@ class IngestForm(Ui_IngestForm, QDialog):
                     link_primary = True
                     reverse_link = False
                 else:
+                    primary_asset = None
                     asset.type = 3 # Asset
                     link_primary = False
                     reverse_link = False
@@ -191,6 +192,9 @@ class IngestForm(Ui_IngestForm, QDialog):
                 temp_filename = 'unsorted' + str(asset.id)
             else:
                 temp_filename = asset.name
+            exists = asset.nameExists()
+            if exists:
+                asset.name = '{}_{}'.format(asset.name, num + 1)
 
             asset.dependencies = 0
             asset.id = None # IMPORTANT clears the id for clean asset creation
@@ -236,13 +240,14 @@ class IngestForm(Ui_IngestForm, QDialog):
         # Update counts on assets and subcategory
         subcategory.count += total
         self.updateSubcategoryCounts(subcategory_index)
-        if dependency := primary_asset.dependencies:
-            dependency += total
-        elif reverse_link:
-            primary_asset.dependencies += total
-        else:
-            primary_asset.dependencies = total
-        primary_asset.update()
+        if primary_asset:
+            if dependency := primary_asset.dependencies:
+                dependency += total
+            elif reverse_link:
+                primary_asset.dependencies += total
+            else:
+                primary_asset.dependencies = total
+            primary_asset.update()
         subcategory.update(fields=['count'])
 
     @staticmethod

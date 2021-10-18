@@ -386,14 +386,14 @@ def setNukeZeroMarginsWidget(widget_object):
 
 
 def main():
-    #pane = nuke.getPaneFor('Properties.1')
+    pane = nuke.getPaneFor('Properties.1')
     panel = nukescripts.panels.registerWidgetAsPanel(
                 widget='relicNukePlugin.RelicPanel',  
                 name=RelicPanel.TITLE,
                 id=RelicPanel.ID,
-                create=False)
+                create=True)
     
-    #panel.addToPane(pane)
+    panel.addToPane(pane)
     #if not panel.customKnob.getObject():
     #    panel.customKnob.makeUI()
     #relic_panel = panel.customKnob.getObject().widget

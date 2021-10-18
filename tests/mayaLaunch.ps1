@@ -1,6 +1,5 @@
 killapp maya
-$env:PYTHONPATH='P:/Code/Relic/library/plugins/Lib'
-$env:MAYA_PLUG_IN_PATH="P:/Code/Relic/library/plugins/relicMaya"
+$env:MAYA_MODULE_PATH="P:/Code/Relic/library/plugins"
 $env:show="Sandbox"
 clear
 & 'C:/Program Files/Autodesk/Maya2023/bin/maya.exe'

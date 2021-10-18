@@ -343,7 +343,122 @@ class colorFramebuffer(object):
 
     fragment_shader = """
         #version 330 core
-        {}
+        struct cfour
+        {
+            vec3 a;
+            vec3 b;
+            vec3 c;
+            vec3 d;
+        };
+
+        float catmull_rom(cfour colors, float along, int c)
+        {
+                // geometry matrix (tension = 0.5):
+                //
+                // [  0.0  1.0  0.0  0.0 ]
+                // [ -0.5  0.0  0.5  0.0 ]
+                // [  1.0 -2.5  2.0 -0.5 ]
+                // [ -0.5  1.5 -1.5  0.5 ]
+
+                float M12 =  1.0;
+                float M21 = -0.5;
+                float M23 =  0.5;
+                float M31 =  1.0;
+                float M32 = -2.5;
+                float M33 =  2.0;
+                float M34 = -0.5;
+                float M41 = -0.5;
+                float M42 =  1.5;
+                float M43 = -1.5;
+                float M44 =  0.5;
+
+                float v0 = colors.a[c];
+                float v1 = colors.b[c];
+                float v2 = colors.c[c];
+                float v3 = colors.d[c];
+
+                float c1 = M12 * v1;
+                float c2 = M21 * v0 + M23 * v2;
+                float c3 = M31 * v0 + M32 * v1 + M33 * v2 + M34 * v3;
+                float c4 = M41 * v0 + M42 * v1 + M43 * v2 + M44 * v3;
+
+                return ((c4 * along + c3) * along + c2) * along + c1;
+        }
+
+        vec3 indexed_color(float values[1024], int index, int rgb_count)
+        {
+            int r = index * rgb_count;
+            int g = index * rgb_count + 1;
+            int b = index * rgb_count + 2;
+            return vec3(values[r], values[g], values[b]);
+        }
+
+        float interpolate(float _in, float positions[1024], float values[3072], int interpolationMode[1024], int c, int rgb_count)
+        {
+            int l = positions.length();
+            int last = l-1;
+
+            // clip floor
+            if (_in < 0)
+                return 0;
+            // clip ceil
+            if (_in > 1)
+                return 0;
+
+            // Out of range below
+            if (_in < positions[0])
+                return values[0+c];    
+
+            if (_in > positions[last])
+                return values[last];
+
+            // Find the segment
+            int i;
+            for (i = 0; i < last; i++)
+            {
+                if (_in >= positions[i] && _in <= positions[i+1])
+                    break;
+            }
+        
+            int i0 = max(0, i-1);
+            int i1 = i;
+            int i2 = i+1;
+            int i3 = min(last, i+2);
+
+            vec3 col0 = indexed_color(values, i0, rgb_count);
+            vec3 col1 = indexed_color(values, i1, rgb_count);
+            vec3 col2 = indexed_color(values, i2, rgb_count);
+            vec3 col3 = indexed_color(values, i3, rgb_count);
+
+            cfour colors = cfour(col0, col1, col2, col3);
+
+            float delta = positions[i2] - positions[i1];
+            // Segment length zero (or less) Return start
+            if (delta <= 0.0)
+                return colors.a[c];
+
+            // Figure out where in the range we are....
+            float along = (_in - positions[i]) / delta;
+            // Simple linear interpolation
+            if (interpolationMode[i] == 0)
+                return mix(colors.b[c], colors.c[c], along);
+            if (interpolationMode[i] == 1)
+                return catmull_rom(colors, along, c);
+
+        }
+
+        vec3 mx_curveadjust (vec3 _in)
+        {
+            const int interpolationMode[4] = int[4](0, 0, 0, 0);  
+            const float values[12] = float[12](0,0,0, 0.65,0.65,0.65, 0,0,0, 1,1,1);
+            const float positions[4] = float[4](0.0, 0.25, 0.50, 1.0);
+            const int rgb_count = values.length() / positions.length();
+            float r = interpolate(_in.r, positions, values, interpolationMode, 0, rgb_count);
+            float g = interpolate(_in.g, positions, values, interpolationMode, 1, rgb_count);
+            float b = interpolate(_in.b, positions, values, interpolationMode, 2, rgb_count);
+            return vec3(r, g, b);
+        }
+
         in vec2 fVertexUV;
 
         uniform sampler2D framebufferTexture;
@@ -355,13 +470,11 @@ class colorFramebuffer(object):
         out vec4 out_rgba;
 
         void main()
-        {{
+        {
             vec4 rgba = texture(framebufferTexture, fVertexUV);
-            vec4 gain = vec4(rgba.rgb * pow(2.0, exposure), rgba.a);
-            vec4 knee = vec4(pow(gain.rgb, vec3(1.0/gamma)), rgba.a);
-            vec4 color = OCIODisplay(knee, lut3DTexture);
-            out_rgba = {};
-        }}
+            vec3 rgb = mx_curveadjust(rgba.rgb);
+            out_rgba = vec4(rgb, rgba.a);
+        }
     """
     base_shader = """
         #version 330 core
@@ -453,10 +566,10 @@ class colorFramebuffer(object):
             self.active_channel = channels
             shader_channel = 'vec4(vec3(color.{c} + color.{c} + color.{c}) / 3.0, 1.0)'.format(c=channels)
         OCIODisplay = self.color_processor.getGpuShaderText(SHADER_DESCRIPTION)
-        frag_shader_text = colorFramebuffer.fragment_shader.format(
-            OCIODisplay.replace('texture3D', 'texture'), # "texture3D" functions are deprecated
-            shader_channel
-        )
+        frag_shader_text = colorFramebuffer.fragment_shader#.format(
+        #    OCIODisplay.replace('texture3D', 'texture'), # "texture3D" functions are deprecated
+        #    shader_channel
+        #)
         self.shader = GLShaders.compileProgram(
             GLShaders.compileShader(colorFramebuffer.vertex_shader, GL_VERTEX_SHADER),
             GLShaders.compileShader(frag_shader_text, GL_FRAGMENT_SHADER),

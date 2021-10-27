@@ -239,7 +239,7 @@ class BaseFields(object):
         video_path = self.relativePath.suffixed('_icon', ext='.mp4')
         rc = 'retrieveVideo/{}/0/0'.format(video_path)
         db.accessor.videoStreamData.connect(slot)
-        db.accessor.doRequest(rc)
+        db.accessor.doStream(rc, self.id)
 
     def busy(self):
         status = db.accessor.response is not None
@@ -390,8 +390,7 @@ class Library(object):
         offset = int(((page * limit) - limit)) if page else 0
         search_data = search_data[offset:(offset+limit)]
         filtered = self.assets_filtered[offset:(offset+limit)]
-    
-        data = db.accessor.doRequestWithResult('retrieveAssets', search_data)
+        data = db.accessor.doRequest('retrieveAssets', search_data)
 
         if data:
             for i, x in enumerate(filtered):

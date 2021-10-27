@@ -580,6 +580,12 @@ QRadioButton::indicator:unchecked {
 }
 QRadioButton:indicator:hover {
     border: 2px solid rgb(150, 146, 137);
+}
+QAbstractSpinBox {
+    padding: 1px;
+    padding-left: 4px;
+    margin: 1px;
+    border: 1px solid rgb(43, 43, 43);
 }</string>
   </property>
   <property name="animated">
@@ -2452,13 +2458,7 @@ QPushButton:hover {
         <item>
          <widget class="QSpinBox" name="pageSpinBox">
           <property name="styleSheet">
-           <string notr="true">QAbstractSpinBox {
-    padding: 1px;
-    padding-left: 4px;
-    margin: 1px;
-    border: 1px solid rgb(43, 43, 43);
-
-}</string>
+           <string notr="true"/>
           </property>
           <property name="frame">
            <bool>false</bool>
@@ -2523,7 +2523,7 @@ QPushButton:hover {
      <x>0</x>
      <y>0</y>
      <width>1130</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -2602,8 +2602,8 @@ QPushButton:hover {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>78</width>
-          <height>527</height>
+          <width>72</width>
+          <height>555</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryLayout">
@@ -2768,6 +2768,7 @@ QFrame:hover {
           </property>
           <property name="font">
            <font>
+            <weight>75</weight>
             <bold>true</bold>
            </font>
           </property>
@@ -3217,7 +3218,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>527</height>
+          <height>555</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">

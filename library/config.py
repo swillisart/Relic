@@ -14,6 +14,7 @@ NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL, IES, _2D_ELEMENT, _3D_
 MOVIE_EXT = ['.mov', '.mxf', '.mp4', '.mkv']
 SHADER_EXT = ['.mtlx', '.osl', '.sbsar']
 RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3']
+FILM_EXT = ['.r3d', '.arriraw']
 HDR_EXT = ['.exr', '.hdr']
 LDR_EXT = ['.jpg', '.png', '.tif', '.tga', '.jpeg']
 LIGHT_EXT = ['.ies']
@@ -70,30 +71,14 @@ def peakPreview(path):
 class Preferences(object):
 
     defaults = {
-        'asset_preview_size': 288,
-        'asset_preview_expand': True,
         'assets_per_page': 25,
-        'local_storage': 'P:/Projects/Library/{project}',
-        'network_storage': 'E:/library',
-        'host': 'http://localhost:8000/',
-        'project_variable': 'show',
         'render_using': '',
-        'relic_plugins_path': '',
         'edit_mode': False,
         'view_scale': 2,
-        'references_color': '168, 58, 58',
-        'modeling_color': '156, 156, 156',
-        'elements_color': '198, 178, 148',
-        'lighting_color': '188, 178, 98',
-        'shading_color': '168, 58, 198',
-        'software_color': '168, 168, 198',
-        'mayatools_color': '66, 118, 150',
-        'nuketools_color': '168, 168, 198',
     }
 
     options = {
         'host': ['http://localhost:8000/', 'https://yoursite.shotgunstudio.com/api/v1/'],
-        'asset_preview_size': [192, 288, 384],
     }
 
     def __init__(self):
@@ -104,26 +89,40 @@ class Preferences(object):
 
         QCoreApplication.setApplicationName('Relic')
         QSettings.setDefaultFormat(QSettings.IniFormat)
-        self.user_settings()
 
     def __setattr__(self, name, value):
+        # All preference set are always in the user scope. 
+        QCoreApplication.setOrganizationName(os.getenv('username'))
+        QSettings.setPath(
+                    QSettings.IniFormat, QSettings.SystemScope, self.user_path)
         QSettings().setValue(name, value)
 
     def __getattr__(self, name):
-        pref = Preferences.defaults.get(name)
-        return QSettings().value(name, pref)
+        shared_pref = self.getSitePref(name)
+        if shared_pref:
+            return shared_pref
+        else:
+            user_pref = self.getUserPref(name)
+            if user_pref:
+                return user_pref
+            else:
+                return Preferences.defaults.get(name)
 
-    def user_settings(self):
-        QCoreApplication.setOrganizationName(os.getenv('username'))
-        path = Path(USERPROFILE) / '.relic/settings/'
-        QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(path))
-        return QSettings()
-
-    def shared_settings(self):
+    @staticmethod
+    def getSitePref(name):
+        shared_path = os.getenv('relic_shared', USERPROFILE) + '/.relic/settings'
         QCoreApplication.setOrganizationName('ResArts')
-        path = Path(USERPROFILE) / '.relic/shared_settings/'
-        QSettings.setPath(QSettings.IniFormat, QSettings.SystemScope, str(path))
-        return QSettings()
+        QSettings.setPath(
+                    QSettings.IniFormat, QSettings.SystemScope, shared_path)
+        return QSettings().value(name, None)
+
+    @staticmethod
+    def getUserPref(name):
+        user_path = USERPROFILE + '/.relic/settings'
+        QCoreApplication.setOrganizationName(os.getenv('username'))
+        QSettings.setPath(
+                    QSettings.IniFormat, QSettings.UserScope, user_path)
+        return QSettings().value(name, None)
 
 RELIC_PREFS = Preferences()
 

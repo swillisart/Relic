@@ -2,17 +2,19 @@ import datetime
 import time
 
 import numpy as np
-from library.objectmodels import (allCategories, alusers, polymorphicItem,
-                                  relationships, subcategory, tags)
-from library.config import RELIC_PREFS
-
-from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
-from PySide6.QtCore import QRect, QSize, Signal, Slot, QObject, QSignalBlocker
-from PySide6.QtGui import QCursor, QIcon, QPainter, QStandardItemModel, Qt, QTextDocument
+from PySide6.QtCore import QObject, QRect, QSignalBlocker, QSize, Signal, Slot
+from PySide6.QtGui import (QCursor, QFont, QIcon, QPainter, QStandardItemModel,
+                           Qt, QTextDocument)
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFrame,
                                QGridLayout, QLabel, QListView, QMenu,
-                               QSizePolicy, QSpacerItem, QStyledItemDelegate,
-                               QStyleOptionViewItem, QTextBrowser, QWidget)
+                               QSizePolicy, QSpacerItem, QSpinBox,
+                               QStyledItemDelegate, QStyleOptionViewItem,
+                               QTextBrowser, QWidget)
+
+from library.config import RELIC_PREFS
+from library.objectmodels import (allCategories, alusers, polymorphicItem,
+                                  relationships, subcategory, tags)
+from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
 
 TYPE_LABELS = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
     'Reference']
@@ -34,15 +36,20 @@ class UpdatableField(QObject):
         """
         if int(RELIC_PREFS.edit_mode):
             field = self.__class__.__name__.replace('Widget', '')
+            if field == 'type':
+                value += 1
             for asset in self.parent().selected_assets:
-                if field == 'type':
-                    value = value + 1
                 setattr(asset, field, value)
                 asset.update(fields=[field])
 
 
 class MetaLabel(QLabel):
-    pass
+    def __init__(self, *args, **kwargs):
+        super(MetaLabel, self).__init__(*args, **kwargs)
+        font = QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        self.setFont(font)
 
 class metadataFormView(QFrame):
 
@@ -72,14 +79,7 @@ class metadataFormView(QFrame):
         # Create our widget from globals
         meta_constructor = globals()[label+'Widget']
         meta_widget = meta_constructor(self)
-
-        # Create the label
-        if isinstance(value, list):
-            label_text = '{} : {} '.format(label, len(value))
-        else:
-            label_text = '{} : '.format(label)
-        meta_label = MetaLabel(label_text.capitalize())
-
+        meta_label = MetaLabel(label.capitalize() + ' :')
         return meta_widget, meta_label
 
     def loadAssets(self, assets):
@@ -93,7 +93,7 @@ class metadataFormView(QFrame):
                     meta_widget = getattr(self, label)
                     meta_label = getattr(self, label+'Label')
                 else:
-                    meta_widget, meta_label = self.createWidget(label ,value)
+                    meta_widget, meta_label = self.createWidget(label, value)
                     setattr(self, label, meta_widget)
                     setattr(self, label+'Label', meta_label)
                 if isinstance(meta_widget, classWidget):
@@ -102,7 +102,8 @@ class metadataFormView(QFrame):
                     meta_widget.setValue(value)
 
                 if isinstance(value, list):
-                    label_text = '{} : {} '.format(label.capitalize(), len(value))
+                    meta_label.setText('{} : {} '.format(label.capitalize(), len(value)))
+
                 self.layout.addWidget(meta_label, line_offset, 0, 1, 1, Qt.AlignTop)
                 self.layout.addWidget(meta_widget, line_offset, 1, 1, 1, Qt.AlignRight | Qt.AlignTop)
 
@@ -183,6 +184,29 @@ class baseRating(QWidget, UpdatableField):
             if i < self.rating:
                 painter.drawPixmap(rect, self.img)
                 offset += 40
+
+
+class baseSpinBox(QSpinBox):
+    def __init__(self, *args, **kwargs):
+        super(baseSpinBox, self).__init__(*args, **kwargs)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._createContextMenus)
+        self.setMaximum(100000)
+
+    @Slot()
+    def _createContextMenus(self, value):
+        context_menu = QMenu(self)
+        if int(RELIC_PREFS.edit_mode):
+            update_action = context_menu.addAction('Update')
+            update_action.triggered.connect(self.update_asset)
+        context_menu.exec(QCursor.pos())
+
+    @Slot()
+    def update_asset(self):
+        self.updateValue(self.value())
+
+    def reset(self):
+        self.setValue(0)
 
 
 class baseLabel(QLabel):
@@ -462,7 +486,7 @@ class ratingWidget(baseRating):
         return QSize(200, 36)
 
 
-class descriptionWidget(QLabel):
+class descriptionWidget(QLabel, UpdatableField):
     def __init__(self, *args, **kwargs):
         super(descriptionWidget, self).__init__(*args, **kwargs)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -480,15 +504,13 @@ class descriptionWidget(QLabel):
     def _createContextMenus(self, value):
         context_menu = QMenu(self)
         if int(RELIC_PREFS.edit_mode):
-            update_action = context_menu.addAction("Update")
+            update_action = context_menu.addAction('Update')
             update_action.triggered.connect(self.update_asset)
         context_menu.exec(QCursor.pos())
 
     def update_asset(self):
         doc = self.findChild(QTextDocument)
-        asset = self.parent().selected_assets[-1]
-        asset.description = doc.toPlainText()
-        asset.update(fields=['description'])
+        self.updateValue(doc.toPlainText())
 
     @Slot()
     def onActivated(self, link_url):
@@ -611,7 +633,22 @@ class filehashWidget(baseLabel):
 class proxyWidget(baseLabel):
     pass
 
-class dependenciesWidget(baseLabel):
+class nameWidget(descriptionWidget):
+    def __init__(self, *args, **kwargs):
+        super(nameWidget, self).__init__(*args, **kwargs)
+
+    def setValue(self, value):
+        self.setText(value)
+
+class dependenciesWidget(baseSpinBox, UpdatableField):
+    pass
+
+class durationWidget(baseSpinBox, UpdatableField):
+    def __init__(self, *args, **kwargs):
+        super(durationWidget, self).__init__(*args, **kwargs)
+        self.setSuffix(' Sec')
+
+class framerateWidget(baseLabel):
     pass
 
 class nodecountWidget(baseLabel):

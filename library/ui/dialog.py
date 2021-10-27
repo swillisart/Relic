@@ -598,6 +598,12 @@ class Ui_RelicMainWindow(object):
 "}\n"
 "QRadioButton:indicator:hover {\n"
 "    border: 2px solid rgb(150, 146, 137);\n"
+"}\n"
+"QAbstractSpinBox {\n"
+"    padding: 1px;\n"
+"    padding-left: 4px;\n"
+"    margin: 1px;\n"
+"    border: 1px solid rgb(43, 43, 43);\n"
 "}")
         RelicMainWindow.setAnimated(True)
         RelicMainWindow.setDockNestingEnabled(True)
@@ -1397,13 +1403,7 @@ class Ui_RelicMainWindow(object):
 
         self.pageSpinBox = QSpinBox(self.centralwidget)
         self.pageSpinBox.setObjectName(u"pageSpinBox")
-        self.pageSpinBox.setStyleSheet(u"QAbstractSpinBox {\n"
-"    padding: 1px;\n"
-"    padding-left: 4px;\n"
-"    margin: 1px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"\n"
-"}")
+        self.pageSpinBox.setStyleSheet(u"")
         self.pageSpinBox.setFrame(False)
         self.pageSpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.pageSpinBox.setMinimum(1)
@@ -1439,7 +1439,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1130, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1130, 21))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -1468,7 +1468,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 78, 527))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 72, 555))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1682,7 +1682,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 527))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 555))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)

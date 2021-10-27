@@ -48,7 +48,8 @@ class RelicPanel(asset_views.RelicSceneForm):
             for key, values in json.loads(stripped).items():
                 constructor = asset_classes.getCategoryConstructor(str(key.decode()))
 
-                for fields in values:
+                sorted_values = sorted(values, key=lambda x: x.get('13'), reverse=True)
+                for fields in sorted_values:
                     asset = constructor(**fields)
                     added = self.group_widget.addAsset(asset)
                     if added:
@@ -62,7 +63,6 @@ class RelicPanel(asset_views.RelicSceneForm):
             return True
         return None
 
-    @logFunction('Syncing Scene Assets')
     def refreshSceneAssets(self):
         for node in nuke.allNodes():
             if not node.knob('RELIC_id'):
@@ -83,7 +83,6 @@ class RelicPanel(asset_views.RelicSceneForm):
         return super(RelicPanel, self).showEvent(event)
 
 
-@logFunction('Retrieving Important Qt Windows')
 def getMainWindows():
     for widget in QApplication.topLevelWidgets():
         if (
@@ -103,7 +102,6 @@ def getMainWindows():
 
     return (mainWindow, panel)
 
-@logFunction('Adding Library Tab & Attributes to Node')
 def addRelicAttributes(nodes, asset):
     if not len(nodes) == 1:
         return
@@ -126,50 +124,56 @@ def addRelicAttributes(nodes, asset):
             #node.addKnob(check)
     return nodes
 
-@logFunction('demo')
 def processUnresolvedAssets(asset):
     already_exists = False
-
+    nukescripts.clear_selection_recursive()
     for node in nuke.allNodes(recurseGroups=True):
         if node.knob('RELIC_hash') and node['RELIC_hash'].value() == asset.filehash:
             already_exists = True
+            if node.Class() != 'Group' and node.knob('file'):
+                node['file'].setValue(str(asset.local_path))
+                continue
 
             nuke.scriptSource(str(asset.local_path))
             a = nuke.selectedNode()
             b = node
-            [x.setSelected(False) for x in nuke.selectedNodes()]
-
+            nukescripts.clear_selection_recursive()
+            print('a')
             temp_path = os.getenv('userprofile') + '/temp.nk'
             a.begin()
             for subnode in a.nodes():
                 subnode.setSelected(True)
             nuke.nodeCopy(temp_path)
             a.end()
+
+            print('b')
             b.begin()
             for subnode in b.nodes():
                 nuke.delete(subnode)
             nuke.scriptSource(temp_path)
             b.end()
+            print('c')
             nuke.delete(a)
+            print('d')
 
     return already_exists
 
-def processUnresolvedFiles(asset):
+def processUnresolvedFiles(asset_path):
     for node in nuke.allNodes(recurseGroups=True):
         if node.knob('file'):
-            applyRepath(node, asset.local_path)
+            applyRepath(node, asset_path)
 
-@logFunction('Asset Dropped')
 def assetDropAction(asset):
     asset_path = asset.local_path
     # check for nodes of this type already in the scene.
-    if processUnresolvedAssets(asset):
+    already_exists = processUnresolvedAssets(asset)
+    if already_exists:
         return
     if asset_path.ext == '.nk':
         nuke.nodePaste(str(asset_path))
         selection = nuke.selectedNodes()
         nodes = selection
-        processUnresolvedFiles(asset)
+        processUnresolvedFiles(asset_path)
     elif asset_path.ext in config.GEO_EXT:
         #TODO: handle geometry assets
         #nodes = ?
@@ -251,7 +255,6 @@ def collectFilePath(node):
     node['file'].setValue(changed_path)
     return str(file_path)
 
-@logFunction('export')
 def exportSelection(asset_type=None):
     results = []
 
@@ -300,7 +303,6 @@ def exportSelection(asset_type=None):
         nuke.message('Invalid data for export! caused this error: \n%s' % exerr)
     return results
 
-@logFunction('Collecting Nuke Node Information')
 def setNodeAssetInfo(asset):
     """Collects all the important node information and
     counts all the nodes in current graph
@@ -329,6 +331,7 @@ def alembicPatch(node):
 
 def applyRepath(node, asset_path):
     file_path = node['file'].value()
+
     if not file_path.startswith('source_'):
         return
     repath = asset_path.parents(0) / file_path

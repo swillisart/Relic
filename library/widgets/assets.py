@@ -78,8 +78,8 @@ class assetItemModel(QStandardItemModel):
 
         for index in indexes:
             primary_asset = copy.copy(index.data(polymorphicItem.Object))
-            if primary_asset.busy():
-                return
+            #if primary_asset.busy():
+            #    return
             unique_ids.append(primary_asset.id)
             for asset in self.unpackAssetsDependencies(primary_asset, unique_ids):
                 # Insert asset into the payload
@@ -250,6 +250,7 @@ class assetListView(QListView):
         collection = constructor(
             name=collection_name,
             dependencies=count,
+            path='{}/{}'.format(subcategory.name, collection_name),
             links=(subcategory.relationMap, subcategory.id),
             type=3, # collection
             )

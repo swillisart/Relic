@@ -677,6 +677,17 @@ class CategoryManager(QObject):
         tree.proxyModel.setFilterRegularExpression(regex)
         tree.expandAll()
 
+"""
+class ResizeFilter(QObject):
+
+    def eventFilter(self, widget, event):
+        parent = self.parent()
+        if widget is parent and event.type() == QEvent.Resize:
+                self.setGeometry(parent.rect())
+                return True
+        else:
+            return False
+"""
 
 class ExpandableTab(Ui_ExpandableTabs, QWidget):
 
@@ -687,6 +698,7 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         self.setupUi(self)
         self.state = False
         self.category = category
+        self.height_store = 320
 
         icon = QIcon(category.icon)
         self.iconButton.setIcon(icon)
@@ -698,14 +710,33 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
                 'QFrame {{background-color: rgb({});border: none}}'.format(
                     color))
 
-        for x in [self.countSpinBox, self.checkButton, self.iconButton]:
+        for x in [self.pushButton, self.pushButton_2, self.countSpinBox, self.checkButton, self.iconButton]:
             x.setAttribute(Qt.WA_TransparentForMouseEvents)
+
         self.ContentFrame.setVisible(False)
+        self.pressing = False
 
     def mousePressEvent(self, event):
         super(ExpandableTab, self).mousePressEvent(event)
+        self.global_start = self.mapToGlobal(event.pos())
         if self.HeaderFrame.underMouse():
             self.toggleState()
+        elif event.buttons() == Qt.LeftButton and self.verticalControl.underMouse():
+            self.last = 0
+            self.pressing = True
+
+    def mouseMoveEvent(self, event):
+        super(ExpandableTab, self).mouseMoveEvent(event)
+        if (event.buttons() & Qt.LeftButton & self.pressing):
+            offset = (self.global_start.y() - self.mapToGlobal(event.pos()).y())                
+            height_adjust = self.size().height() + -(offset - self.last)
+            if not height_adjust <= 76:
+                self.setFixedHeight(height_adjust)
+            self.last = offset
+
+    def mouseReleaseEvent(self, event):
+        super(ExpandableTab, self).mouseReleaseEvent(event)
+        self.pressing = False
 
     def expandState(self):
         self.state = True
@@ -719,6 +750,11 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
 
     def toggleState(self):
         self.state = not self.state
+        if self.state:
+            self.setFixedHeight(self.height_store)
+        else:
+            self.height_store = self.size().height()
+            self.setFixedHeight(29)
         self.checkButton.nextCheckState()
         self.ContentFrame.setVisible(self.state)
         self.collapseExpand.emit(self.state)

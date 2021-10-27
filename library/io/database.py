@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import re
 import math
 import requests
 from subprocess import PIPE, Popen
@@ -23,6 +24,27 @@ from sequencePath import sequencePath as Path
 # -- Globals --
 DEVNULL = open(os.devnull, "w")
 session = requests.session()
+URL_REGEX = re.compile(r'(\w+):\/\/(\w+):(\d{4})')
+
+def videoToFrames(data, id):
+    w, h, c = (288, 192, 3)
+    userp = os.getenv('USERPROFILE').replace('\\', '/')
+    local_mp4 = f'{userp}/.relic/{id}'
+    with open(local_mp4, 'wb') as in_pipe:
+        in_pipe.write(data)
+
+    cap = cv2.VideoCapture(local_mp4)
+    ret = True
+    frames = []
+    while ret:
+        ret, frame = cap.read()
+        if ret:
+            img = QImage(frame, w, h, QImage.Format_RGB888)
+            px = QPixmap.fromImageInPlace(img.rgbSwapped())
+            frames.append(px)
+    cap.release()
+    os.remove(local_mp4)
+    return frames
 
 class libraryNetwork(QObject):
     
@@ -34,12 +56,16 @@ class libraryNetwork(QObject):
         qApp or QApplication() # need QApplication instance for event loop.
         self.netman = QNetworkAccessManager(self)
         self.result = None
-        self.response = None
+        self.errored = False
 
     def makeConnection(self, hostname=None):
         if hostname:
             self.hostname = hostname
-        self.netman.connectToHost('localhost', port=8000)
+        matches = re.match(URL_REGEX, self.hostname)
+
+        if matches:
+            protocol, domain, port = matches.groups()
+            self.netman.connectToHost(domain, port=int(port))
 
     def doRequestWithResult(self, url, data=None):
         if data:
@@ -55,39 +81,31 @@ class libraryNetwork(QObject):
 
     def doRequest(self, url, data=None):
         self.makeConnection()
-        # CRITICAL. Wait on response before attempting request
-        while self.response:
-            loop = QEventLoop()
-            QTimer.singleShot(450, loop.quit)
-            loop.exec_()
-            if not self.response:
-                break
-
-        url = QUrl(self.hostname + url)
-        request = QNetworkRequest(url)
+        request = QNetworkRequest(QUrl(self.hostname + url))
         if data is not None:
             request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
             post_data = json.dumps(data).encode()
-            self.response = self.netman.post(request, post_data)
+            response = self.netman.post(request, post_data)
         else:
-            self.response = self.netman.get(request)
+            response = self.netman.get(request)
 
         loop = QEventLoop()
-        self.response.finished.connect(self.onFinished)
-        self.response.finished.connect(loop.quit)
-        self.response.errorOccurred.connect(self.onError)
-        loop.exec()
-        self.response = None
+        response.readyRead.connect(self.requestFinished)
+        response.finished.connect(loop.quit)
+        response.errorOccurred.connect(self.onError)
+        response.errorOccurred.connect(loop.quit)
+        loop.exec_()
+        if self.errored:
+            self.errored = False
+            return self.doRequest(url, data)
         return self.result
 
-    @Slot()
-    def onFinished(self):
-        if not self.response:
-            print('finish aborted')
-            return
-        bytes_string = self.response.readAll()
+    @Slot(QNetworkReply)
+    def requestFinished(self):
+        response = self.sender()
+        bytes_string = response.readAll()
         data = bytes_string.data()
-        content_type = self.response.header(QNetworkRequest.ContentTypeHeader)
+        content_type = response.header(QNetworkRequest.ContentTypeHeader)
         if content_type == 'application/json':
             if not data:
                 self.result = None
@@ -97,50 +115,35 @@ class libraryNetwork(QObject):
         elif content_type == 'image/jpg':
             img = QPixmap()
             img.loadFromData(data)
-            id = self.response.id
+            id = response.id
             self.imageStreamData.emit((img, id))
         elif content_type == 'video/mp4':
-            w, h, c = (288, 192, 3)
-            userp = os.getenv('USERPROFILE').replace('\\', '/')
-            local_mp4 = f'{userp}/.relic/pipe_mp4_preview'
-            with open(local_mp4, 'wb') as in_pipe:
-                in_pipe.write(data)
- 
-            cap = cv2.VideoCapture(local_mp4)
-            ret = True
-            frames = []
-            while ret:
-                ret, frame = cap.read()
-                if ret:
-                    img = QImage(frame, w, h, QImage.Format_RGB888)
-                    px = QPixmap.fromImageInPlace(img.rgbSwapped())
-                    frames.append(px)
+            id = response.id
+            frames = videoToFrames(data, id)
             self.videoStreamData.emit(frames)
-            cap.release()
-            os.remove(local_mp4)
 
-        if self.response:
-            self.response = None
+        if response:
+            response.deleteLater()
 
-    @Slot(QNetworkReply.NetworkError)
-    def onError(self, code: QNetworkReply.NetworkError):
-        if code == QNetworkReply.NetworkError.ProtocolInvalidOperationError:
+    @Slot(QNetworkReply)
+    def onError(self):
+        self.errored = True
+        response = self.sender()
+        if response.NetworkError == QNetworkReply.NetworkError.ProtocolInvalidOperationError:
             self.makeConnection()
         else:
-            print(self.response.errorString())
+            print(response.errorString())
 
     def doStream(self, url, id):
         url = QUrl(self.hostname + url)
         request = QNetworkRequest(url)
-        self.response = self.netman.get(request)
-        self.response.id = id
-        # DEBUG STUFF
-        loop = QEventLoop()
-        self.response.finished.connect(self.onFinished)
-        self.response.finished.connect(loop.quit)
-        #self.response.readyRead.connect(self.onReady)
-        self.response.errorOccurred.connect(self.onError)
-        loop.exec()
+        response = self.netman.get(request)
+        response.id = id
+        #loop = QEventLoop()
+        response.finished.connect(self.requestFinished)
+        #response.finished.connect(loop.quit)
+        response.errorOccurred.connect(self.onError)
+        #loop.exec_()
 
 
 class AssetDatabase(object):

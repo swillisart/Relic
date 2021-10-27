@@ -248,6 +248,17 @@ class ConversionRouter(QObject):
         return asset
 
     @staticmethod
+    def processFILM(in_path, out_path):
+        asset = temp_asset(
+            name=in_path.stem,
+            category=0,
+            type=0,
+            duration=0,
+            path=in_path,
+        )
+        return asset
+
+    @staticmethod
     @logFunction('Making preview from (SEQ)')
     def processSEQ(in_img_path, out_img_path):
         frames = sorted(glob.glob(str(in_img_path.sequence_path)))

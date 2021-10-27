@@ -78,7 +78,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         category_widgets = self.category_manager.assembleCategories(self.library.categories)
         for index, category in enumerate(category_widgets):
-            category.verticalControl.hide()
             self.categoryLayout.insertWidget(index, category)
 
         self.categoryDock.setTitleBarWidget(self.dockTitleFrame)

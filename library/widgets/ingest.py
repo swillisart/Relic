@@ -12,7 +12,7 @@ from library.objectmodels import (polymorphicItem, db, references, modeling,
 from library.widgets.assets import assetItemModel
 from library.widgets.util import ListViewFiltered, SimpleAsset
 
-from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT,
+from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT, FILM_EXT,
                             LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT, RELIC_PREFS)
 
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
@@ -136,7 +136,6 @@ class IngestForm(Ui_IngestForm, QDialog):
                 primary_asset_id = primary_asset.nameExists()
             primary_asset.fetch(id=primary_asset_id)
             link_primary = True
-            total += 1
         for num, index in enumerate(collected_indices):
             temp_asset = index.data(polymorphicItem.Object)
             asset = asset_constructor(*temp_asset.values)
@@ -155,7 +154,6 @@ class IngestForm(Ui_IngestForm, QDialog):
                     asset.type = 5 # Variant
                     primary_asset = asset_constructor(name=item, id=exists)
                     primary_asset.fetch(id=exists)
-                    total += 1
                     link_primary = True
                     reverse_link = False
                 elif total > 1:
@@ -175,7 +173,7 @@ class IngestForm(Ui_IngestForm, QDialog):
                     reverse_link = False
                 else:
                     primary_asset = None
-                    asset.type = 3 # Asset
+                    asset.type = 2 # Asset
                     link_primary = False
                     reverse_link = False
             else:
@@ -246,7 +244,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             elif reverse_link:
                 primary_asset.dependencies += total
             else:
-                primary_asset.dependencies = total
+                primary_asset.dependencies = total or 1
             primary_asset.update()
         subcategory.update(fields=['count'])
 
@@ -355,6 +353,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             [function_map.update({ext:'processHDR'}) for ext in HDR_EXT]
         if self.rawCheckBox.checkState():
             [function_map.update({ext:'processRAW'}) for ext in RAW_EXT]
+            [function_map.update({ext:'processFILM'}) for ext in FILM_EXT]
         if self.toolsCheckBox.checkState():
             [function_map.update({ext:'processTOOL'}) for ext in TOOLS_EXT]
         if self.lightsCheckBox.checkState():

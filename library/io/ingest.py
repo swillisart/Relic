@@ -1,9 +1,8 @@
 import ctypes
 import glob
 import os
+import json
 import subprocess
-import sys
-import time
 from functools import partial
 
 import libraw
@@ -68,6 +67,30 @@ def getMovInfo(fpath):
     result = output.decode("utf-8").split('\r\n')[:3]
     return result
 
+def getRawInfo(fpath):
+    """
+    Gets Exif metadata from Canon cameras raw .cr2.
+    """
+    keys = [
+        'CreateDate',
+        'CameraModelName',
+        'LensType',
+        'Orientation',
+        'ShutterSpeed',
+        'Aperture',
+        'ISO',
+        'FocalLength',
+
+        'WhiteBalance',
+        'ColorTemperature',
+        'ExposureProgram',
+        'CanonFlashMode',
+    ]
+    flags = '-' + ' -'.join(keys)
+    cmd = f'exiftool -json {flags} "{fpath}"'
+    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW)
+    result = json.loads(output)[0]
+    return result.items()
 
 def generatePreviews(img_buf, path):
     """Makes Proxy & Icon previews from an OpenImageIO image buffer"""
@@ -406,8 +429,7 @@ class ConversionRouter(QObject):
         return asset
 
     @staticmethod
-    @logFunction('Making preview from (RAW)')
-    def processRAW(in_img_path, out_img_path, denoise=True):
+    def processRAW(in_img_path, out_img_path, denoise=False):
         proc = libraw.LibRaw()
 
         # Read RAW data
@@ -435,6 +457,9 @@ class ConversionRouter(QObject):
             0,         0,         0,       1
         )
         buf = oiio.ImageBufAlgo.colormatrixtransform(buf, ACESCG_MATRIX)
+        # Embed the Exif camera metadata into the exr metadata.
+        for key, value in getRawInfo(in_img_path):
+            buf.specmod().attribute(f'exif/{key}', value)
 
         out_img_path.ext = '.exr' # Raw is always converted to exr.
         in_img_path.ext = '.exr' # Raw is always converted to exr.

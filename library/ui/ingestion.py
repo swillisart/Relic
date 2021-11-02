@@ -556,8 +556,7 @@ class Ui_IngestForm(object):
 "    border-top-left-radius: 3px;\n"
 "    border-top-right-radius: 3px;\n"
 "    border-top: 1px solid rgb(43, 43, 43);\n"
-"}\n"
-"")
+"}")
         self.verticalLayout_3 = QVBoxLayout(IngestForm)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.frame_4 = QFrame(IngestForm)
@@ -603,7 +602,12 @@ class Ui_IngestForm(object):
         self.tabWidget = QTabWidget(self.frame_2)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tabWidget.setEnabled(True)
-        self.tabWidget.setStyleSheet(u"background-color: rgb(75, 75, 75);")
+        self.tabWidget.setStyleSheet(u"QWidget {\n"
+"    background-color: rgb(75, 75, 75);\n"
+"}\n"
+"QToolTip {\n"
+"    background-color: #ffffff;\n"
+"}")
         self.collectTab = QWidget()
         self.collectTab.setObjectName(u"collectTab")
         self.verticalLayout_4 = QVBoxLayout(self.collectTab)
@@ -993,7 +997,7 @@ class Ui_IngestForm(object):
         self.toolsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .py, .exe, .nk ]", None))
         self.moviesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .mov, .mp4, .mxf ]", None))
         self.rawLabel.setText(QCoreApplication.translate("IngestForm", u"Camera Raw :", None))
-        self.rawCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .cr2, .dng, .red ]", None))
+        self.rawCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .cr2, .dng, .r3d ]", None))
         self.texturesReferencesCheckBox_2.setText("")
         self.texturesReferencesLabel_2.setText(QCoreApplication.translate("IngestForm", u"Categorize Using Parent Folder", None))
         self.label_7.setText(QCoreApplication.translate("IngestForm", u"Advanced", None))

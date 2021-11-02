@@ -339,6 +339,7 @@ class metadataRelationView(QListView):
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._createContextMenus)
+        self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 2px;')
 
     @Slot()
     def linkItem(self, tag):
@@ -433,7 +434,6 @@ class tagsWidget(metadataRelationView):
         super(tagsWidget, self).__init__(parent)
         self.setMinimumHeight(72)
 
-        self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 2px;')
         self.icons = {
             0: QIcon(":/resources/app/tagIcon.svg"),
             1: QIcon(modifySVG(":/resources/app/tagIcon.svg", '(200,157,8)', '(175,115,250)')),
@@ -451,8 +451,6 @@ class alusersWidget(metadataRelationView):
 
     def __init__(self, parent=None):
         super(alusersWidget, self).__init__(parent)
-        self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 2px;')
-
         self.icons = {
             0: QIcon(":/resources/app/user.png"),
         }

@@ -6,7 +6,7 @@ from functools import partial
 import webbrowser
 
 # -- Third-party --
-from PySide6.QtCore import Slot, QPoint, QModelIndex, QThreadPool
+from PySide6.QtCore import Slot, QPoint, QModelIndex, QThreadPool, QItemSelectionModel
 from PySide6.QtGui import QPixmap, QImage, QFontDatabase, QFont, QIcon, QColor, Qt, QTextDocument, QTextCursor
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon,
     QMenu, QWidget, QSizePolicy,QFrame, QGraphicsDropShadowEffect, QLabel, QTextBrowser)
@@ -350,20 +350,39 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 path = asset.network_path
                 peakPreview(path)
 
-    @Slot()
+    @Slot(QModelIndex)
+    def unlinkAsset(self, index):
+        """Unlinks two assets by removing the relationship.
+
+        Parameters
+        ----------
+        index : QModelIndex
+            the index from which this slot is conecting to
+        """
+
+        primary_indices = self.assets_view.selectedIndexes()
+
+        for p_index in primary_indices:
+            primary_asset = p_index.data(polymorphicItem.Object)
+            linked_asset = index.data(polymorphicItem.Object)
+            if linked_asset is not primary_asset:
+                linked_asset.unlinkTo(primary_asset)
+                primary_asset.dependencies -= 1
+                primary_asset.update(fields=['dependencies'])
+
+    @Slot(QModelIndex)
     def loadLinkData(self, index):
         """Load related assets via links from relationships.
 
         Parameters
         ----------
         index : QModelIndex
-            the index which this slot connects to
+            the index from which this slot is conecting to
         """
 
         self.assets_view.hide()
 
-        indices = set(self.assets_view.selectedIndexes())
-        indices.add(index)
+        indices = self.assets_view.selectedIndexes()
 
         linked_assets = []
         for index in indices:

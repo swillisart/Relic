@@ -101,8 +101,8 @@ class LinkViewWidget(QWidget):
             proxyModel.setDynamicSortFilter(True)
             proxyModel.setSourceModel(self.model)
             view.setModel(proxyModel)
-
             view.selmod.selectionChanged.connect(self.parent().loadAssetData)
+            view.onLinkRemove.connect(self.parent().unlinkAsset)
             view.onLinkLoad.connect(self.parent().loadLinkData)
 
             tab = ExpandableTab(self, asset_type)

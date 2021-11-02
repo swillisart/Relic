@@ -105,10 +105,10 @@ class BaseFields(object):
             ids = self.id
         can_delete = True
         if hasattr(self, 'path'):
-            can_delete = db.accessor.doRequestWithResult('deleteAsset/{}'.format(str(self.relativePath.parent)))
-        if can_delete:
-            rc = 'removeAssets/{}'.format(self.categoryName)
-            db.accessor.doRequest(rc, ids)
+            db.accessor.doRequestWithResult('deleteAsset/{}'.format(str(self.relativePath.parent)))
+
+        rc = 'removeAssets/{}'.format(self.categoryName)
+        db.accessor.doRequestWithResult(rc, ids)
 
     def fetch(self, id=False):
         rc = 'fetchAsset/{}'.format(self.categoryName)
@@ -136,6 +136,15 @@ class BaseFields(object):
             link=asset.links,
         )
         relation.create()
+
+    def unlinkTo(self, asset):
+        relation = relationships(
+            category_map=self.relationMap,
+            category_id=self.id,
+            link=asset.links,
+        )
+        relation.fetch()
+        relation.remove()
     
     def related(self, noassets=False):
         rc = 'retrieveLinks/{}/{}'.format(self.links, int(noassets))
@@ -199,7 +208,7 @@ class BaseFields(object):
             'source': self.categoryName + '/' + old.name + '/' + folder,
             'destination': self.categoryName + '/' + new.name + '/' + folder
         }
-        db.accessor.doRequest('moveAsset', data)
+        db.accessor.doRequestWithResult('moveAsset', data)
 
         # Update the subcategory counts.
         old.count -= 1
@@ -485,7 +494,7 @@ class relationships(BaseFields):
         else:
             ids = self.id
         rc = 'removeRelationship/{}'.format(self.categoryName)
-        db.accessor.doRequest(rc, ids)
+        db.accessor.doRequestWithResult(rc, ids)
 
 class details:
     """

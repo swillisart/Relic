@@ -90,7 +90,7 @@ class libraryNetwork(QObject):
             response = self.netman.get(request)
 
         loop = QEventLoop()
-        response.readyRead.connect(self.requestFinished)
+        response.finished.connect(self.requestFinished)
         response.finished.connect(loop.quit)
         response.errorOccurred.connect(self.onError)
         response.errorOccurred.connect(loop.quit)

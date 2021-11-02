@@ -532,8 +532,7 @@ QTabBar::tab:selected {
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
     border-top: 1px solid rgb(43, 43, 43);
-}
-</string>
+}</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
@@ -611,7 +610,12 @@ QTabBar::tab:selected {
          <bool>true</bool>
         </property>
         <property name="styleSheet">
-         <string notr="true">background-color: rgb(75, 75, 75);</string>
+         <string notr="true">QWidget {
+    background-color: rgb(75, 75, 75);
+}
+QToolTip {
+    background-color: #ffffff;
+}</string>
         </property>
         <property name="currentIndex">
          <number>0</number>
@@ -787,7 +791,7 @@ QTabBar::tab:selected {
                  <bool>true</bool>
                 </property>
                 <property name="text">
-                 <string> [ .cr2, .dng, .red ]</string>
+                 <string> [ .cr2, .dng, .r3d ]</string>
                 </property>
                 <property name="checked">
                  <bool>false</bool>

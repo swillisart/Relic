@@ -27,7 +27,7 @@ from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie
                            QStandardItemModel, Qt, QImage, QMouseEvent)
 from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog,
                                QListView, QMenu, QStyle, QStyledItemDelegate,
-                               QStyleOption, QWidget, QApplication, QCheckBox)
+                               QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
 
 ICON_SIZE = QSize(296, 239)
 
@@ -38,6 +38,10 @@ def generateBlankImage():
     return blank
 
 NO_IMAGE = generateBlankImage()
+
+unimageable_types = {
+    '.r3d': QPixmap(':resources/general/RedLogo.png')
+} 
 
 class assetItemModel(QStandardItemModel):
 
@@ -119,6 +123,7 @@ class assetListView(QListView):
 
     onSelection = Signal(QModelIndex)
     onLinkLoad = Signal(QModelIndex)
+    onLinkRemove = Signal(QModelIndex)
     onDeleted = Signal(QModelIndex)
 
     def __init__(self, *args, **kwargs):
@@ -133,6 +138,8 @@ class assetListView(QListView):
         self.setMouseTracking(True)
         self.setUniformItemSizes(True)
         # Drag & Drop
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
         self.setDragDropOverwriteMode(False)
         self.setDragDropMode(QAbstractItemView.DragDrop)
@@ -151,6 +158,8 @@ class assetListView(QListView):
         self.actionExploreLocation.triggered.connect(self.browseLocalAsset)
         self.actionDelete = QAction('Delete', self)
         self.actionDelete.triggered.connect(self.deleteAsset)
+        self.actionUnlink = QAction('Unlink', self)
+        self.actionUnlink.triggered.connect(self.unlinkAsset)
         self.actionGeneratePreview =  QAction('Generate Preview', self)
         self.actionGeneratePreview.triggered.connect(self.generatePreview)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -291,7 +300,8 @@ class assetListView(QListView):
             else:
                 asset = index.data(polymorphicItem.Object)
                 self.editor = AssetEditor(self, index)
-                if hasattr(asset, 'duration') and asset.duration:
+                has_movie = hasattr(asset, 'duration') and asset.duration
+                if has_movie or getattr(asset, 'class') == config.MODEL:
                     asset.stream_video_to(self.editor.updateSequence)
     
             self.editor.dragIt.connect(self.enterDrag)
@@ -321,6 +331,48 @@ class assetListView(QListView):
         #self.selmod.select(sender.index, QItemSelectionModel.Select)
         self.model.mimeData([sender.index])
 
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            return super(assetListView, self).dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        super(assetListView, self).dragMoveEvent(event)
+        index = self.indexAt(event.pos())
+        if event.mimeData().hasUrls() and index.isValid():
+            self.setFocus()
+            self.update()
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        if not int(config.RELIC_PREFS.edit_mode):
+            return
+
+        index = self.indexAt(event.pos())
+        primary_asset = index.data(polymorphicItem.Object)
+
+        event.accept()
+        dst_name = primary_asset.name
+        msg = f'Link selected assets to <b>{dst_name}</b>?\n'
+        message_box = QMessageBox(QMessageBox.Information, 'Are you sure?', msg,
+                QMessageBox.Yes|QMessageBox.No, self)
+        link_ico = QPixmap(':/resources/general/folder_link.svg')
+        message_box.setIconPixmap(link_ico.scaled(64, 64, mode=Qt.SmoothTransformation))
+
+        if QMessageBox.No == message_box.exec_():
+            return
+
+        mime = event.mimeData()
+        payload = json.loads(mime.text())
+        for key, values in payload.items():
+            constructor = getCategoryConstructor(str(key))
+            for fields in values:
+                asset = constructor(**fields)
+                asset.linkTo(primary_asset)
+                primary_asset.dependencies += 1
+        primary_asset.update(fields=['dependencies'])
+
     @Slot()
     def showContextMenus(self, val):
         """Populates a context menu based on the current application index.
@@ -330,15 +382,22 @@ class assetListView(QListView):
         context_menu.addAction(self.actionExploreLocation)
         context_menu.addAction(self.actionPreview)
     
-        if bool(int(config.RELIC_PREFS.edit_mode)):
+        if int(config.RELIC_PREFS.edit_mode):
             context_menu.addAction(self.actionDelete)
             context_menu.addAction(self.actionGeneratePreview)
+            context_menu.addAction(self.actionUnlink)
 
         for action in self.additional_actions:
             context_menu.addAction(action)
 
         context_menu.exec(QCursor.pos())
 
+    @Slot()
+    def unlinkAsset(self, action):
+        for index in self.selectedIndexes():
+            self.onLinkRemove.emit(index)
+
+    @Slot()
     def deleteAsset(self, action):
         """Asset deletion. Iterates selected items to delete,
         and updates the items parent subcategory counts.
@@ -441,7 +500,9 @@ class AssetItemPaint:
         if preview_img:
             preview_img = preview_img.scaledToWidth(self.label.width(), Qt.SmoothTransformation)
         else:
-            preview_img = NO_IMAGE
+            suffix = asset.network_path.ext.lower()
+            preview_img = unimageable_types.get(suffix, NO_IMAGE)
+
         img_rect = self.label.rect()
         b = self.label.mapTo(self, img_rect.topLeft())
         painter.translate(b)
@@ -453,7 +514,7 @@ class AssetItemPaint:
         # Paint Category Color Id
         painter.save()
         painter.translate(rect.topLeft())
-        line_rect = self.styledLine.rect()
+        line_rect = self.styledLine.rect() - QMargins(0,1,0,-1)
         b = self.styledLine.mapTo(self, img_rect.topLeft())
         painter.translate(b)
 
@@ -468,6 +529,7 @@ class AssetDelegateWidget(AssetItemPaint, Ui_AssetDelegate, QWidget):
         #self.progressBar.setProperty("complete", True)
         #self.progressBar.setStyle(self.progressBar.style())
         self.checkBox.hide()
+        self.styledLine.setStyleSheet('border: none')
 
 
 class CompactDelegateWidget(AssetItemPaint, Ui_CompactDelegate, QWidget):
@@ -476,6 +538,7 @@ class CompactDelegateWidget(AssetItemPaint, Ui_CompactDelegate, QWidget):
         self.setupUi(self)
         self.checkBox = QCheckBox(self)
         self.checkBox.hide()
+        self.styledLine.setStyleSheet('border: none')
 
 
 class AssetStyleDelegate(QStyledItemDelegate):
@@ -565,6 +628,10 @@ class BaseAssetEditor(AbstractDoubleClick):
         self._click_startpos = None
 
         self.asset = self.index.data(polymorphicItem.Object)
+        tip = '<h4>Name</h4>{}'.format(self.asset.name)
+        self.nameLabel.setStatusTip(self.asset.name)
+        self.nameLabel.setToolTip(tip)
+
         if link_count := self.asset.dependencies:
             self.linksButton.setText(str(link_count))
         else:
@@ -588,8 +655,17 @@ class BaseAssetEditor(AbstractDoubleClick):
         unchk = partial(item.setCheckState, Qt.Unchecked)
         setit = lambda x : check() if x == 2 else unchk()
         self.checkBox.stateChanged.connect(setit)
-        self.linksButton.clicked.connect(partial(self.loadLinks.emit, self.index))
+        self.linksButton.clicked.connect(self.onLoadLinks)
         self.aDoubleClicked.connect(self.onDoubleClick)
+
+    @Slot()
+    def onLoadLinks(self):
+        indices = self.view.selectedIndexes()
+        if self.index not in indices:
+            self.view.selmod.select(self.index, QItemSelectionModel.ClearAndSelect)
+        else:
+            self.view.selmod.select(self.index, QItemSelectionModel.Select)
+        self.loadLinks.emit(self.index)
 
     @Slot()
     def onDoubleClick(self):
@@ -638,6 +714,11 @@ class BaseAssetEditor(AbstractDoubleClick):
         self.view.setFocus()
         self.close()
 
+    def wheelEvent(self, event):
+        self.parent().wheelEvent(event)
+        self.snapToSize()
+        self.deferred_snap = QTimer.singleShot(100, self.snapToSize)
+
 
 class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
 
@@ -649,7 +730,9 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
         if self.asset.icon:
             self.label.setPixmap(self.asset.icon)
         else:
-            self.label.setPixmap(NO_IMAGE)
+            suffix = self.asset.network_path.ext.lower()
+            icon = unimageable_types.get(suffix, NO_IMAGE)
+            self.label.setPixmap(icon)
 
         if isinstance(self.view, assetListView):
             self.selected = bool(index in self.view.selmod.selectedIndexes())
@@ -698,21 +781,18 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
 
         super(AssetEditor, self).mouseMoveEvent(event)
 
-    def wheelEvent(self, event):
-        self.parent().wheelEvent(event)
-        self.snapToSize()
-        self.deferred_snap = QTimer.singleShot(100, self.snapToSize)
-
 
 class CompactAssetEditor(BaseAssetEditor, CompactDelegateWidget):
 
     def __init__(self, parent, index):
         super(CompactAssetEditor, self).__init__(parent, index)
         if self.asset.icon:
-            preview_img = self.asset.icon.scaledToWidth(72, Qt.SmoothTransformation)
+            icon = self.asset.icon
         else:
-            preview_img = NO_IMAGE.scaledToWidth(72, Qt.SmoothTransformation)
-        self.label.setPixmap(preview_img)
+            suffix = self.asset.network_path.ext.lower()
+            icon = unimageable_types.get(suffix, NO_IMAGE)
+
+        self.label.setPixmap(icon.scaledToWidth(72, Qt.SmoothTransformation))
         updateWidgetProperty(self.HeaderFrame, "selected", True)
         updateWidgetProperty(self.frame, "selected", True)
 

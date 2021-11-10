@@ -183,7 +183,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.recordButton.clicked.connect(self.performRecording)
         self.pool = QThreadPool.globalInstance()
         self.recording = False
-        self.delay = 1000/24
+        self.delay = 1000/30
         self.snap_model = QStandardItemModel()
         self.video_model = QStandardItemModel()
         self.gif_model = QStandardItemModel()
@@ -438,12 +438,17 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 '-y', # Always Overwrite
                 '-i', '{}'.format(self.out_audio),
                 '-i', '{}'.format(self.out_video),
-                '-c:v', 'copy',
+                #'-c:v', 'copy',
                 #'-c:a', 'aac',
-                '-filter:a', 'atempo={}'.format(a_duration / v_duration),
+                #'-filter:a', 'atempo=1.0',#{}'.format(a_duration / v_duration),
+                '-filter:v', 'setpts=PTS*{}'.format(a_duration / v_duration),
+                #'-map', '[v]',
+                #'-map', '1:a',
+                '-r', '24', # FPS
+                #'-shortest',
                 out_file,
             ]
-            subprocess.call(self.post_cmd, creationflags=CREATE_NO_WINDOW)
+            subprocess.call(self.post_cmd)#,# creationflags=CREATE_NO_WINDOW)
             os.remove(str(self.out_audio))
             os.remove(str(self.out_video))
             self.appendToModel(out_file, self.video_model, sort=True)
@@ -468,12 +473,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             '-y', # Always Overwrite
             '-f', 'rawvideo',
             '-vcodec', 'rawvideo',
-            '-pix_fmt', 'rgb32',
+            '-pix_fmt', 'rgb24',
             '-s', '{}x{}'.format(divisible_width, self.h),
             '-i', '-',
-            '-r', '24', # FPS
+            '-r', '30', # FPS
             '-pix_fmt', 'yuv420p',
-            '-preset', 'fast',
+            '-preset', 'ultrafast',
             '-crf', '32',
             #'-vcodec', 'h264',
             #'-tune', 'zerolatency',
@@ -574,7 +579,7 @@ class CapScreen(QRunnable):
         painter = QPainter(pixmap)
         painter.drawPixmap(self.cursor_pos.x()-x, self.cursor_pos.y()-y, self.cursor_pixmap)
         painter.end()
-        image = pixmap.toImage()
+        image = pixmap.toImage().convertToFormat(QImage.Format_RGB888)
         self.ffproc.stdin.write(image.constBits())
 
 

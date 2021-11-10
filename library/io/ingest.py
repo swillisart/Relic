@@ -429,7 +429,7 @@ class ConversionRouter(QObject):
         return asset
 
     @staticmethod
-    def processRAW(in_img_path, out_img_path, denoise=True):
+    def processRAW(in_img_path, out_img_path, denoise=False):
         proc = libraw.LibRaw()
 
         # Read RAW data

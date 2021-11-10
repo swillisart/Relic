@@ -10,6 +10,7 @@ from sequencePath import sequencePath as Path
 # -- Module --
 import library.config as config
 from library.io.ingest import ConversionRouter
+from library.io.database import LocalThumbnail
 from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor, Library
 from library.ui.asset_delegate import Ui_AssetDelegate
 from library.qt_objects import AbstractDoubleClick
@@ -19,7 +20,7 @@ from library.widgets.metadataView import (categoryWidget, classWidget,
                                           qualityWidget, subcategoryWidget,
                                           typeWidget)
 # -- Third-party --
-from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins,
+from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPool,
                             QMimeData, QModelIndex, QObject, QPoint,
                             QPropertyAnimation, QRect, QSize, Signal, Slot, QEvent, QTimer, QUrl)
 from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
@@ -42,6 +43,7 @@ NO_IMAGE = generateBlankImage()
 unimageable_types = {
     '.r3d': QPixmap(':resources/general/RedLogo.png')
 } 
+THREAD_POOL = QThreadPool.globalInstance()
 
 class assetItemModel(QStandardItemModel):
 
@@ -291,6 +293,7 @@ class assetListView(QListView):
         if self.drag_select:
             return
         elif index.isValid() and index != self.lastIndex:
+            THREAD_POOL.clear()
             if self.editor:
                 self.editor.close()
                 self.setFocus()
@@ -303,6 +306,16 @@ class assetListView(QListView):
                 has_movie = hasattr(asset, 'duration') and asset.duration
                 if has_movie or getattr(asset, 'class') == config.MODEL:
                     asset.stream_video_to(self.editor.updateSequence)
+                elif asset.type == 3: #config.COLLECTION:
+                    asset.related()
+                    for num, x in enumerate(asset.upstream):
+                        if num > 15:
+                            break
+                        linked_asset = x.data(polymorphicItem.Object)
+                        #linked_asset.fetchIcon()
+                        ico = linked_asset.network_path.suffixed('_icon', '.jpg')
+                        worker = LocalThumbnail(ico, self.editor.appendToSequence)
+                        THREAD_POOL.start(worker)
     
             self.editor.dragIt.connect(self.enterDrag)
             self.editor.loadLinks.connect(self.onLinkLoad.emit)
@@ -755,11 +768,16 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
     def updateSequence(self, frames):
         self.sequence = frames
 
+    @Slot()
+    def appendToSequence(self, frame):
+        self.sequence.append(frame)
+
     def mousePressEvent(self, event):
         super(AssetEditor, self).mousePressEvent(event)
         self.selected = not self.selected
 
     def mouseMoveEvent(self, event):
+        #TODO: load collection dependency icons thingy instead of sequence 
         self.snapToSize()
         if event.buttons() in [Qt.LeftButton, Qt.MiddleButton]:
             x = abs(self._click_startpos.x() - event.pos().x())
@@ -778,6 +796,11 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
                 self.label.setPixmap(self.sequence[0])
             self.progressBar.setMaximum(duration)
             self.progressBar.setValue(pos_idx)
+        elif self.asset.type == 3 and self.asset.upstream:
+            for i, item in enumerate(self.asset.upstream):
+                if item.icon and item.icon not in self.sequence:
+                    self.sequence.append(item.icon)
+
 
         super(AssetEditor, self).mouseMoveEvent(event)
 

@@ -88,13 +88,13 @@ class LinkViewWidget(QWidget):
         self.main_layout.addLayout(self.inactive_layout)
         self.setLayout(self.main_layout)
         self.model = assetItemModel(self)
+        self.all_tabs = []
+        self.all_views = [] 
+        self.asset_type_counter = {}
         self.createGroups()
         self.pool = QThreadPool.globalInstance()
-        self.asset_type_counter = {}
 
     def createGroups(self):
-        self.all_tabs = []
-    
         for index, asset_type in enumerate(typeWidget.LABELS):
             view = assetListView(self)
             proxyModel = assetTypeFilter(index+1)
@@ -110,6 +110,7 @@ class LinkViewWidget(QWidget):
             tab.frame.layout().insertWidget(1, view)
             tab.model = proxyModel
             self.all_tabs.append(tab)
+            self.all_views.append(view)
             self.inactive_layout.addWidget(tab)
         self.clear()
 
@@ -152,12 +153,13 @@ class LinkViewWidget(QWidget):
             self.main_layout.removeWidget(expandableFrame)
             self.inactive_layout.addWidget(expandableFrame)
 
-    def getAllSelectedItems(self):
+    def getAllSelectedIndexes(self):
         all_idx = [] 
-        for x in self.children():
-            if isinstance(x, ExpandableTab):
-                all_idx.extend(x.widget.selectedIndexes())
-        #self.onSelection.emit()
+        for view in self.all_views:
+            all_idx.extend(view.selectedIndexes())
+            if view.editor: #CRITICAL
+                view.editor.close()
+        return all_idx
 
     def iterateTypeGroups(self):
         for x in self.children():

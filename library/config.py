@@ -80,22 +80,26 @@ class Preferences(object):
     options = {
         'host': ['http://localhost:8000/', 'https://yoursite.shotgunstudio.com/api/v1/'],
     }
+    
+    HOST_APP_NAME = QCoreApplication.applicationName()
 
     def __init__(self):
         """Entry point to QSettings for all of the Applications preferences.
         when getting or setting attributes they are automatically saved on change
         to an .INI file in the USERPROFILE location.
         """
-
-        QCoreApplication.setApplicationName('Relic')
         QSettings.setDefaultFormat(QSettings.IniFormat)
 
     def __setattr__(self, name, value):
         # All preference set are always in the user scope. 
+        QCoreApplication.setApplicationName('Relic')
         QCoreApplication.setOrganizationName(os.getenv('username'))
+
+        user_path = USERPROFILE + '/.relic/settings'
         QSettings.setPath(
-                    QSettings.IniFormat, QSettings.SystemScope, self.user_path)
+                    QSettings.IniFormat, QSettings.SystemScope, user_path)
         QSettings().setValue(name, value)
+        QCoreApplication.setApplicationName(Preferences.HOST_APP_NAME)
 
     def __getattr__(self, name):
         shared_pref = self.getSitePref(name)
@@ -111,18 +115,26 @@ class Preferences(object):
     @staticmethod
     def getSitePref(name):
         shared_path = os.getenv('relic_shared', USERPROFILE) + '/.relic/settings'
+        QCoreApplication.setApplicationName('Relic')
         QCoreApplication.setOrganizationName('ResArts')
+
         QSettings.setPath(
                     QSettings.IniFormat, QSettings.SystemScope, shared_path)
-        return QSettings().value(name, None)
+        result = QSettings().value(name, None)
+        QCoreApplication.setApplicationName(Preferences.HOST_APP_NAME)
+        return result
 
     @staticmethod
     def getUserPref(name):
         user_path = USERPROFILE + '/.relic/settings'
+        QCoreApplication.setApplicationName('Relic')
         QCoreApplication.setOrganizationName(os.getenv('username'))
+
         QSettings.setPath(
                     QSettings.IniFormat, QSettings.UserScope, user_path)
-        return QSettings().value(name, None)
+        result = QSettings().value(name, None)
+        QCoreApplication.setApplicationName(Preferences.HOST_APP_NAME)
+        return result
 
 RELIC_PREFS = Preferences()
 

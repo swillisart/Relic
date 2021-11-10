@@ -159,18 +159,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             self.assets_view.hide()
             self.assets_grid.show()
         if value == 1:
-            self.assets_view.show()
-            self.attributeDock.show()
             self.assets_view.compactMode()
-            grid_visible = self.assets_grid.isVisible()
-            self.assets_grid.hide()
-            if grid_visible:
+            [view.compactMode() for view in self.links_view.all_views]
+            if self.assets_grid.isVisible():
+                self.assets_view.show()
+                self.assets_grid.hide()
                 self.updateAssetView()
+                self.attributeDock.show()
         elif value == 2:
-            self.assets_grid.hide()
-            self.assets_view.show()
-            self.attributeDock.show()
+            if self.assets_grid.isVisible():
+                self.assets_grid.hide()
+                self.assets_view.show()
+                self.attributeDock.show()
             self.assets_view.iconMode()
+            [view.iconMode() for view in self.links_view.all_views]
 
         RELIC_PREFS.view_scale = value
 
@@ -278,6 +280,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 if item.id == id:
                     item.icon = img
                     item.emitDataChanged()
+                elif item.upstream:
+                    for x in item.upstream:
+                        linked_asset = x.data(polymorphicItem.Object)
+                        if linked_asset.id == id:
+                            linked_asset.icon = img
 
     @Slot()
     def assetViewing(self):
@@ -313,11 +320,14 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         if new_search or sender not in [self.searchBox, self.category_manager]:
             page = self.pageSpinBox.value()
-            skip_icons = not self.assets_grid.isVisible()
-            for asset in self.library.load(page, PAGE_LIMIT, categories, icons=skip_icons):
-                on_complete = partial(setattr, asset, 'icon')
-                if skip_icons:
-                    worker = LocalThumbnail(asset.network_path.suffixed('_icon', '.jpg'), on_complete)
+            load_icons = not self.assets_grid.isVisible()
+            for asset in self.library.load(page, PAGE_LIMIT, categories, icons=load_icons):
+                if load_icons:
+                    on_complete = partial(setattr, asset, 'icon')
+                    icon_path = asset.network_path.suffixed('_icon', '.jpg')
+                    if not icon_path.exists:
+                        copyRelatedIcon(asset)
+                    worker = LocalThumbnail(icon_path, on_complete)
                     self.pool.start(worker)
                 self.assets_view.addAsset(asset)
             asset_total = len(self.library.assets_filtered)
@@ -379,19 +389,24 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         index : QModelIndex
             the index from which this slot is conecting to
         """
-
-        self.assets_view.hide()
+        if self.assets_view.isVisible():
+            self.assets_view.hide()
+        sender = self.sender()
 
         indices = self.assets_view.selectedIndexes()
+        if index not in indices:
+            indices = self.links_view.getAllSelectedIndexes()
 
         linked_assets = []
         for index in indices:
             asset = index.data(polymorphicItem.Object)
-            asset.related()
+            if not asset.upstream:
+                asset.related()
             linked_assets.extend(asset.upstream)
 
         self.links_view.updateGroups(linked_assets, clear=True)
-        self.linksDock.show()
+        if not self.linksDock.isVisible():
+            self.linksDock.show()
 
     @Slot()
     def toggleVisibility(self, reason):
@@ -411,6 +426,15 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         site = RELIC_PREFS.host
         url = f'{site}documentation/index.html'
         webbrowser.open(url)
+
+def copyRelatedIcon(asset):
+    asset.related()
+    for item in asset.upstream:
+        linked_asset = item.data(polymorphicItem.Object)
+        related_icon = linked_asset.network_path.suffixed('_icon', '.jpg')
+        asset_icon = asset.network_path.suffixed('_icon', '.jpg')
+        related_icon.copyTo(asset_icon)
+        break
 
 def onStateChange(state):
     if state == Qt.ApplicationState.ApplicationActive:

@@ -235,18 +235,16 @@ class IngestForm(Ui_IngestForm, QDialog):
             extra_files = temp_asset.dependencies
             self.ingest_thread.load([temp_filename, asset, extra_files])
 
-        # Update counts on assets and subcategory
+        # Update counts on assets and subcategories
         subcategory.count += total
         self.updateSubcategoryCounts(subcategory_index)
+        subcategory.update(fields=['count'])
         if primary_asset:
-            if dependency := primary_asset.dependencies:
-                dependency += total
-            elif reverse_link:
+            if primary_asset.dependencies or reverse_link:
                 primary_asset.dependencies += total
             else:
                 primary_asset.dependencies = total or 1
             primary_asset.update()
-        subcategory.update(fields=['count'])
 
     @staticmethod
     def numberedName(item):

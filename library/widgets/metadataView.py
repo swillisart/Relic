@@ -659,11 +659,12 @@ class linksWidget(baseLabel):
     pass
 
 
-class pathWidget(baseLabel):
+class pathWidget(descriptionWidget):
     def __init__(self, *args, **kwargs):
         super(pathWidget, self).__init__(*args, **kwargs)
-        #self.setStyleSheet('padding: 1px;')
 
+    def setValue(self, value):
+        self.setText(value)
 
 class categoryWidget(QComboBox):
 

@@ -1,4 +1,5 @@
 import sys
+from functools import partial
 
 from sequencePath import sequencePath as Path
 

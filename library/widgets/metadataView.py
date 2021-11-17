@@ -638,6 +638,13 @@ class nameWidget(descriptionWidget):
     def setValue(self, value):
         self.setText(value)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            self.update_asset()
+        else:
+            super(nameWidget, self).keyPressEvent(event)
+
+
 class dependenciesWidget(baseSpinBox, UpdatableField):
     pass
 
@@ -658,13 +665,22 @@ class idWidget(baseLabel):
 class linksWidget(baseLabel):
     pass
 
-
 class pathWidget(descriptionWidget):
     def __init__(self, *args, **kwargs):
         super(pathWidget, self).__init__(*args, **kwargs)
 
     def setValue(self, value):
-        self.setText(value)
+        self.setText(str(value))
+
+    def reset(self):
+        self._value = ''
+        self.setText('None')
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            self.update_asset()
+        else:
+            super(pathWidget, self).keyPressEvent(event)
 
 class categoryWidget(QComboBox):
 

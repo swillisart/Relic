@@ -75,6 +75,7 @@ class Preferences(object):
         'render_using': '',
         'edit_mode': False,
         'view_scale': 2,
+        'recurse_subcategories': 1,
     }
 
     options = {
@@ -103,11 +104,11 @@ class Preferences(object):
 
     def __getattr__(self, name):
         shared_pref = self.getSitePref(name)
-        if shared_pref:
+        if shared_pref is not None:
             return shared_pref
         else:
             user_pref = self.getUserPref(name)
-            if user_pref:
+            if user_pref is not None:
                 return user_pref
             else:
                 return Preferences.defaults.get(name)

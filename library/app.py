@@ -122,6 +122,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.filterBox.textChanged.connect(self.category_manager.filterAll)
         self.linkFilterBox.textChanged.connect(self.links_view.filterAll)
         self.actionPortal.toggled.connect(self.hideDocks)
+        self.actionRecurseSubcategory.setChecked(int(RELIC_PREFS.recurse_subcategories))
+        self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
         self.actionIngest.triggered.connect(self.beginIngest)
         self.descriptionCloseButton.clicked.connect(self.closeOverlay)
         self.actionDocumentation.triggered.connect(self.browseDocumentation)
@@ -279,6 +281,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def hideDocks(self, state):
         self.categoryExpandButton.setChecked(state)
         self.attrExpandButton.setChecked(state)
+
+    @Slot()
+    def recursiveSubcategories(self, state):
+        RELIC_PREFS.recurse_subcategories = int(state)
 
     @Slot()
     def updateIcons(self, data):

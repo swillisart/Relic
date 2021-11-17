@@ -369,10 +369,14 @@ class subcategoryTreeView(QTreeView):
         ids = []
         for i in indexes:
             item = self.indexToItem(i)
-            # get all descendant subcategory ids
-            self.recursiveCountCursor(item, collect=True, up=False, down=True)
-            [ids.append(x) for x in self.counts]
-            self.counts = {}
+            do_recurse = int(RELIC_PREFS.recurse_subcategories)
+            if do_recurse:
+                # get all descendant subcategory ids
+                self.recursiveCountCursor(item, collect=True, up=False, down=True)
+                [ids.append(x) for x in self.counts]
+                self.counts = {}
+            else:
+                ids.append(item.id)
 
         return ids
 

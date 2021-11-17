@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1130</width>
-    <height>705</height>
+    <height>709</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2764,6 +2764,7 @@ QPushButton:hover {
      <string>View</string>
     </property>
     <addaction name="actionPortal"/>
+    <addaction name="actionRecurseSubcategory"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -2816,7 +2817,7 @@ QPushButton:hover {
           <x>0</x>
           <y>0</y>
           <width>74</width>
-          <height>551</height>
+          <height>555</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryLayout">
@@ -3430,7 +3431,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>551</height>
+          <height>555</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">
@@ -3502,8 +3503,28 @@ QFrame:hover {
    <property name="text">
     <string>Portal</string>
    </property>
+   <property name="statusTip">
+    <string>Collapse / Expand the Categories and Attributes panels.</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Tab</string>
+   </property>
+  </action>
+  <action name="actionRecurseSubcategory">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Recursive Subcategory Selection</string>
+   </property>
+   <property name="toolTip">
+    <string>Use the selected Subcategories child-items in the active selection filter. (Enable Recursive Loading)</string>
+   </property>
+   <property name="statusTip">
+    <string>Use the selected Subcategories child-items in the active selection filter. (Enable Recursive Loading)</string>
    </property>
   </action>
  </widget>

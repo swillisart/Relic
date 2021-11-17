@@ -642,13 +642,122 @@ class Ui_RelicMainWindow(object):
 
         self.verticalLayout.addWidget(self.line_5)
 
-        self.documentationDock = QDockWidget(self.centralwidget)
-        self.documentationDock.setObjectName(u"documentationDock")
-        sizePolicy1 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.noSearchResultsPage = QFrame(self.centralwidget)
+        self.noSearchResultsPage.setObjectName(u"noSearchResultsPage")
+        self.noSearchResultsPage.setFrameShape(QFrame.StyledPanel)
+        self.noSearchResultsPage.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_6 = QVBoxLayout(self.noSearchResultsPage)
+        self.verticalLayout_6.setSpacing(6)
+        self.verticalLayout_6.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalSpacer_3 = QSpacerItem(20, 19, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_6.addItem(self.verticalSpacer_3)
+
+        self.noResults = QFrame(self.noSearchResultsPage)
+        self.noResults.setObjectName(u"noResults")
+        self.noResults.setFrameShape(QFrame.StyledPanel)
+        self.noResults.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_5 = QVBoxLayout(self.noResults)
+        self.verticalLayout_5.setSpacing(6)
+        self.verticalLayout_5.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.verticalLayout_5.setContentsMargins(18, 6, 18, 6)
+        self.searchButton_2 = QPushButton(self.noResults)
+        self.searchButton_2.setObjectName(u"searchButton_2")
+        self.searchButton_2.setLayoutDirection(Qt.LeftToRight)
+        self.searchButton_2.setStyleSheet(u"QPushButton {\n"
+"	background-color: transparent;\n"
+"    padding: 2px;\n"
+"	border: none;\n"
+"}")
+        icon3 = QIcon()
+        icon3.addFile(u":/resources/general/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.searchButton_2.setIcon(icon3)
+        self.searchButton_2.setIconSize(QSize(20, 20))
+        self.searchButton_2.setFlat(False)
+
+        self.verticalLayout_5.addWidget(self.searchButton_2)
+
+        self.label = QLabel(self.noResults)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setPointSize(14)
+        self.label.setFont(font)
+        self.label.setStyleSheet(u"color: rgb(182, 182, 182)")
+        self.label.setAlignment(Qt.AlignCenter)
+
+        self.verticalLayout_5.addWidget(self.label)
+
+        self.horizontalLayout_12 = QHBoxLayout()
+        self.horizontalLayout_12.setSpacing(9)
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.horizontalLayout_12.setContentsMargins(6, 6, 6, 6)
+        self.horizontalSpacer_10 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_12.addItem(self.horizontalSpacer_10)
+
+        self.clearSubcategoryButton = QPushButton(self.noResults)
+        self.clearSubcategoryButton.setObjectName(u"clearSubcategoryButton")
+        self.clearSubcategoryButton.setEnabled(True)
+        self.clearSubcategoryButton.setStyleSheet(u"QPushButton {\n"
+"    padding: 4px;\n"
+"	border: 2px solid rgb(57,57,57);\n"
+"	border-radius: 4px;\n"
+"}")
+
+        self.horizontalLayout_12.addWidget(self.clearSubcategoryButton)
+
+        self.label_4 = QLabel(self.noResults)
+        self.label_4.setObjectName(u"label_4")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.documentationDock.sizePolicy().hasHeightForWidth())
-        self.documentationDock.setSizePolicy(sizePolicy1)
+        sizePolicy1.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
+        self.label_4.setSizePolicy(sizePolicy1)
+        font1 = QFont()
+        font1.setPointSize(9)
+        self.label_4.setFont(font1)
+        self.label_4.setStyleSheet(u"color: rgb(182, 182, 182)")
+        self.label_4.setAlignment(Qt.AlignCenter)
+
+        self.horizontalLayout_12.addWidget(self.label_4)
+
+        self.clearSearchButton = QPushButton(self.noResults)
+        self.clearSearchButton.setObjectName(u"clearSearchButton")
+        self.clearSearchButton.setEnabled(True)
+        self.clearSearchButton.setStyleSheet(u"QPushButton {\n"
+"    padding: 4px;\n"
+"	border: 2px solid rgb(57,57,57);\n"
+"	border-radius: 4px;\n"
+"}")
+
+        self.horizontalLayout_12.addWidget(self.clearSearchButton)
+
+        self.horizontalSpacer_11 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_12.addItem(self.horizontalSpacer_11)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_12)
+
+
+        self.verticalLayout_6.addWidget(self.noResults)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_6.addItem(self.verticalSpacer_2)
+
+
+        self.verticalLayout.addWidget(self.noSearchResultsPage)
+
+        self.documentationDock = QDockWidget(self.centralwidget)
+        self.documentationDock.setObjectName(u"documentationDock")
+        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.documentationDock.sizePolicy().hasHeightForWidth())
+        self.documentationDock.setSizePolicy(sizePolicy2)
         palette = QPalette()
         brush = QBrush(QColor(200, 200, 200, 255))
         brush.setStyle(Qt.SolidPattern)
@@ -709,9 +818,9 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
         self.documentationTextBrowser = QTextBrowser(self.attrDockWidgetContents_3)
         self.documentationTextBrowser.setObjectName(u"documentationTextBrowser")
-        font = QFont()
-        font.setPointSize(11)
-        self.documentationTextBrowser.setFont(font)
+        font2 = QFont()
+        font2.setPointSize(11)
+        self.documentationTextBrowser.setFont(font2)
         self.documentationTextBrowser.setStyleSheet(u"QTextBrowser {\n"
 "padding: 8px 8px 8px 40px;\n"
 "background-color: rgb(75, 75, 75);\n"
@@ -726,8 +835,8 @@ class Ui_RelicMainWindow(object):
 
         self.linksDock = QDockWidget(self.centralwidget)
         self.linksDock.setObjectName(u"linksDock")
-        sizePolicy1.setHeightForWidth(self.linksDock.sizePolicy().hasHeightForWidth())
-        self.linksDock.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.linksDock.sizePolicy().hasHeightForWidth())
+        self.linksDock.setSizePolicy(sizePolicy2)
         palette1 = QPalette()
         palette1.setBrush(QPalette.Active, QPalette.WindowText, brush)
         palette1.setBrush(QPalette.Active, QPalette.Button, brush1)
@@ -804,7 +913,7 @@ class Ui_RelicMainWindow(object):
 
         self.label_2 = QLabel(self.dockTitleWidgets)
         self.label_2.setObjectName(u"label_2")
-        self.label_2.setFont(font)
+        self.label_2.setFont(font2)
         self.label_2.setStyleSheet(u"border:none;")
         self.label_2.setFrameShape(QFrame.NoFrame)
         self.label_2.setFrameShadow(QFrame.Sunken)
@@ -813,11 +922,8 @@ class Ui_RelicMainWindow(object):
 
         self.filterFrame = QFrame(self.dockTitleWidgets)
         self.filterFrame.setObjectName(u"filterFrame")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.filterFrame.sizePolicy().hasHeightForWidth())
-        self.filterFrame.setSizePolicy(sizePolicy2)
+        sizePolicy1.setHeightForWidth(self.filterFrame.sizePolicy().hasHeightForWidth())
+        self.filterFrame.setSizePolicy(sizePolicy1)
         self.filterFrame.setStyleSheet(u"QFrame {\n"
 "	margin: 2px;\n"
 "    border: 1px solid rgb(43, 43, 43);\n"
@@ -852,8 +958,6 @@ class Ui_RelicMainWindow(object):
 "QPushButton:checked {\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}")
-        icon3 = QIcon()
-        icon3.addFile(u":/resources/general/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.filterButton.setIcon(icon3)
         self.filterButton.setIconSize(QSize(18, 18))
         self.filterButton.setCheckable(True)
@@ -870,9 +974,9 @@ class Ui_RelicMainWindow(object):
         sizePolicy4.setHeightForWidth(self.filterBox.sizePolicy().hasHeightForWidth())
         self.filterBox.setSizePolicy(sizePolicy4)
         self.filterBox.setMinimumSize(QSize(0, 0))
-        font1 = QFont()
-        font1.setPointSize(8)
-        self.filterBox.setFont(font1)
+        font3 = QFont()
+        font3.setPointSize(8)
+        self.filterBox.setFont(font3)
         self.filterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
         self.filterBox.setFrame(False)
@@ -964,7 +1068,7 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.label_3 = QLabel(self.attributeDockTitleWidget)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font)
+        self.label_3.setFont(font2)
         self.label_3.setStyleSheet(u"border:none;")
         self.label_3.setFrameShape(QFrame.NoFrame)
         self.label_3.setFrameShadow(QFrame.Sunken)
@@ -973,8 +1077,8 @@ class Ui_RelicMainWindow(object):
 
         self.attrFilterFrame = QFrame(self.attributeDockTitleWidget)
         self.attrFilterFrame.setObjectName(u"attrFilterFrame")
-        sizePolicy2.setHeightForWidth(self.attrFilterFrame.sizePolicy().hasHeightForWidth())
-        self.attrFilterFrame.setSizePolicy(sizePolicy2)
+        sizePolicy1.setHeightForWidth(self.attrFilterFrame.sizePolicy().hasHeightForWidth())
+        self.attrFilterFrame.setSizePolicy(sizePolicy1)
         self.attrFilterFrame.setStyleSheet(u"QFrame {\n"
 "	margin: 2px;\n"
 "    border: 1px solid rgb(43, 43, 43);\n"
@@ -1019,7 +1123,7 @@ class Ui_RelicMainWindow(object):
         sizePolicy4.setHeightForWidth(self.attrFilterBox.sizePolicy().hasHeightForWidth())
         self.attrFilterBox.setSizePolicy(sizePolicy4)
         self.attrFilterBox.setMinimumSize(QSize(0, 0))
-        self.attrFilterBox.setFont(font1)
+        self.attrFilterBox.setFont(font3)
         self.attrFilterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
         self.attrFilterBox.setFrame(False)
@@ -1098,7 +1202,7 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_15.setContentsMargins(0, 0, 0, 0)
         self.label_5 = QLabel(self.linkDockTitleWidget)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font)
+        self.label_5.setFont(font2)
         self.label_5.setStyleSheet(u"border:none;")
         self.label_5.setFrameShape(QFrame.NoFrame)
         self.label_5.setFrameShadow(QFrame.Sunken)
@@ -1107,8 +1211,8 @@ class Ui_RelicMainWindow(object):
 
         self.linkFilterFrame = QFrame(self.linkDockTitleWidget)
         self.linkFilterFrame.setObjectName(u"linkFilterFrame")
-        sizePolicy2.setHeightForWidth(self.linkFilterFrame.sizePolicy().hasHeightForWidth())
-        self.linkFilterFrame.setSizePolicy(sizePolicy2)
+        sizePolicy1.setHeightForWidth(self.linkFilterFrame.sizePolicy().hasHeightForWidth())
+        self.linkFilterFrame.setSizePolicy(sizePolicy1)
         self.linkFilterFrame.setStyleSheet(u"QFrame {\n"
 "	margin: 2px;\n"
 "    border: 1px solid rgb(43, 43, 43);\n"
@@ -1153,7 +1257,7 @@ class Ui_RelicMainWindow(object):
         sizePolicy4.setHeightForWidth(self.linkFilterBox.sizePolicy().hasHeightForWidth())
         self.linkFilterBox.setSizePolicy(sizePolicy4)
         self.linkFilterBox.setMinimumSize(QSize(0, 0))
-        self.linkFilterBox.setFont(font1)
+        self.linkFilterBox.setFont(font3)
         self.linkFilterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
         self.linkFilterBox.setFrame(False)
@@ -1218,8 +1322,8 @@ class Ui_RelicMainWindow(object):
 
         self.documentationFilterFrame = QFrame(self.documentationDockTitleWidget)
         self.documentationFilterFrame.setObjectName(u"documentationFilterFrame")
-        sizePolicy2.setHeightForWidth(self.documentationFilterFrame.sizePolicy().hasHeightForWidth())
-        self.documentationFilterFrame.setSizePolicy(sizePolicy2)
+        sizePolicy1.setHeightForWidth(self.documentationFilterFrame.sizePolicy().hasHeightForWidth())
+        self.documentationFilterFrame.setSizePolicy(sizePolicy1)
         self.documentationFilterFrame.setStyleSheet(u"QFrame {\n"
 "	margin: 2px;\n"
 "    border: 1px solid rgb(43, 43, 43);\n"
@@ -1264,7 +1368,7 @@ class Ui_RelicMainWindow(object):
         sizePolicy4.setHeightForWidth(self.documentationFilterBox.sizePolicy().hasHeightForWidth())
         self.documentationFilterBox.setSizePolicy(sizePolicy4)
         self.documentationFilterBox.setMinimumSize(QSize(0, 0))
-        self.documentationFilterBox.setFont(font1)
+        self.documentationFilterBox.setFont(font3)
         self.documentationFilterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
         self.documentationFilterBox.setFrame(False)
@@ -1281,9 +1385,9 @@ class Ui_RelicMainWindow(object):
 
         self.descriptionTitle = QLabel(self.documentationDockTitleWidget)
         self.descriptionTitle.setObjectName(u"descriptionTitle")
-        font2 = QFont()
-        font2.setPointSize(12)
-        self.descriptionTitle.setFont(font2)
+        font4 = QFont()
+        font4.setPointSize(12)
+        self.descriptionTitle.setFont(font4)
         self.descriptionTitle.setStyleSheet(u"border:none;")
         self.descriptionTitle.setFrameShape(QFrame.NoFrame)
         self.descriptionTitle.setFrameShadow(QFrame.Sunken)
@@ -1439,7 +1543,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1130, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1130, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -1468,7 +1572,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 72, 555))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 74, 551))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1544,9 +1648,9 @@ class Ui_RelicMainWindow(object):
         sizePolicy5.setHeightForWidth(self.searchBox.sizePolicy().hasHeightForWidth())
         self.searchBox.setSizePolicy(sizePolicy5)
         self.searchBox.setMinimumSize(QSize(256, 26))
-        font3 = QFont()
-        font3.setBold(True)
-        self.searchBox.setFont(font3)
+        font5 = QFont()
+        font5.setBold(True)
+        self.searchBox.setFont(font5)
         self.searchBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
         self.searchBox.setFrame(False)
@@ -1682,7 +1786,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 555))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 551))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)
@@ -1732,6 +1836,11 @@ class Ui_RelicMainWindow(object):
 #if QT_CONFIG(shortcut)
         self.actionPortal.setShortcut(QCoreApplication.translate("RelicMainWindow", u"Ctrl+Tab", None))
 #endif // QT_CONFIG(shortcut)
+        self.searchButton_2.setText("")
+        self.label.setText(QCoreApplication.translate("RelicMainWindow", u"Search Yielded No Results...", None))
+        self.clearSubcategoryButton.setText(QCoreApplication.translate("RelicMainWindow", u"Clear Subcategory Selection", None))
+        self.label_4.setText(QCoreApplication.translate("RelicMainWindow", u"OR", None))
+        self.clearSearchButton.setText(QCoreApplication.translate("RelicMainWindow", u"Clear Search Keywords", None))
         self.documentationDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Docs", None))
         self.linksDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Links", None))
         self.toolButton.setText("")

@@ -99,7 +99,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.categoryDock.setAutoFillBackground(True)
         self.linksDock.setAutoFillBackground(True)
 
-
         # Creates asset view
         self.assets_view = assetListView(self)
         self.asset_item_model = assetItemModel(self.assets_view)
@@ -108,6 +107,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.assets_grid = AssetGridView(PAGE_LIMIT, 30, self)
         self.assets_grid.base_model = self.asset_item_model
         self.assets_grid.hide()
+        self.noSearchResultsPage.hide()
         self.asset_item_model.rowsInserted.connect(self.assets_grid.onRowsInserted)
         self.asset_item_model.modelReset.connect(self.assets_grid.clear)
         self.centralwidget.layout().insertWidget(3, self.assets_grid)
@@ -138,6 +138,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.viewScaleSlider.setValue(int(RELIC_PREFS.view_scale))
         self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
 
+        self.clearSearchButton.clicked.connect(self.clearSearch)
+        self.clearSubcategoryButton.clicked.connect(self.clearSubcategorySelection)
+
         self.documentationDock.setTitleBarWidget(self.documentationDockTitle)
         self.documentationDock.hide()
         self.documentationDock.setAutoFillBackground(True)
@@ -151,6 +154,14 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             else:
                 RELIC_PREFS.user_id = user_id
 
+    def clearSearch(self):
+        self.searchBox.clear()
+        self.updateAssetView()
+
+    def clearSubcategorySelection(self):
+        for category in self.library.categories:
+            category.tree.selection_model.clearSelection()
+        self.updateAssetView()
 
     @Slot()
     def scaleView(self, value):
@@ -331,8 +342,14 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     self.pool.start(worker)
                 self.assets_view.addAsset(asset)
             asset_total = len(self.library.assets_filtered)
-
             self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
+
+        if asset_total == 0:
+            self.noSearchResultsPage.show()
+            self.assets_view.hide()
+        else:
+            self.assets_view.show()
+            self.noSearchResultsPage.hide()
         page_count = math.ceil(asset_total / PAGE_LIMIT) or 1
         self.pageSpinBox.setSuffix('/' + str(page_count))
         self.pageSpinBox.setMaximum(page_count)

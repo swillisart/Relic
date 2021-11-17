@@ -36,6 +36,33 @@ The remaining unprocessed files will be lost.
 Are you sure you want to cancel and close?
 """
 
+def uniqueNameIncrement(asset):
+    """Increments name value until it reaches a unique name.
+
+    Parameters
+    ----------
+    asset : BaseFields 
+        asset object
+
+    Returns
+    -------
+    BaseFields
+        asset object result with incremented unique name.
+    """
+    exists = asset.nameExists()
+    if exists:
+        if '_' in asset.name:
+            base, num = asset.name.split('_')
+            upnumber = int(num) + 1
+            asset.name =  f'{base}_{upnumber}'
+        else:
+            base = asset.name
+            asset.name = f'{base}_1'
+
+        return uniqueNameIncrement(asset)
+    else:
+        return asset
+
 class IngestForm(Ui_IngestForm, QDialog):
 
     beforeClose = Signal(QWidget)
@@ -149,7 +176,8 @@ class IngestForm(Ui_IngestForm, QDialog):
                 asset.name = item
                 exists = asset.nameExists()
                 if exists:
-                    asset.name = self.numberedName(item)
+                    asset.name = item
+                    asset = uniqueNameIncrement(asset)
                     self.existingNamesList.addItem(asset.name, exists)
                     asset.type = 5 # Variant
                     primary_asset = asset_constructor(name=item, id=exists)
@@ -157,7 +185,8 @@ class IngestForm(Ui_IngestForm, QDialog):
                     link_primary = True
                     reverse_link = False
                 elif total > 1:
-                    asset.name = self.numberedName(item)
+                    asset.name = item
+                    asset = uniqueNameIncrement(asset)
                     primary_asset = asset_constructor(
                         name=item,
                         category=category_id,
@@ -190,9 +219,8 @@ class IngestForm(Ui_IngestForm, QDialog):
                 temp_filename = 'unsorted' + str(asset.id)
             else:
                 temp_filename = asset.name
-            exists = asset.nameExists()
-            if exists:
-                asset.name = '{}_{}'.format(asset.name, num + 1)
+
+            asset = uniqueNameIncrement(asset)
 
             asset.dependencies = 0
             asset.id = None # IMPORTANT clears the id for clean asset creation
@@ -245,15 +273,6 @@ class IngestForm(Ui_IngestForm, QDialog):
             else:
                 primary_asset.dependencies = total or 1
             primary_asset.update()
-
-    @staticmethod
-    def numberedName(item):
-        if '_' in item:
-            name, num = item.split('_')
-            upnumber = int(num) + 1
-            return f'{name}_{upnumber}'
-        else:
-            return f'{item}_1'
 
     @property
     def selectedSubcategory(self):

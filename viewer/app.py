@@ -3,8 +3,10 @@ import ctypes
 import os
 import sys
 import time
+import json
 from functools import partial
 
+# -- Third-party --
 import numpy as np
 from PySide2.QtCore import *
 from PySide2.QtGui import *
@@ -15,9 +17,10 @@ from qtshared2.utils import loadStyleFromFile
 from qtshared2.svg import rasterizeSVG
 from qtshared2.widgets import (CompactTitleBar, HoverTintButton,
                               InteractiveSpinBox)
-# -- Third-party --
+# -- First-Party -- 
 from sequencePath import sequencePath as Path
 from strand2.server import StrandServer
+import relic_base
 
 # -- Module --
 import resources_rc
@@ -27,7 +30,7 @@ from viewer.timeline import ClipA, Graph, timelineGLView
 from viewer.ui import playerWidget
 from viewer.ui.widgets import PaintDockWidget
 from viewer.viewport import Viewport
-from viewer.config import PEAK_PREFS
+from viewer import config
 
 # Interaction modes
 VIEW = 0
@@ -49,11 +52,11 @@ class ViewerTitleBar(CompactTitleBar):
         self.gamma_control = InteractiveSpinBox(
             self, minimum=0.1, maximum=10000, decimals=3, default=1.0, speed=0.01)
 
-        title_label = QLabel('Viewer')
         # Buttons
         icon_size = QSize(16, 16)
         exposure_icon = rasterizeSVG(':/resources/aperture.svg', icon_size).toImage()
-        gamma_icon = rasterizeSVG(':/resources/gamma.svg', icon_size).toImage()
+        gamma_icon = QImage(':/resources/gammaCurve.png').scaled(
+            icon_size, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
         ocio_icon = rasterizeSVG(':/resources/ocio.svg', icon_size).toImage()
         app_icon = rasterizeSVG(':/resources/icons/peak.svg', icon_size).toImage()
         self.icon_button = HoverTintButton(app_icon, size=icon_size)
@@ -64,22 +67,39 @@ class ViewerTitleBar(CompactTitleBar):
         self.color_views = QComboBox(self)
         self.exposure_toggle.clicked.connect(self.resetExposure)
         self.gamma_toggle.clicked.connect(self.resetGamma)
+        self.zoom_ratios = QComboBox(self)
+        for item in config.ZOOM_RATIOS:
+            self.zoom_ratios.addItem(f'{item} %', item)
+        self.zoom_ratios.setSizePolicy(
+            QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
+        self.zoom_ratios.setFixedWidth(18)
 
         self.left_layout.addWidget(self.icon_button)
-        self.left_layout.addWidget(title_label)
         self.center_layout.addWidget(self.exposure_toggle)
         self.center_layout.addWidget(self.exposure_control)
         self.center_layout.addWidget(self.gamma_toggle)
         self.center_layout.addWidget(self.gamma_control)
         self.center_layout.addWidget(self.ocio_toggle)
         self.center_layout.addWidget(self.color_views)
+        self.center_layout.addWidget(self.zoom_ratios)
+
+        self.menubar = QMenuBar()
+        self.left_layout.addWidget(self.menubar)
+        self.menuFile = self.menubar.addMenu('File')
+        #self.menuFile.setTearOffEnabled(True)
+
+        for label in config.FILE_ACTIONS:
+            action = QAction(label, self)
+            # set class variable -> self.exitAction
+            setattr(self, label.lower()+'Action', action) 
+            self.menuFile.addAction(action)
 
     def resetGamma(self):
         value = self.gamma_control.value()
         if value == 1.0:
-            value = float(PEAK_PREFS.gamma)
+            value = float(config.PEAK_PREFS.gamma)
         else:
-            PEAK_PREFS.gamma = value
+            config.PEAK_PREFS.gamma = value
             value = 1.0
 
         self.gamma_control.setValue(value)
@@ -87,9 +107,9 @@ class ViewerTitleBar(CompactTitleBar):
     def resetExposure(self):
         value = self.exposure_control.value()
         if value == 0.0:
-            value = float(PEAK_PREFS.exposure)
+            value = float(config.PEAK_PREFS.exposure)
         else:
-            PEAK_PREFS.exposure = value
+            config.PEAK_PREFS.exposure = value
             value = 0.0
 
         self.exposure_control.setValue(value)
@@ -134,8 +154,13 @@ class PlayerAppWindow(QMainWindow):
         self.title_bar.gamma_control.valueChanged.connect(self.viewport.setGamma)
         self.title_bar.exposure_control.valueChanged.connect(self.viewport.setExposure)
         self.title_bar.color_views.currentIndexChanged.connect(self.viewport.setColorspace)
+        zoom_callback = lambda x: self.viewport.setZoom(config.ZOOM_RATIOS[x])
+        self.title_bar.zoom_ratios.currentIndexChanged.connect(zoom_callback)
         self.viewport.colorConfigChanged.connect(self.title_bar.color_views.addItems)
         self.viewport.finishAnnotation.connect(self.saveAnnotation)
+        self.viewport.zoomChanged.connect(self.setZoomValue)
+        self.title_bar.exitAction.triggered.connect(self.close)
+        self.title_bar.newAction.triggered.connect(self.newSession)
 
         # -- Shortcuts --
         channel_call = self.viewport.setColorChannel
@@ -161,15 +186,40 @@ class PlayerAppWindow(QMainWindow):
         #self.loadFile('E:/OneDrive/Documents/Scripts/standalone_apps/peak/tests/SteinsGateChickenTenders.mp4', reset=False)
         #self.loadFile("P:\Photos\ingesttest_data\DJI00067\DJI00067.mp4", reset=False)
 
+    @Slot()
+    def setZoomValue(self, percent):
+        zoom_widget = self.title_bar.zoom_ratios
+        zoom_widget.blockSignals(True)
+        zoom_widget.setCurrentIndex(0)
+        zoom_widget.blockSignals(False)
+        zoom_widget.setItemData(0, f'{percent} %', Qt.DisplayRole)
+        zoom_widget.setItemData(0, percent)
+
+    @Slot()
+    def newSession(self):
+        self.viewport.makeCurrent()
+        self.viewport.image_plane = None
+        self.timeline.current_clip.geometry.clear()
+        self.timeline.makeCurrent()
+        self.timeline.graph.clear()
+        self.timeline.reset(ClipA())
+        self.timeline.frameGeometry()
+        #self.loadFrames(offset, clip, self.timeline.graph)
+
     def setShorctutMode(self, mode):
         for index in SHORTCUTS:
             is_mode = mode == index
             for shortcut in SHORTCUTS[index]:
                 shortcut.setEnabled(is_mode)
 
+    def closePaint(self):
+        paint_mode = self.viewport.togglePaintContext(save=False)
+        self.paint_dock.hide()
+        self.setShorctutMode(PAINT) if paint_mode else self.setShorctutMode(VIEW)
+
     @Slot()
     def paintContext(self):
-        paint_mode = self.viewport.togglePaintContext()
+        paint_mode = self.viewport.togglePaintContext(save=True)
         self.paint_dock.setVisible(paint_mode)
         self.setShorctutMode(PAINT) if paint_mode else self.setShorctutMode(VIEW)
 
@@ -231,6 +281,8 @@ class PlayerAppWindow(QMainWindow):
         dock = PaintDockWidget()
         dock.colorChanged.connect(self.viewport.paint_engine.brush.setColor)
         dock.toolChanged.connect(self.viewport.setActiveTool)
+        #paint_no_save = partial(self.paintContext, False)
+        dock.onClosed.connect(self.closePaint)
         dock.saveButton.clicked.connect(self.paintContext)
         dock.clearButton.clicked.connect(self.clearAnnotation)
         dock.shapeTypeCombobox.currentIndexChanged.connect(self.viewport.setShapeType)
@@ -244,6 +296,7 @@ class PlayerAppWindow(QMainWindow):
         empty_widget.setFrameShadow(QFrame.Raised)
         empty_widget.setFrameShape(QFrame.HLine)
         empty_widget.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        dock.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
         empty_widget.setFixedHeight(1)
         dock.setWidget(empty_widget)
         dock.layout().setContentsMargins(0,0,0,0)
@@ -324,6 +377,7 @@ class PlayerAppWindow(QMainWindow):
         elif global_diff >= -50:
             gframe = frame + abs(global_diff)
             self.thread.load(gframe, clip, graph)
+        self.viewport.update()
 
     def notInCache(self, frame):
         cached_frames = self.cache.keys()
@@ -371,11 +425,20 @@ class PlayerAppWindow(QMainWindow):
 
     def dropEvent(self, event):
         self.viewport.makeCurrent()
-        if event.mimeData().hasUrls:
-            event.setDropAction(Qt.CopyAction)
-            event.accept()
-            for url in event.mimeData().urls():
-                self.loadFile(url.toLocalFile(), reset=False)
+        data = event.mimeData()
+        if data.hasUrls:
+            if data.hasFormat('application/x-relic'):
+                assets = data.text()
+                for key, values in json.loads(assets).items():
+                    constructor = relic_base.asset_classes.getCategoryConstructor(key)
+                    for fields in values:
+                        asset = constructor(**fields)
+                        self.loadFile(asset.network_path, reset=False)
+            else:
+                event.setDropAction(Qt.CopyAction)
+                event.accept()
+                for url in data.urls():
+                    self.loadFile(url.toLocalFile(), reset=False)
         else:
             event.ignore()
 
@@ -448,7 +511,7 @@ def main(args):
     # C Python Windowing
     ctypes.windll.kernel32.SetConsoleTitleW("Peak")
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.peak")
-    app.processEvents()
+    app.setEffectEnabled(Qt.UI_AnimateCombo, False)
     window = PlayerAppWindow()
     window.setWindowIcon(QIcon(':resources/icons/peak.svg'))
     loadStyleFromFile(window, ':style.qss')

@@ -308,7 +308,7 @@ def setNodeAssetInfo(asset):
     counts all the nodes in current graph
     """
 
-    nuke_loc = alPath(nuke.env['ExecutablePath'])
+    nuke_loc = Path(nuke.env['ExecutablePath'])
     count = 0
 
     for node in nuke.allNodes(recurseGroups=True):

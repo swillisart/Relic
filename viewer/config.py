@@ -12,3 +12,6 @@ class Preferences(AppPreferences):
     }
 
 PEAK_PREFS = Preferences('peak')
+
+FILE_ACTIONS = ['New', 'Exit'] # TODO: 'Open', 'Save',
+ZOOM_RATIOS = ['', 25, 50, 100, 150, 200] # percent

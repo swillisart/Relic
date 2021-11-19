@@ -34,7 +34,7 @@
     <file>resources/splashscreen.png</file>
     <file>resources/LucidaTypewriterRegular.ttf</file>
     <file>resources/timeline_node.svg</file>
-    <file>resources/gamma.svg</file>
+    <file>resources/gammaCurve.png</file>
     <file>resources/aperture.svg</file>
     <file>resources/ocio.svg</file>
     <file>resources/shaders/vertex_colors.vs</file>

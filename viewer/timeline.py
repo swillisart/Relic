@@ -341,6 +341,9 @@ class Graph(object):
     def __init__(self, shader):
         self.nodes = ClipNodes(shader)
         self.hover = ClipNodes(shader)
+        self.clear()
+
+    def clear(self):
         self.clips = [[]] # Each list is a sequence
         self.sequence_num = 0
         self.selection = None
@@ -662,10 +665,9 @@ class timelineGLView(InteractiveGLView):
             else:
                 self.selectNodes()
 
-
     def withinScrubArea(self):
         top = self.camera.top
-        bot = self.scrub_area.vertices[0, 1]
+        bot = self.camera.top - (self.font_scale * 25 * 2)
         y = self.w_pos.y()
         if y <= top and y >= bot:
             return True

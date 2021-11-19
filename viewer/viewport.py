@@ -791,6 +791,7 @@ class ImagePlane(object):
 class Viewport(InteractiveGLView):
 
     colorConfigChanged = Signal(list)
+    zoomChanged = Signal(int)
     finishAnnotation = Signal(QImage)
 
     def __init__(self, *args, **kwargs):
@@ -892,6 +893,16 @@ class Viewport(InteractiveGLView):
         super(Viewport, self).resizeGL(width, height)
         self.framebuffer.build(width, height)
 
+    def drawViewport(self, orbit=False, scale=False, pan2d=False):
+        super(Viewport, self).drawViewport(orbit, scale, pan2d)
+        if scale:
+            percent = int(100 / self.zoom2d)
+            self.zoomChanged.emit(percent)
+
+    def zoom(self, delta):
+        super(Viewport, self).zoom(delta)
+        self.zoomChanged.emit(int(100 / self.zoom2d))
+
     def setColorConfig(self, file_path=None):
         if not file_path:
             backup_config = '{}/config.ocio'.format(os.path.dirname(__file__))
@@ -978,6 +989,7 @@ class Viewport(InteractiveGLView):
                 self.zoom2d = tw
             else:
                 self.zoom2d = th
+            self.zoomChanged.emit(int(100 / self.zoom2d))
         #else:
         #    if self.mesh_container:
         #        if self.mesh_container.name == 'latlong':
@@ -989,6 +1001,17 @@ class Viewport(InteractiveGLView):
         #                self.mesh_container.min, self.mesh_container.max
         #            )
         self.drawViewport()
+
+    @useGL
+    def setZoom(self, value):
+        self.zoom2d = 100 / value
+        self.drawViewport()
+        # Do not use fraction values for camera zoom level. 1:1 pixels
+        self.camera.left = int(self.camera.left)
+        self.camera.right = int(self.camera.right)
+        self.camera.bottom = int(self.camera.bottom)
+        self.camera.top = int(self.camera.top)
+        self.camera.updatePerspective()
 
     def paintPath(self):
         path = QPainterPath()
@@ -1096,7 +1119,7 @@ class Viewport(InteractiveGLView):
         self.color_sampler.setRGB(lut_pixel, raw_pixel, 'Look')
         self.color_sampler.move(self.c_pos.x() + 18, self.c_pos.y() + 18)
 
-    def togglePaintContext(self):
+    def togglePaintContext(self, save=True):
         self.paint_engine.enabled = not self.paint_engine.enabled
         if self.paint_engine.enabled:
             if self.paint_engine.brush.radius >= 20:
@@ -1108,7 +1131,8 @@ class Viewport(InteractiveGLView):
                 annotated_comp = self.compQImages(annotated_shapes, self.image_plane.paint_canvas)
                 self.paint_engine.shapes.primitives.clear()
                 self.paint_engine.strokes.clear()
-                self.finishAnnotation.emit(annotated_comp)
+                if save:
+                    self.finishAnnotation.emit(annotated_comp)
                 self.makeCurrent()
                 self.image_plane.resetAnnotation()
 
@@ -1136,7 +1160,6 @@ class Viewport(InteractiveGLView):
         super(Viewport, self).mousePressEvent(event)
         self.c_firstpos = event.pos()
         self.w_firstpos = glm.vec2(self.w_pos.x(), self.w_pos.y())
-
 
     def mouseDoubleClickEvent(self, event):
         mods = event.modifiers()

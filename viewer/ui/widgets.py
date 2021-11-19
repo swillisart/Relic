@@ -111,6 +111,7 @@ class PaintDockWidget(Ui_PaintDock, QDockWidget):
 
 	colorChanged = Signal(QColor)
 	toolChanged = Signal(int)
+	onClosed = Signal()
 	Brush = 0
 	Shape = 1
 	Text = 2
@@ -130,6 +131,11 @@ class PaintDockWidget(Ui_PaintDock, QDockWidget):
 		self.brushToolButton.toggled.connect(self.setBrushMode)
 		self.shapeToolButton.toggled.connect(self.setShapeMode)
 		self.textToolButton.toggled.connect(self.setTextMode)
+		self.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable|QDockWidget.DockWidgetClosable)
+
+	def closeEvent(self, event):
+		self.onClosed.emit()
+		event.ignore()
 
 	def setBrushMode(self, value):
 		self.disableSignals()

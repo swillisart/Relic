@@ -237,8 +237,7 @@ class Camera(object):
 		# switches based on if we are in ortho mode
 		if self.ortho:
 			self.perspective = glm.ortho(
-				self.left, self.right, self.bottom, self.top, self._near, self._far
-			)
+				self.left, self.right, self.bottom, self.top, self._near, self._far)
 		else:
 			self.perspective = glm.perspective(
 				self._fov, self._aspect, self._near, self._far

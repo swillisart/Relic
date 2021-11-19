@@ -194,6 +194,7 @@ class PlayerAppWindow(QMainWindow):
         zoom_widget.blockSignals(False)
         zoom_widget.setItemData(0, f'{percent} %', Qt.DisplayRole)
         zoom_widget.setItemData(0, percent)
+        config.ZOOM_RATIOS[0] = percent
 
     @Slot()
     def newSession(self):
@@ -236,7 +237,8 @@ class PlayerAppWindow(QMainWindow):
                 clip.annotations.pop(i)
         folder = clip.annotation_folder
         remove_path = clip.annotated(frame)
-        os.remove(str(remove_path))
+        if remove_path.exists:
+            os.remove(str(remove_path))
         self.timeline.makeCurrent()
         self.timeline.updateNodeGlyphs()
 

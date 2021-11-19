@@ -90,20 +90,20 @@ class colorSampler(QDialog):
 
 saturation_style = """QSlider::groove:horizontal {{
 	background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgb(85, 85, 85), stop:1 rgb({}, {}, {}));
-    padding-top: -6px;
-    padding-bottom: -6px;
-    margin-top: 5px;
-    margin-bottom: 5px;
+	padding-top: -6px;
+	padding-bottom: -6px;
+	margin-top: 5px;
+	margin-bottom: 5px;
 }}
 QSlider::handle:horizontal {{
-    background: rgb(0, 0, 0);
-    border: 2px solid rgb(225, 225, 225);
-    width: 2px;
+	background: rgb(0, 0, 0);
+	border: 2px solid rgb(225, 225, 225);
+	width: 2px;
 	border-radius: 3px;
-    padding-top: -6px;
-    padding-bottom: -6px;
-    margin-top: 5px;
-    margin-bottom: 5px;
+	padding-top: -6px;
+	padding-bottom: -6px;
+	margin-top: 5px;
+	margin-bottom: 5px;
 }}"""
 
 
@@ -134,8 +134,16 @@ class PaintDockWidget(Ui_PaintDock, QDockWidget):
 		self.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable|QDockWidget.DockWidgetClosable)
 
 	def closeEvent(self, event):
-		self.onClosed.emit()
 		event.ignore()
+		msg = 'Closing will lose any unsaved annotations.'
+		message = QMessageBox(QMessageBox.Warning, 'Are you sure?', msg,
+					QMessageBox.NoButton, self)
+		message.addButton('Yes', QMessageBox.AcceptRole)
+		message.addButton('Cancel', QMessageBox.RejectRole)
+
+		if message.exec_() == QMessageBox.RejectRole:
+			return
+		self.onClosed.emit()
 
 	def setBrushMode(self, value):
 		self.disableSignals()

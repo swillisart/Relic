@@ -14,11 +14,12 @@ class colorSampler(QDialog):
 		self.setGeometry(QRect(0, 0, 170, 52))
 		self.setWindowFlags(Qt.FramelessWindowHint)
 		self.setAttribute(Qt.WA_StaticContents)
+		self.setAutoFillBackground(True)
 		self.lut_vec3data = self.raw_vec3data = (0, 0, 0)
 		self.view = None
 		self.font = QFont("Consolas", 8)
 		self.setStyleSheet(
-			"QDialog {font-weight: bold; border: 1px solid rgb(66, 118, 150)}"
+			"QDialog {font-weight: bold; border: 1px solid rgb(66, 118, 150); background-color: rgb(68,68,68)}"
 		)
 		self.hide()
 

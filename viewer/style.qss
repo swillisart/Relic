@@ -1,10 +1,14 @@
-
-QWidget {
+QFrame {
 	background-color: rgb(68, 68, 68);
     color: rgb(200, 200, 200);
     selection-background-color: rgb(126, 126, 126);
     selection-color: rgb(250, 250, 250);
     outline: 0;
+}
+QMainWindow {
+	background-color: rgb(68, 68, 68);
+    color: rgb(200, 200, 200);
+    selection-color: rgb(250, 250, 250);
 }
 QWidget:item {
     background-color: transparent;
@@ -109,10 +113,12 @@ QScrollArea {
 
 /* QMenu ------------------------------------------------------------------ */
 
-QMenu {
+QMenu,
+QMenuBar {
     border: 1px solid rgb(68, 68, 68);
-    background-color: rgb(43, 43, 43);
     padding: 1px;
+    selection-color: rgb(250, 250, 250);
+    color: rgb(200, 200, 200);
 }
 QMenu::separator {
     height: 1px;
@@ -127,6 +133,7 @@ QMenu::item {
     padding-left: 16px;
     padding-right: 16px;
     background-color: rgb(68, 68, 68);
+    color: rgb(200, 200, 200);
 }
 QMenu::indicator {
     padding: 6px;
@@ -302,6 +309,8 @@ QComboBox {
     padding-left: 4px;
     padding-right: 4px;
     min-width: 75px;
+    color: rgb(200, 200, 200);
+
 }
 QComboBox::drop-down {
     subcontrol-origin: padding;
@@ -497,12 +506,10 @@ QTabBar::tab:selected {
     border-top: 1px solid rgb(43, 43, 43);
 }
 
-QDockWidget::title {
-    text-align: center;
+QStatusBar {
+	background-color: rgb(68, 68, 68);
+    color: rgb(200, 200, 200);
+    border-top: 1px solid rgb(43, 43, 43);
+    margin-top: 2px;
     padding-top: 2px;
-    padding-bottom: 4px;
-}
-QDockWidget {
-    border: 2px solid rgb(68, 68, 68);
-    background-color: rgb(108, 108, 108);
 }

@@ -67,7 +67,8 @@ class ClipA(object):
     ]
 
     def __init__(self, file_path=None, timeline_in=0):
-
+        self.first = 0
+        self.last = 0
         if file_path:
             # Set the framerange and geometry (first, last)
             if file_path.sequence_path:
@@ -75,7 +76,6 @@ class ClipA(object):
                 self.framerate = 24
                 self.type = ClipA.IMAGE_SEQUENCE
             elif file_path.ext in io.MOVIE:
-                self.loadMovieFile(file_path)
                 self.type = ClipA.MOVIE
             elif file_path.ext in io.GEOMETRY:
                 self.loadGeometricFile(file_path)
@@ -90,14 +90,12 @@ class ClipA(object):
             self.label = file_path.name
             self.getImageAnnotations()
 
-        else: # Load from file
-            self.first = -1
-            self.last = -1
-
-
         # Set and update the timeline offset (start frame)
         self.timeline_in = timeline_in
-        self.timeline_out = timeline_in + (self.last - self.first)
+        self.setTimelineOut()
+
+    def setTimelineOut(self):
+        self.timeline_out = self.timeline_in + (self.last - self.first)
 
     def mapToGlobalFrame(self, frame):
         timeline_frame = (frame - self.first) + self.timeline_in 
@@ -155,8 +153,7 @@ class ClipA(object):
             pixels=np.zeros(shape=(height, width, channels), dtype=np.float16)
         )
 
-    def loadMovieFile(self, file_path):
-        duration, resolution, framerate = io.image.getMovInfo(file_path)
+    def setMovieData(self, duration, resolution, framerate):
         calc_duration = (float(duration) * float(framerate))
         w, h = resolution.split('x')
         width = int(w)
@@ -168,6 +165,7 @@ class ClipA(object):
         self.geometry = ImagePlane(width, height, aspect=aspect, order='bgr',
             pixels=np.zeros(shape=(height, width, 3), dtype=np.uint8)
         )
+        self.setTimelineOut()
 
     @property
     def annotation_folder(self):
@@ -198,7 +196,8 @@ class timelineControl(QTimeLine):
         super(timelineControl, self).__init__(*args, **kwargs)
         self.end = 864000
         self.setFrameRange(0, self.end)
-        self.setFramerate(25)
+        self.fps = 24
+        self.setFramerate()
         self.setLoopCount(0)
         self.setCurveShape(QTimeLine.LinearCurve)
         self.setUpdateInterval(0.25)
@@ -216,9 +215,16 @@ class timelineControl(QTimeLine):
         return (1000 / self.fps)
 
     def setFramerate(self, rate=25):
+        old_rate = self.fps
         self.fps = rate
-        miliseconds_duration = self.end * (1000 / rate)# millisec conversion
+        miliseconds_duration = self.end * (1000 / rate) # millisec conversion
+        duration_div = miliseconds_duration / (self.end * (1000 / old_rate))
         self.setDuration(miliseconds_duration)
+        # Block update signals to prevent recursive loop.
+        self.blockSignals(True)
+        new = (self.frame + 1) * (1000 / (rate))
+        self.setCurrentTime( new * duration_div)
+        self.blockSignals(False)
 
     def play(self):
         state = self.state()
@@ -242,12 +248,10 @@ class timelineControl(QTimeLine):
         self.setCurrentTime(new_time)
 
     def oneFrameForward(self):
-        current_time = ((self.frame + 1) * self.millisec_fps) + self.fps
-        self.setCurrentTime(current_time)
+        self.setCurrentTime(int(self.currentTime() + self.millisec_fps))
 
     def oneFrameBackward(self):
-        new_time = (self.frame * self.millisec_fps) - self.fps
-        self.setCurrentTime(new_time)
+        self.setCurrentTime(int(self.currentTime() - self.millisec_fps))
 
     def setFrame(self, frame):
         new_time = (frame * self.millisec_fps)
@@ -304,6 +308,19 @@ class ClipNodes(LineRect):
         self.vertices = np.append(vertices, self.vertices, axis=0)
         self.buildFromVertices(self.vertices)
         self.count += 1
+
+    def updateDuration(self, clip, duration):
+        start = (clip.index + 1) * 4
+        end = start + 4
+        #print(self.vertices[::-1][start:end 0])
+        self.vertices[::-1][start:end][0, 0] += duration
+        self.vertices[::-1][start:end][1, 0] += duration
+        #self.vertices[::-1][start:end][-1, :1] += duration
+
+        with self.vbo:
+            self.vbo.implementation.glBufferSubData(
+                self.vbo.target, 0, self.vertices
+            )
 
     def move(self, clip, movement):
         start = (clip.index + 1) * 4
@@ -366,7 +383,7 @@ class Graph(object):
 
 class timelineGLView(InteractiveGLView):
 
-    frameMapping = Signal(int, ClipA, Graph)
+    frameMapping = Signal(int, ClipA)
 
     annotatedLoad = Signal(int, ClipA)
 
@@ -422,10 +439,11 @@ class timelineGLView(InteractiveGLView):
             for sequence, clip in self.graph.iterateSequences():
                 if clip.mapToLocalFrame(frame):
                     # cache for re-lookup without looping over sequences every time
+                    self.controller.setFramerate(clip.framerate)
                     self.current_clip = clip
                     break
 
-        self.frameMapping.emit(frame, self.current_clip, self.graph)
+        self.frameMapping.emit(frame, self.current_clip)
 
         self.makeCurrent()
         self.current_frame = frame
@@ -767,7 +785,7 @@ class timelineGLView(InteractiveGLView):
             clip_center = clip.timeline_in + (clip.duration / 2)
             clip_duration = clip.duration
 
-        self.zoom2d = (clip_duration + 5) / self.width()
+        self.zoom2d = (clip_duration + 20) / self.width()
         self.pan2d = glm.vec2(-clip_center, 0)
         self.origin_pos = self.pan2d
         self.drawViewport()

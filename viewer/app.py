@@ -49,8 +49,11 @@ class ViewerTitleBar(CompactTitleBar):
         self.makeWindowButtons()
         self.exposure_control = InteractiveSpinBox(
             self, minimum=-10000, maximum=10000, decimals=3, default=0.0, speed=0.1)
+        self.exposure_control.setStatusTip('Exposure Control Value')
+
         self.gamma_control = InteractiveSpinBox(
             self, minimum=0.1, maximum=10000, decimals=3, default=1.0, speed=0.01)
+        self.gamma_control.setStatusTip('Exposure Control Value')
 
         # Buttons
         icon_size = QSize(16, 16)
@@ -61,17 +64,21 @@ class ViewerTitleBar(CompactTitleBar):
         app_icon = rasterizeSVG(':/resources/icons/peak.svg', icon_size).toImage()
         self.icon_button = HoverTintButton(app_icon, size=icon_size)
         self.exposure_toggle = HoverTintButton(exposure_icon, size=icon_size)
+        self.exposure_toggle.setStatusTip('Exposure. (Toggles exposure from current value to 0.0)')
         self.gamma_toggle = HoverTintButton(gamma_icon, size=icon_size)
+        self.gamma_toggle.setStatusTip('Gamma (Toggles gamma to and from 1.0)')
         self.ocio_toggle = HoverTintButton(ocio_icon, size=icon_size)
 
         self.color_views = QComboBox(self)
+        self.color_views.setStatusTip('OCIO Colorspace (View Transform)')
         self.exposure_toggle.clicked.connect(self.resetExposure)
         self.gamma_toggle.clicked.connect(self.resetGamma)
         self.zoom_ratios = QComboBox(self)
+        self.zoom_ratios.setStatusTip('Zoom level (Percentage)')
         for item in config.ZOOM_RATIOS:
             self.zoom_ratios.addItem(f'{item} %', item)
-        self.zoom_ratios.setSizePolicy(
-            QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
+        #self.zoom_ratios.setSizePolicy(
+        #    QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
         self.zoom_ratios.setFixedWidth(18)
 
         self.left_layout.addWidget(self.icon_button)
@@ -83,7 +90,9 @@ class ViewerTitleBar(CompactTitleBar):
         self.center_layout.addWidget(self.color_views)
         self.center_layout.addWidget(self.zoom_ratios)
 
-        self.menubar = QMenuBar()
+        self.menubar = QMenuBar(self)
+        self.menubar.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
+
         self.left_layout.addWidget(self.menubar)
         self.menuFile = self.menubar.addMenu('File')
         #self.menuFile.setTearOffEnabled(True)
@@ -119,9 +128,10 @@ class PlayerAppWindow(QMainWindow):
     def __init__(self, parent=None):
         super(PlayerAppWindow, self).__init__(parent)
         self.cache = {}
-        self.title_bar = ViewerTitleBar(self)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         self.setAcceptDrops(True)
+
+        # widgets
 
         # System Tray 
         app_icon = QIcon(':/resources/icons/peak.svg')
@@ -134,34 +144,53 @@ class PlayerAppWindow(QMainWindow):
         close_action.triggered.connect(self.close)
         self.tray.setContextMenu(tray_menu)
 
-
         self.viewport = Viewport(self)
-        self.timeline = timelineGLView()
-        self.timeline.frameMapping.connect(self.loadFrames)
-        self.timeline.frameJump.connect(self.playbackToggle)
-        self.timeline.annotatedLoad.connect(self.viewAnnotated)
-        self.timeline.mouseInteracted.connect(self.refreshViewport)
         self.setCentralWidget(self.viewport)
+        self.title_bar = ViewerTitleBar(self)
+        self.timeline = timelineGLView(self)
+        self.timelineFrame = QFrame(self)
+        timeline_layout = QHBoxLayout()
+        timeline_layout.addWidget(self.timeline)
+        timeline_layout.setContentsMargins(4, 0, 4, 0)
+        timeline_layout.setSpacing(2)
+        self.timelineFrame.setLayout(timeline_layout)
+        self.player = playerWidget(self, self.viewport, self.timeline)
         self.createDocks()
 
+        # Status bar
+        self.statusbar = QStatusBar(self)
+        self.statusbar.setObjectName(u"statusbar")
+        self.setStatusBar(self.statusbar)
+
+        # Layouts
         self.thread = io.workers.loaderThread()
         self.qt_thread = io.workers.QuicktimeThread(self)
+        self.meta_thread = io.workers.ExifWorker(self)
+        self.meta_thread.metaLoaded.connect(self.movieDataRecieved)
+        self.meta_thread.start()
+
         self.qt_thread.loadedImage.connect(self.loadFrameData)
         self.thread.loadedImage.connect(self.updateCache)
         self.worker = None
 
         # -- Signals / Slots --
+        zoom_callback = lambda x: self.viewport.setZoom(config.ZOOM_RATIOS[x])
+        self.title_bar.zoom_ratios.currentIndexChanged.connect(zoom_callback)
         self.title_bar.gamma_control.valueChanged.connect(self.viewport.setGamma)
         self.title_bar.exposure_control.valueChanged.connect(self.viewport.setExposure)
         self.title_bar.color_views.currentIndexChanged.connect(self.viewport.setColorspace)
-        zoom_callback = lambda x: self.viewport.setZoom(config.ZOOM_RATIOS[x])
-        self.title_bar.zoom_ratios.currentIndexChanged.connect(zoom_callback)
-        self.viewport.colorConfigChanged.connect(self.title_bar.color_views.addItems)
-        self.viewport.finishAnnotation.connect(self.saveAnnotation)
-        self.viewport.zoomChanged.connect(self.setZoomValue)
         self.title_bar.exitAction.triggered.connect(self.close)
         self.title_bar.newAction.triggered.connect(self.newSession)
 
+        self.viewport.colorConfigChanged.connect(self.title_bar.color_views.addItems)
+        self.viewport.finishAnnotation.connect(self.saveAnnotation)
+        self.viewport.zoomChanged.connect(self.setZoomValue)
+
+        self.timeline.frameMapping.connect(self.loadFrames)
+        self.timeline.frameJump.connect(self.playbackToggle)
+        self.timeline.annotatedLoad.connect(self.viewAnnotated)
+        self.timeline.mouseInteracted.connect(self.refreshViewport)
+    
         # -- Shortcuts --
         channel_call = self.viewport.setColorChannel
         shuffle_red = partial(channel_call, 'r')
@@ -186,6 +215,22 @@ class PlayerAppWindow(QMainWindow):
         #self.loadFile('E:/OneDrive/Documents/Scripts/standalone_apps/peak/tests/SteinsGateChickenTenders.mp4', reset=False)
         #self.loadFile("P:\Photos\ingesttest_data\DJI00067\DJI00067.mp4", reset=False)
 
+    def movieDataRecieved(self, clip, data):
+        self.viewport.makeCurrent()
+        clip.setMovieData(
+            data.get('Duration'),
+            data.get('ImageSize'),
+            data.get('VideoFrameRate')
+        )
+        self.viewport.update()
+        self.timeline.makeCurrent()
+        self.timeline.graph.appendClip(clip, 0)
+        if self.timeline.current_frame == clip.timeline_in:
+            self.loadFrames(self.timeline.current_frame, clip)
+            self.timeline.current_clip = clip
+            self.timeline.frameGeometry()
+        self.timeline.update()
+
     @Slot()
     def setZoomValue(self, percent):
         zoom_widget = self.title_bar.zoom_ratios
@@ -200,12 +245,12 @@ class PlayerAppWindow(QMainWindow):
     def newSession(self):
         self.viewport.makeCurrent()
         self.viewport.image_plane = None
-        self.timeline.current_clip.geometry.clear()
+        if hasattr(self.timeline.current_clip, 'geometry'):
+            self.timeline.current_clip.geometry.clear()
         self.timeline.makeCurrent()
         self.timeline.graph.clear()
         self.timeline.reset(ClipA())
         self.timeline.frameGeometry()
-        #self.loadFrames(offset, clip, self.timeline.graph)
 
     def setShorctutMode(self, mode):
         for index in SHORTCUTS:
@@ -283,7 +328,6 @@ class PlayerAppWindow(QMainWindow):
         dock = PaintDockWidget()
         dock.colorChanged.connect(self.viewport.paint_engine.brush.setColor)
         dock.toolChanged.connect(self.viewport.setActiveTool)
-        #paint_no_save = partial(self.paintContext, False)
         dock.onClosed.connect(self.closePaint)
         dock.saveButton.clicked.connect(self.paintContext)
         dock.clearButton.clicked.connect(self.clearAnnotation)
@@ -312,11 +356,9 @@ class PlayerAppWindow(QMainWindow):
         dock = QDockWidget('Timeline')
         dock.setAllowedAreas(Qt.BottomDockWidgetArea)
         dock.setFeatures(dock.features() | QDockWidget.DockWidgetVerticalTitleBar)
-        self.player = playerWidget(self, self.viewport, self.timeline)
         dock.setTitleBarWidget(self.player)
-        dock.setWidget(self.timeline)
+        dock.setWidget(self.timelineFrame)
         self.player_dock = dock
-
         self.addDockWidget(Qt.BottomDockWidgetArea, dock)
 
 
@@ -332,7 +374,7 @@ class PlayerAppWindow(QMainWindow):
         self.viewport.makeCurrent()
 
     @Slot()
-    def loadFrames(self, frame, clip, graph):
+    def loadFrames(self, frame, clip):
         if not hasattr(clip, 'geometry'):
             return
 
@@ -346,7 +388,9 @@ class PlayerAppWindow(QMainWindow):
             if local_frame is False:
                 return
             is_next_frame = local_frame == (self.qt_thread.frame + 1)
-            if clip is not self.qt_thread.clip or not is_next_frame:
+            is_late = local_frame == (self.qt_thread.frame + 2)
+            if clip is not self.qt_thread.clip or not is_next_frame and not is_late:
+                self.timeline.controller.setFramerate(clip.framerate)
                 self.playbackToggle()
                 self.qt_thread.stop()
                 self.qt_thread.setupRead(clip, local_frame)
@@ -364,21 +408,20 @@ class PlayerAppWindow(QMainWindow):
             self.thread.pool.clear()
             while self.thread.pool.activeThreadCount() != 0:
                 QApplication.processEvents()
-                time.sleep(0.1)
+                time.sleep(0.05)
             self.cache = {}
 
-            self.thread.load(frame, clip, graph)
+            self.thread.load(frame, clip, self.timeline.graph)
             deferred_load = partial(self.loadFrame, frame)
             self.deferred_frame_load = QTimer.singleShot(600, deferred_load)
             return
 
         global_diff = frame - self.thread.frame
         if global_diff == frame:
-            self.thread.load(frame, clip, graph)
-        
+            self.thread.load(frame, clip, self.timeline.graph)
         elif global_diff >= -50:
             gframe = frame + abs(global_diff)
-            self.thread.load(gframe, clip, graph)
+            self.thread.load(gframe, clip, self.timeline.graph)
         self.viewport.update()
 
     def notInCache(self, frame):
@@ -467,11 +510,14 @@ class PlayerAppWindow(QMainWindow):
         self.viewport.makeCurrent()
         clip = ClipA(file_path, timeline_in=offset)
         self.timeline.makeCurrent()
-        self.timeline.graph.appendClip(clip, 0)
+        if clip.type == ClipA.MOVIE:
+            self.meta_thread.addToQueue(clip)
+        else:
+            self.timeline.graph.appendClip(clip, 0)
         if reset: #or self.timeline.graph.nodes.count == 1:
             self.timeline.reset(clip)
             self.timeline.frameGeometry()
-            self.loadFrames(offset, clip, self.timeline.graph)
+            self.loadFrames(offset, clip)
             self.viewport.frameGeometry()
         else:
             self.timeline.updateNodeGlyphs()

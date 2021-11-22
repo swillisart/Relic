@@ -623,6 +623,7 @@ class ImagePlane(object):
         self.no_annotation = True
 
     def build(self, pixels):
+        self.pixels = pixels
         x, y, z = self.shape
         self.elements = np.array(
             [
@@ -728,6 +729,7 @@ class ImagePlane(object):
             self.gl_format,#GL_HALF_FLOAT,
             pixels
         )
+        self.pixels = pixels
         glBindTexture(GL_TEXTURE_2D, 0)
 
     def updateAnnotation(self, pixels):
@@ -907,7 +909,6 @@ class Viewport(InteractiveGLView):
         if not file_path:
             backup_config = '{}/config.ocio'.format(os.path.dirname(__file__))
             file_path = os.getenv('ocio') or backup_config
-            print(file_path)
         self.color_config = ocio.Config().CreateFromFile(str(file_path))
         try:
             self.color_views = self.color_config.getViews('default')
@@ -979,10 +980,9 @@ class Viewport(InteractiveGLView):
 
     @useGL
     def frameGeometry(self):
-        if self.camera.ortho:
+        if self.camera.ortho and self.image_plane:
             self.pan2d = glm.vec2(0, 0)
             self.origin_pos = glm.vec2(0, 0)
-
             tw = self.image_plane.shape.x / self.width()
             th = self.image_plane.shape.y / self.height()
             if th < tw:

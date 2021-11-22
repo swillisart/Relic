@@ -1,7 +1,9 @@
+import subprocess, os, json
 from PySide2.QtCore import (
     Signal, QMutex, QMutexLocker, QPoint, QSize, Qt, QThread, QWaitCondition,
     QRunnable, QThreadPool, QObject
 )
+from collections import deque
 import numpy as np
 from . import image
 import time, random
@@ -21,9 +23,9 @@ class QuicktimeThread(QThread):
         self.index = 1
 
     def setupRead(self, clip, start):
-        self.clip = clip
-        self.cap = cv2.VideoCapture(str(clip.path)) #, cv2.CAP_INTEL_MFX)    
+        self.cap = cv2.VideoCapture(str(clip.path))
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, start)
+        self.clip = clip
         self.frame = start
         self.index = start
 
@@ -43,7 +45,7 @@ class QuicktimeThread(QThread):
             with QMutexLocker(self.mutex):
                 if self.stopped:
                     return
-                if self.index <= self.frame:
+                if self.index <= self.frame and self.cap:
                     ret, frame = self.cap.read()
                     if ret:
                         self.loadedImage.emit(frame)
@@ -142,3 +144,57 @@ class ImageLoader(PixelLoader):
         if isinstance(img_data, np.ndarray):
             self.signal.emit(self.frame, img_data)
             time.sleep(random.uniform(0.001, 0.125))
+
+
+class ExifWorker(QThread):
+
+    metaLoaded = Signal(object, dict)
+
+    def __init__(self, *args, **kwargs):
+        super(ExifWorker, self).__init__(*args, **kwargs)
+        self.mutex = QMutex()
+        self.stopped = False
+        self.proc = None
+        self.queue = deque()
+
+    def addToQueue(self, path):
+        self.queue.append(path)
+
+    def stop(self):
+        with QMutexLocker(self.mutex):
+            self.stopped = True
+        self.wait(10)
+
+    def start(self):
+        self.stopped = False
+        super(ExifWorker, self).start()
+
+    def run(self):
+        while True:
+            with QMutexLocker(self.mutex):
+                if self.stopped:
+                    return
+                if not self.queue:
+                    self.msleep(10)
+                    continue
+
+                if not self.proc:
+                    self.proc = subprocess.Popen(
+                        'exiftool -stay_open True -@ -', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                clip = self.queue.popleft()
+                cmd_text = ['-j', # JSON
+                    '-Duration#',
+                    '-ImageSize',
+                    '-VideoFrameRate',
+                    str(clip.path),
+                    '-execute\n']
+                self.proc.stdin.write(bytes('\n'.join(cmd_text), encoding='utf-8'))
+                self.proc.stdin.flush()
+                output = b''
+                while True:
+                    line = self.proc.stdout.readline()
+                    output += line
+                    if output.endswith(b'y}\r\n'):
+                        break
+                data = json.loads(output.decode('utf-8').replace('{ready}', ''))[0]
+                self.metaLoaded.emit(clip, data)

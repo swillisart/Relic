@@ -653,8 +653,10 @@ class durationWidget(baseSpinBox, UpdatableField):
         super(durationWidget, self).__init__(*args, **kwargs)
         self.setSuffix(' Sec')
 
-class framerateWidget(baseLabel):
-    pass
+class framerateWidget(baseSpinBox, UpdatableField):
+    def __init__(self, *args, **kwargs):
+        super(framerateWidget, self).__init__(*args, **kwargs)
+        self.setSuffix(' fps')
 
 class nodecountWidget(baseLabel):
     pass

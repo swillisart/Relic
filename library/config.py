@@ -13,7 +13,7 @@ NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL, IES, _2D_ELEMENT, _3D_
 # Valid Extensions in an exclusive list
 MOVIE_EXT = ['.mov', '.mxf', '.mp4', '.mkv']
 SHADER_EXT = ['.mtlx', '.osl', '.sbsar']
-RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3']
+RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3', '.nef']
 FILM_EXT = ['.r3d', '.arriraw']
 HDR_EXT = ['.exr', '.hdr']
 LDR_EXT = ['.jpg', '.png', '.tif', '.tga', '.jpeg']

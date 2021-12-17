@@ -67,7 +67,7 @@ class loaderThread(QThread):
         self.pool = QThreadPool.globalInstance()
         self.pool.setMaxThreadCount(3)
         self.frame = 0
-        self.chunk_size = 50
+        self.chunk_size = 48
 
     def stop(self):
         self.mutex.lock()
@@ -75,7 +75,7 @@ class loaderThread(QThread):
         self.abort = True
         self.condition.wakeOne()
         self.mutex.unlock()
-        self.wait(1000)
+        self.wait(500)
 
     def load(self, frame, clip, graph):
         locker = QMutexLocker(self.mutex)
@@ -143,7 +143,7 @@ class ImageLoader(PixelLoader):
                     break
         if isinstance(img_data, np.ndarray):
             self.signal.emit(self.frame, img_data)
-            time.sleep(random.uniform(0.001, 0.125))
+            time.sleep(random.uniform(0.001, 0.055))
 
 
 class ExifWorker(QThread):
@@ -163,6 +163,9 @@ class ExifWorker(QThread):
     def stop(self):
         with QMutexLocker(self.mutex):
             self.stopped = True
+            if self.proc: # Kill the exiftool child process
+                pid = self.proc.pid
+                subprocess.call(f'taskkill /F /T /PID {pid}')
         self.wait(10)
 
     def start(self):
@@ -180,7 +183,11 @@ class ExifWorker(QThread):
 
                 if not self.proc:
                     self.proc = subprocess.Popen(
-                        'exiftool -stay_open True -@ -', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                        'exiftool -stay_open True -@ -',
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
                 clip = self.queue.popleft()
                 cmd_text = ['-j', # JSON
                     '-Duration#',

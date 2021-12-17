@@ -11,7 +11,9 @@ def getImageResolution(image_in):
         return None
     spec = image_in.spec()
     aspect = spec.get_float_attribute("PixelAspectRatio")
-    return (spec.full_width, spec.full_height, spec.nchannels, aspect)
+    formats = spec.get_channelformats()
+    image_in.close()
+    return (spec.full_width, spec.full_height, spec.nchannels, aspect, str(formats[0]))
 
 
 def read_file(image_in, subimage=(0,3)):
@@ -54,20 +56,3 @@ def generate_blank(
     oiio.ImageBufAlgo.fill(b, value)
     image = b.get_pixels(pixel_format)
     return image
-
-
-def getMovInfo(fpath):
-    """
-    Gets Duration, Resolution and Framerate of supplied quicktime.
-
-    Returns
-    -------
-    list (duration, resolution, framerate)
-
-    EXAMPLE:
-        >>> getMovInfo('dev/test.mov')
-        >>> ['5.292', '912x899', '24']
-    """
-    cmd = 'exiftool -s3 -Duration# -ImageSize -VideoFrameRate "{}"'.format(fpath)
-    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW).decode("utf-8").split('\r\n')
-    return output[:3]

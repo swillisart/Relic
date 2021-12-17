@@ -316,9 +316,11 @@ class PlayerAppWindow(QMainWindow):
         if self.title_dock.isVisible():
             self.player_dock.hide()
             self.title_dock.hide()
+            self.statusbar.hide()
             self.viewport.bgc = 0
             self.viewport.framebuffer.bgc = 0
         else:
+            self.statusbar.show()
             self.player_dock.show()
             self.title_dock.show()
             self.viewport.framebuffer.bgc = 0.18
@@ -514,7 +516,7 @@ class PlayerAppWindow(QMainWindow):
             self.meta_thread.addToQueue(clip)
         else:
             self.timeline.graph.appendClip(clip, 0)
-        if reset: #or self.timeline.graph.nodes.count == 1:
+        if reset or self.timeline.graph.nodes.count == 1:
             self.timeline.reset(clip)
             self.timeline.frameGeometry()
             self.loadFrames(offset, clip)
@@ -535,6 +537,7 @@ class PlayerAppWindow(QMainWindow):
         super(PlayerAppWindow, self).hide()
 
     def closeEvent(self, event):
+        self.meta_thread.stop()
         self.thread.stop()
         self.qt_thread.stop()
         self.thread.pool.clear()

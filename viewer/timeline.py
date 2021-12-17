@@ -146,11 +146,11 @@ class ClipA(object):
         frames = sorted(glob.glob(file_path.sequence_path))
         self.first = int(re.search(file_path.SEQUENCE_REGEX, frames[0]).group(1))
         self.last = self.first + len(frames)
-        width, height, channels, aspect = io.image.getImageResolution(frames[0])
+        width, height, channels, aspect, pixel_format = io.image.getImageResolution(frames[0])
         if channels > 4:
             channels = 4
         self.geometry = ImagePlane(width, height, aspect=aspect,
-            pixels=np.zeros(shape=(height, width, channels), dtype=np.float16)
+            pixels=np.zeros(shape=(height, width, channels), dtype=pixel_format)
         )
 
     def setMovieData(self, duration, resolution, framerate):
@@ -312,7 +312,6 @@ class ClipNodes(LineRect):
     def updateDuration(self, clip, duration):
         start = (clip.index + 1) * 4
         end = start + 4
-        #print(self.vertices[::-1][start:end 0])
         self.vertices[::-1][start:end][0, 0] += duration
         self.vertices[::-1][start:end][1, 0] += duration
         #self.vertices[::-1][start:end][-1, :1] += duration

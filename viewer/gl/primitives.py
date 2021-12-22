@@ -206,6 +206,28 @@ class AnnotationCursors(BasePrimitive):
 		glLineWidth(1.0)
 
 
+class HandleCursors(BasePrimitive):
+
+	def __init__(self, *args, **kwargs):
+		super(HandleCursors, self).__init__(*args, **kwargs)
+		self.vertices = np.array(
+			[[0, 0, -1], [0, 0, -1]], dtype=np.float32
+		)
+		self.color = glm.vec4(0.505, 0.207, 0.185, 0.875)
+
+	def build(self):
+		self.buildFromVertices(self.vertices)
+
+	def append(self, ins, out, y):
+		new_vertices = np.array([[ins, y, 0], [out, y, 0]], dtype=np.float32)
+		self.vertices = np.append(self.vertices, new_vertices, axis=0)
+
+	def draw(self, transpose_mvp):
+		glLineWidth(2.5)
+		super(HandleCursors, self).draw(transpose_mvp)
+		glLineWidth(1.0)
+
+
 class CacheProgress(grid):
 
 	def __init__(self, *args, **kwargs):

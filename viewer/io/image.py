@@ -5,16 +5,26 @@ import numpy as np
 DEVNULL = subprocess.DEVNULL
 CREATE_NO_WINDOW = 0x08000000
 
+oiio.attribute('threads', 1) # Glorious optimization
+
 def getImageResolution(image_in):
     image_in = oiio.ImageInput.open(image_in)
     if not image_in:
         return None
     spec = image_in.spec()
-    aspect = spec.get_float_attribute("PixelAspectRatio")
+    aspect = spec.get_float_attribute('PixelAspectRatio')
+    framerate = spec.get_float_attribute('FrameRate') or 23.976
     formats = spec.get_channelformats()
     image_in.close()
-    return (spec.full_width, spec.full_height, spec.nchannels, aspect, str(formats[0]))
+    return (spec.full_width, spec.full_height, spec.nchannels, aspect, str(formats[0]), framerate)
 
+def simpleRead(image_in):
+    image_in = oiio.ImageInput.open(image_in)
+    if not image_in:
+        return None
+    data = image_in.read_image(oiio.UNKNOWN)
+    image_in.close()
+    return data
 
 def read_file(image_in, subimage=(0,3)):
     image_in = oiio.ImageInput.open(image_in)
@@ -29,11 +39,11 @@ def read_file(image_in, subimage=(0,3)):
     elif isinstance(subimage, tuple):
         start, end = subimage
         data = image_in.read_image(start, end + 1, oiio.UNKNOWN)
-    # If display window is not the same as data window pad the pixels with zeros
-    if spec.height < display_r.height or spec.width < display_r.width:
-        display = np.zeros((display_r.height, display_r.width, data.shape[2]), dtype=data.dtype)
-        display[data_r.ybegin:data_r.yend, data_r.xbegin:data_r.xend, :] = data
-        data = display
+    ## If display window is not the same as data window pad the pixels with zeros
+    #if spec.height < display_r.height or spec.width < display_r.width:
+    #    display = np.zeros((display_r.height, display_r.width, data.shape[2]), dtype=data.dtype)
+    #    display[data_r.ybegin:data_r.yend, data_r.xbegin:data_r.xend, :] = data
+    #    data = display
 
     image_in.close()
 

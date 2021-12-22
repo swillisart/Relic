@@ -1,39 +1,59 @@
 import subprocess, os, json
+import concurrent.futures
+from functools import partial
+from collections import deque
+
 from PySide2.QtCore import (
     Signal, QMutex, QMutexLocker, QPoint, QSize, Qt, QThread, QWaitCondition,
     QRunnable, QThreadPool, QObject
 )
-from collections import deque
 import numpy as np
-from . import image
+from .image import simpleRead
 import time, random
 import cv2
 
+class QuicktimeSignals(QObject):
+    frame_ready = Signal(int)
+    finished = Signal()
+
+
 class QuicktimeThread(QThread):
+    
+    BATCH_SIZE = 120
 
-    loadedImage = Signal(np.ndarray)
-
-    def __init__(self, *args, **kwargs):
-        super(QuicktimeThread, self).__init__(*args, **kwargs)
+    def __init__(self, cache, parent=None):
+        QThread.__init__(self, parent)
         self.mutex = QMutex()
+        self.signals = QuicktimeSignals()
+        self.cache = cache
         self.stopped = False
-        self.clip = None
+        self.path = None
         self.cap = None
-        self.frame = 1
-        self.index = 1
+        self.clip_frame = 0
+        self.frame = 0
 
-    def setupRead(self, clip, start):
-        self.cap = cv2.VideoCapture(str(clip.path))
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, start)
-        self.clip = clip
-        self.frame = start
-        self.index = start
+    @staticmethod
+    def iterations():
+        return range(0)
+
+    def setFrame(self, clip_frame, frame):
+        self.clip_frame = clip_frame
+        self.frame = frame
+        self.stopped = False
+
+    def setClip(self, clip, clip_frame, frame):
+        if self.cap:
+            self.cap.release()
+            self.cap = None
+        self.path = str(clip.path)
+        self.setFrame(clip_frame, frame)
 
     def stop(self):
         with QMutexLocker(self.mutex):
             self.stopped = True
             if self.cap:
                 self.cap.release()
+                self.cap = None
         self.wait(10)
 
     def start(self):
@@ -43,107 +63,31 @@ class QuicktimeThread(QThread):
     def run(self):
         while True:
             with QMutexLocker(self.mutex):
-                if self.stopped:
-                    return
-                if self.index <= self.frame and self.cap:
-                    ret, frame = self.cap.read()
-                    if ret:
-                        self.loadedImage.emit(frame)
-                    self.index += 1
-                else:
-                    self.msleep(10)
+                stop = self.stopped
+                cache = self.cache
+                cap = self.cap
+                path = self.path
+                clip_frame = self.clip_frame
+                frame = self.frame
+                if not cap and self.path:
+                    cap = cv2.VideoCapture(path)
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, clip_frame - 1)
 
-
-class loaderThread(QThread):
-
-    loadedImage = Signal(int, np.ndarray)
-
-    def __init__(self, parent=None):
-        super(loaderThread, self).__init__(parent)
-        # Base Thread Logic using mutex
-        self.mutex = QMutex()
-        self.condition = QWaitCondition()
-        self.abort = False
-        self.pool = QThreadPool.globalInstance()
-        self.pool.setMaxThreadCount(3)
-        self.frame = 0
-        self.chunk_size = 48
-
-    def stop(self):
-        self.mutex.lock()
-        self.pool.clear()
-        self.abort = True
-        self.condition.wakeOne()
-        self.mutex.unlock()
-        self.wait(500)
-
-    def load(self, frame, clip, graph):
-        locker = QMutexLocker(self.mutex)
-        self.clip = clip
-        self.graph = graph
-        self.frame = int(frame)
-        if not self.isRunning():
-            self.start(QThread.HighPriority)
-        else:
-            self.condition.wakeOne()
-
-    def run(self):
-        while True:
-            self.mutex.lock()
-            self.mutex.unlock()
-
-            if self.abort:
-                return
-            end_frame = self.frame + self.chunk_size
-            switch = 0 # priority toggle to help thread priority
-            for f in range(self.frame, end_frame):
-                self.worker = ImageLoader(self.clip, self.graph, f, self.loadedImage)
-                switch = not switch
-                self.frame += 1
-                self.pool.start(self.worker, priority=switch)
-
-            self.mutex.lock()
-            self.condition.wait(self.mutex)
-            self.mutex.unlock()
-
-
-class PixelLoader(QRunnable):
-    
-    def __init__(self, clip, graph, frame, signal):
-        super(PixelLoader, self).__init__(signal)
-        self.signal = signal
-        self.clip = clip
-        self.graph = graph
-        self.frame = frame
-
-
-class ImageLoader(PixelLoader):
-    
-    def __init__(self, *args, **kwargs):
-        super(ImageLoader, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def readClipData(clip, frame):
-        clip_frame = clip.mapToLocalFrame(frame)
-        if not clip_frame:
-            return None
-        fp = clip.path.padSequence(clip_frame)
-        data, spec = image.read_file(fp)
-        return data
-
-    def run(self):
-        img_data = self.readClipData(self.clip, self.frame)
-        if not isinstance(img_data, np.ndarray):
-            # re-lookup looping over graph looking for next possible frame
-            #for index, node in enumerate(self.graph[0].nodes):
-            for sequence, clip in self.graph.iterateSequences():
-                local_frame = clip.mapToLocalFrame(self.frame)
-                if local_frame:
-                    img_data = self.readClipData(clip, self.frame)
-                    break
-        if isinstance(img_data, np.ndarray):
-            self.signal.emit(self.frame, img_data)
-            time.sleep(random.uniform(0.001, 0.055))
+            if cap and not stop:
+                #self.cap.set(cv2.CAP_PROP_POS_FRAMES, clip_frame - 1)
+                for index in QuicktimeThread.iterations():
+                    timeline_frame = frame + index
+                    if timeline_frame in cache:
+                        ret, data = cap.read()
+                        if ret:
+                            cache[timeline_frame] = data
+                            self.signals.frame_ready.emit(timeline_frame)
+                            self.msleep(1)
+                self.signals.finished.emit()
+                FrameThread.iterations = partial(range, 0)
+                self.stopped = True
+                self.cap = cap
+            self.msleep(10)
 
 
 class ExifWorker(QThread):
@@ -193,6 +137,9 @@ class ExifWorker(QThread):
                     '-Duration#',
                     '-ImageSize',
                     '-VideoFrameRate',
+                    '-SampleRate', # MXF framerate
+                    '-DisplayHeight', # MXF
+                    '-DisplayWidth', # MXF
                     str(clip.path),
                     '-execute\n']
                 self.proc.stdin.write(bytes('\n'.join(cmd_text), encoding='utf-8'))
@@ -205,3 +152,80 @@ class ExifWorker(QThread):
                         break
                 data = json.loads(output.decode('utf-8').replace('{ready}', ''))[0]
                 self.metaLoaded.emit(clip, data)
+
+
+class FrameSignals(QObject):
+    frame_ready = Signal(int)
+    finished = Signal()
+
+
+class FrameThread(QThread):
+
+    BATCH_SIZE = 24
+
+    def __init__(self, cache, parent=None):
+        QThread.__init__(self, parent)
+        # Instantiate signals and connect signals to the slots
+        self.signals = FrameSignals()
+        self.pool = concurrent.futures.ThreadPoolExecutor(4)
+        self.cache = cache
+        self.mutex = QMutex()
+
+    @staticmethod
+    def iterations():
+        return range(0)
+
+    @staticmethod
+    def fastRead(index, cache=None, frame=None, clip_frame=None, path=None):
+        timeline_frame = frame + index
+        fp = path.padSequence(clip_frame + index)
+        data = simpleRead(str(fp))
+        #data = np.zeros(shape=(2160, 4096, 3), dtype=np.float16)
+        if frame in cache: # Frame expected by GUI (Not old or obsolete)
+            cache[timeline_frame] = data
+            return timeline_frame
+    
+    def run(self):
+        while True:
+            counter = 0
+            with QMutexLocker(self.mutex):
+                cache = self.cache  
+            func = partial(FrameThread.fastRead, cache=cache)
+            for timeline_frame in self.pool.map(func, FrameThread.iterations()):
+                if timeline_frame:
+                    self.signals.frame_ready.emit(timeline_frame)
+                counter += 1
+                if counter == len(FrameThread.iterations()):
+                    self.signals.finished.emit()
+                    FrameThread.iterations = partial(range, 0)
+                self.msleep(1)
+            self.msleep(10)
+
+
+class FrameCacheIOThread(QThread):
+
+    def __init__(self, cache, parent=None):
+        QThread.__init__(self, parent)
+        self.mutex = QMutex()
+        self.cache = cache
+        self.queue = []
+
+    def addToQueue(self, func):
+        self.queue.append(func)
+
+    @staticmethod
+    def deleteCacheRange(_min, _max, cache):
+        for x in range(_min, _max):
+            try:
+                del cache[x]
+            except: pass
+
+    def run(self):
+        while True:
+            with QMutexLocker(self.mutex):
+                    queue = self.queue
+                    cache = self.cache
+            while queue:
+                func = queue.pop(0)
+                func(cache)
+            self.msleep(100)

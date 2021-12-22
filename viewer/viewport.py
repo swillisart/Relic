@@ -25,7 +25,7 @@ from viewer.gl.util import useGL
 from viewer.gl.shading import BaseProgram
 from viewer.gl.primitives import Circle, ColorWheel, Line, LineRect, Ellipse
 from viewer.gl.text import glyphContainer, TextShader, createFontAtlas
-from viewer.ui.widgets import colorSampler, PaintDockWidget
+from viewer.ui.widgets import colorSampler, AnnotationDock
 # -- Globals --
 NOPE = 0
 OVERSCAN = 1
@@ -803,7 +803,7 @@ class Viewport(InteractiveGLView):
         self.paint_engine = PaintEngine()
         self.color_sampler = colorSampler(self)
         self.key_callback = None
-        self.active_tool = PaintDockWidget.Brush
+        self.active_tool = AnnotationDock.Brush
         self.is_painting = False
 
     def renderShapes(self, scene=False):
@@ -919,21 +919,21 @@ class Viewport(InteractiveGLView):
 
     @useGL
     def undo(self):
-        if self.active_tool == PaintDockWidget.Brush:
+        if self.active_tool == AnnotationDock.Brush:
             pass
-        elif self.active_tool == PaintDockWidget.Shape:
+        elif self.active_tool == AnnotationDock.Shape:
             self.paint_engine.shapes.undo()
-        elif self.active_tool == PaintDockWidget.Text:
+        elif self.active_tool == AnnotationDock.Text:
             self.paint_engine.shapes.undo()
             self.paint_engine.shapes.glyphs.reset()
 
     @useGL
     def redo(self):
-        if self.active_tool == PaintDockWidget.Brush:
+        if self.active_tool == AnnotationDock.Brush:
             pass
-        elif self.active_tool == PaintDockWidget.Shape:
+        elif self.active_tool == AnnotationDock.Shape:
             self.paint_engine.shapes.redo()
-        elif self.active_tool == PaintDockWidget.Text:
+        elif self.active_tool == AnnotationDock.Text:
             pass
 
     @Slot()
@@ -943,7 +943,7 @@ class Viewport(InteractiveGLView):
     @Slot()
     def setActiveTool(self, tool):
         sender = self.sender()
-        if tool == PaintDockWidget.Shape:
+        if tool == AnnotationDock.Shape:
             self.paint_engine.shapes.create()
             self.paint_engine.shapes._type = sender.shapeTypeCombobox.currentIndex()
             self.paint_engine.shapes.newActiveShape()
@@ -1154,7 +1154,7 @@ class Viewport(InteractiveGLView):
         return a
 
     def mousePressEvent(self, event):
-        if self.active_tool == PaintDockWidget.Text:
+        if self.active_tool == AnnotationDock.Text:
             if self.paint_engine.shapes.glyphs.indices_count != 0:
                 self.paint_engine.shapes.create()
         super(Viewport, self).mousePressEvent(event)
@@ -1171,7 +1171,7 @@ class Viewport(InteractiveGLView):
         if self.paint_engine.brush.radius >= 25 and self.paint_engine.enabled:
             self.setCursor(Qt.CrossCursor)
         if self.is_painting:
-            if self.active_tool == PaintDockWidget.Shape:
+            if self.active_tool == AnnotationDock.Shape:
                 self.paint_engine.shapes.create()
             self.paint_engine.strokes.clear()
             self.is_painting = False
@@ -1179,7 +1179,7 @@ class Viewport(InteractiveGLView):
     def keyPressEvent(self, event):
         mods = QApplication.keyboardModifiers()
         key = event.key()
-        if self.active_tool == PaintDockWidget.Text and mods != Qt.ControlModifier:
+        if self.active_tool == AnnotationDock.Text and mods != Qt.ControlModifier:
             self.updateText(event)
             return
         if key == Qt.Key_F:
@@ -1243,12 +1243,12 @@ class Viewport(InteractiveGLView):
                 return
             else:
                 self.is_painting = True
-                if self.active_tool == PaintDockWidget.Brush:
+                if self.active_tool == AnnotationDock.Brush:
                     self.paintSimpleStroke()
                     #self.paintPath()
-                elif self.active_tool == PaintDockWidget.Shape:
+                elif self.active_tool == AnnotationDock.Shape:
                     self.createShape()
-                elif self.active_tool == PaintDockWidget.Text:
+                elif self.active_tool == AnnotationDock.Text:
                     self.paint_engine.shapes._type = 4
                     self.paint_engine.shapes.newActiveShape()
                     self.createShape()

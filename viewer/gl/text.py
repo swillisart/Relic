@@ -25,7 +25,7 @@ def createFontAtlas(file_path):
         face = freetype.Face(stream)
     else:
         raise OSError('Unable to open font : {}'.format(file_path))
-    #face.set_char_size( 16*64 )
+
     face.set_pixel_sizes(0, 44)
     slot = face.glyph
 
@@ -252,6 +252,12 @@ class frameGlyphs(glyphContainer):
         super(frameGlyphs, self).__init__(*args, **kwargs)
         self.color = glm.vec4(0.5, 0.9, 0.65, 1.0)
 
+class HandleGlyphs(glyphContainer):
+
+    def __init__(self, *args, **kwargs):
+        super(HandleGlyphs, self).__init__(*args, **kwargs)
+        self.color = glm.vec4(0.875, 0.490, 0.455, 1) 
+        self.z = -0.1
 
 class tickGlyphs(glyphContainer):
 

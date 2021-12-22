@@ -2,7 +2,8 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import numpy as np
-from .paint_dock import Ui_PaintDock
+from .paint_dock import Ui_AnnotateDock
+from .color_picker import Ui_ColorPickerDock
 import cv2
 import glm
 
@@ -107,18 +108,12 @@ QSlider::handle:horizontal {{
 	margin-bottom: 5px;
 }}"""
 
-
-class PaintDockWidget(Ui_PaintDock, QDockWidget):
+class ColorPickerkDock(Ui_ColorPickerDock, QDockWidget):
 
 	colorChanged = Signal(QColor)
-	toolChanged = Signal(int)
-	onClosed = Signal()
-	Brush = 0
-	Shape = 1
-	Text = 2
 
 	def __init__(self, *args, **kwargs):
-		super(PaintDockWidget, self).__init__(*args, **kwargs)
+		super(ColorPickerkDock, self).__init__(*args, **kwargs)
 		self.setupUi(self)
 		self._color = QColor(255,255,255)
 
@@ -129,65 +124,8 @@ class PaintDockWidget(Ui_PaintDock, QDockWidget):
 		self.valueControl.valueChanged.connect(self.value_from_control)
 		self.saturationSlider.valueChanged.connect(self.saturation_from_slider)
 		self.saturationControl.valueChanged.connect(self.saturation_from_control)
-		self.brushToolButton.toggled.connect(self.setBrushMode)
-		self.shapeToolButton.toggled.connect(self.setShapeMode)
-		self.textToolButton.toggled.connect(self.setTextMode)
 		self.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable|QDockWidget.DockWidgetClosable)
 
-	def closeEvent(self, event):
-		event.ignore()
-		msg = 'Closing will lose any unsaved annotations.'
-		message = QMessageBox(QMessageBox.Warning, 'Are you sure?', msg,
-					QMessageBox.NoButton, self)
-		message.addButton('Yes', QMessageBox.AcceptRole)
-		message.addButton('Cancel', QMessageBox.RejectRole)
-
-		if message.exec_() == QMessageBox.RejectRole:
-			return
-		self.onClosed.emit()
-
-	def setBrushMode(self, value):
-		self.disableSignals()
-		self.shapeToolButton.setChecked(Qt.Unchecked)
-		self.textToolButton.setChecked(Qt.Unchecked)
-		self.enableSignals()
-		self.toolChanged.emit(self.Brush)
-
-	def setShapeMode(self, value):
-		self.disableSignals()
-		self.brushToolButton.setChecked(Qt.Unchecked)
-		self.textToolButton.setChecked(Qt.Unchecked)
-		self.enableSignals()
-		self.toolChanged.emit(self.Shape)
-
-	def setTextMode(self, value):
-		self.disableSignals()
-		self.brushToolButton.setChecked(Qt.Unchecked)
-		self.shapeToolButton.setChecked(Qt.Unchecked)
-		self.enableSignals()
-		self.toolChanged.emit(self.Text)
-
-	def disableSignals(self):
-		self.brushToolButton.blockSignals(True)
-		self.shapeToolButton.blockSignals(True)
-		self.textToolButton.blockSignals(True)
-		self.saturationSlider.blockSignals(True)
-		self.valueSlider.blockSignals(True)
-		self.opacitySlider.blockSignals(True)
-		self.saturationControl.blockSignals(True)
-		self.valueControl.blockSignals(True)
-		self.opacityControl.blockSignals(True)
-
-	def enableSignals(self):
-		self.brushToolButton.blockSignals(False)
-		self.shapeToolButton.blockSignals(False)
-		self.textToolButton.blockSignals(False)
-		self.saturationSlider.blockSignals(False)
-		self.valueSlider.blockSignals(False)
-		self.opacitySlider.blockSignals(False)
-		self.saturationControl.blockSignals(False)
-		self.valueControl.blockSignals(False)
-		self.opacityControl.blockSignals(False)
 
 	@property
 	def color(self):
@@ -272,3 +210,100 @@ class PaintDockWidget(Ui_PaintDock, QDockWidget):
 			r, g, b = rgb*self.color.valueF()
 			color = QColor.fromRgbF(r, g, b, self.color.alphaF())
 		self.color = color
+
+	def disableSignals(self):
+		self.saturationSlider.blockSignals(True)
+		self.valueSlider.blockSignals(True)
+		self.opacitySlider.blockSignals(True)
+		self.saturationControl.blockSignals(True)
+		self.valueControl.blockSignals(True)
+		self.opacityControl.blockSignals(True)
+
+	def enableSignals(self):
+		self.saturationSlider.blockSignals(False)
+		self.valueSlider.blockSignals(False)
+		self.opacitySlider.blockSignals(False)
+		self.saturationControl.blockSignals(False)
+		self.valueControl.blockSignals(False)
+		self.opacityControl.blockSignals(False)
+
+
+class AnnotationDock(Ui_AnnotateDock, QDockWidget):
+
+	toolChanged = Signal(int)
+	Brush = 0
+	Shape = 1
+	Text = 2
+
+	def __init__(self, *args, **kwargs):
+		super(AnnotationDock, self).__init__(*args, **kwargs)
+		self.setupUi(self)
+		self._color = QColor(255,255,255)
+
+		self.brushToolButton.toggled.connect(self.setBrushMode)
+		self.shapeToolButton.toggled.connect(self.setShapeMode)
+		self.textToolButton.toggled.connect(self.setTextMode)
+		self.setFeatures(QDockWidget.NoDockWidgetFeatures)
+		self.setTitleBarWidget(QWidget())
+
+	def setBrushMode(self, value):
+		self.disableSignals()
+		self.shapeToolButton.setChecked(Qt.Unchecked)
+		self.textToolButton.setChecked(Qt.Unchecked)
+		self.enableSignals()
+		self.toolChanged.emit(self.Brush)
+
+	def setShapeMode(self, value):
+		self.disableSignals()
+		self.brushToolButton.setChecked(Qt.Unchecked)
+		self.textToolButton.setChecked(Qt.Unchecked)
+		self.enableSignals()
+		self.toolChanged.emit(self.Shape)
+
+	def setTextMode(self, value):
+		self.disableSignals()
+		self.brushToolButton.setChecked(Qt.Unchecked)
+		self.shapeToolButton.setChecked(Qt.Unchecked)
+		self.enableSignals()
+		self.toolChanged.emit(self.Text)
+
+	def disableSignals(self):
+		self.brushToolButton.blockSignals(True)
+		self.shapeToolButton.blockSignals(True)
+		self.textToolButton.blockSignals(True)
+
+	def enableSignals(self):
+		self.brushToolButton.blockSignals(False)
+		self.shapeToolButton.blockSignals(False)
+		self.textToolButton.blockSignals(False)
+
+
+class PaintDockWindow(QMainWindow):
+	def __init__(self, *args, **kwargs):
+		super(PaintDockWindow, self).__init__(*args, **kwargs)
+		self.setWindowFlags(Qt.Widget)
+		self.setDockNestingEnabled(True)
+
+class PaintDock(QDockWidget):
+
+	onClosed = Signal()
+
+	def __init__(self, *args, **kwargs):
+		super(PaintDock, self).__init__(*args, **kwargs)
+		#self.setFeatures(self.features() | QDockWidget.DockWidgetVerticalTitleBar)
+		self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.setWindowTitle('Paint')
+		self.window = PaintDockWindow(self)
+		self.setWidget(self.window)
+
+	def closeEvent(self, event):
+		event.ignore()
+		msg = 'Closing will lose any unsaved annotations.'
+		message = QMessageBox(QMessageBox.Warning, 'Are you sure?', msg,
+					QMessageBox.NoButton, self)
+		message.addButton('Yes', QMessageBox.AcceptRole)
+		message.addButton('Cancel', QMessageBox.RejectRole)
+
+		if message.exec_() == QMessageBox.RejectRole:
+			return
+		self.onClosed.emit()

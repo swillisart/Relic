@@ -103,6 +103,7 @@ class Ui_ColorPickerDock(object):
 
         self.opacitySlider = QSlider(self.frame)
         self.opacitySlider.setObjectName(u"opacitySlider")
+        self.opacitySlider.setMouseTracking(True)
         self.opacitySlider.setStyleSheet(u"QSlider::groove:horizontal {\n"
 "    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 255, 255, 255));\n"
 "    padding-top: -6px;\n"
@@ -130,6 +131,7 @@ class Ui_ColorPickerDock(object):
 
         self.valueSlider = QSlider(self.frame)
         self.valueSlider.setObjectName(u"valueSlider")
+        self.valueSlider.setMouseTracking(True)
         self.valueSlider.setStyleSheet(u"QSlider::groove:horizontal {\n"
 "    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));\n"
 "    padding-top: -6px;\n"
@@ -160,6 +162,7 @@ class Ui_ColorPickerDock(object):
 
         self.saturationSlider = QSlider(self.frame)
         self.saturationSlider.setObjectName(u"saturationSlider")
+        self.saturationSlider.setMouseTracking(True)
         self.saturationSlider.setStyleSheet(u"QSlider::groove:horizontal {\n"
 "    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(0, 255, 0, 255));\n"
 "    padding-top: -6px;\n"

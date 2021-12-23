@@ -117,14 +117,22 @@ class ColorPickerkDock(Ui_ColorPickerDock, QDockWidget):
 		self.setupUi(self)
 		self._color = QColor(255,255,255)
 
-		self.colorWheelGLView.userPickedColor.connect(self.colorPicked)
 		self.opacitySlider.valueChanged.connect(self.opacity_from_slider)
 		self.opacityControl.valueChanged.connect(self.opacity_from_control)
+
 		self.valueSlider.valueChanged.connect(self.value_from_slider)
 		self.valueControl.valueChanged.connect(self.value_from_control)
+
 		self.saturationSlider.valueChanged.connect(self.saturation_from_slider)
 		self.saturationControl.valueChanged.connect(self.saturation_from_control)
+	
 		self.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable|QDockWidget.DockWidgetClosable)
+		self.colorWheelGLView.userPickedColor.connect(self.colorPicked)
+
+		self.slider_events = DragFilter()
+		self.opacitySlider.installEventFilter(self.slider_events)
+		self.valueSlider.installEventFilter(self.slider_events)
+		self.saturationSlider.installEventFilter(self.slider_events)
 
 
 	@property
@@ -284,6 +292,7 @@ class PaintDockWindow(QMainWindow):
 		self.setWindowFlags(Qt.Widget)
 		self.setDockNestingEnabled(True)
 
+
 class PaintDock(QDockWidget):
 
 	onClosed = Signal()
@@ -307,3 +316,27 @@ class PaintDock(QDockWidget):
 		if message.exec_() == QMessageBox.RejectRole:
 			return
 		self.onClosed.emit()
+
+
+class DragFilter(QObject):
+
+	def __init__(self, *args, **kwargs):
+		super(DragFilter, self).__init__(*args, **kwargs)
+		self.active = False
+
+	def drag(self, widget, event):
+		x = event.pos().x()
+		value = (widget.maximum() - widget.minimum()) * x / widget.width() + widget.minimum()
+		widget.setValue(value)
+		widget.update()
+
+	def eventFilter(self, widget, event):
+		if event.type() == QEvent.MouseButtonPress:
+			self.active = True
+			self.drag(widget, event)
+		elif event.type() == QEvent.MouseMove:
+			if self.active:
+				self.drag(widget, event)
+		elif event.type() == QEvent.MouseButtonRelease:
+			self.active = False
+		return False

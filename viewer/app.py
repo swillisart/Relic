@@ -729,15 +729,8 @@ class PlayerAppWindow(QMainWindow):
                 offset = self.timeline.graph.clips[-1][-1].timeline_out
             except:
                 pass
-        else:
-            self.frame_engine.clearFrameCache(offset)
-            self.viewport.makeCurrent()
-            if hasattr(self.timeline.current_clip, 'geometry'):
-                self.timeline.current_clip.geometry.clear()
 
-            self.timeline.graph = Graph(shader=self.timeline.primitive_shader)
-
-        self.viewport.makeCurrent()
+        self.viewport.makeCurrent() # Need this for clip image plane geometry creation
 
         if file_path.ext in io.MOVIE:
             clip = MovClip(file_path=file_path, timeline_in=offset)
@@ -747,16 +740,19 @@ class PlayerAppWindow(QMainWindow):
                 clip = SeqClip(file_path=file_path, timeline_in=offset)
             else:
                 clip = ImageClip(file_path=file_path, timeline_in=offset)
-            self.timeline.graph.appendClip(clip, 0)
 
+        # Now we modify the timeline
         self.timeline.makeCurrent()
         if reset or self.timeline.graph.nodes.count == 0:
+            self.frame_engine.clearFrameCache(offset)
             self.timeline.reset(clip)
-            self.timeline.frameGeometry()
-            self.frame_engine.onFrameChange(clip.timeline_in)
-            self.viewport.frameGeometry()
-        else:
-            self.timeline.updateNodeGlyphs()
+
+        self.timeline.graph.appendClip(clip, 0)
+        self.timeline.updateNodeGlyphs()
+        #self.timeline.frameGeometry()
+        # Finally update the viewport again
+        self.frame_engine.onFrameChange(clip.timeline_in)
+        self.viewport.frameGeometry()
 
     def hide(self):
         self.frame_engine.clearFrameCache()

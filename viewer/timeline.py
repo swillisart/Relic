@@ -70,9 +70,9 @@ class BaseClip(object):
 
     def __init__(self, file_path=None, timeline_in=1):
         self.first = 0
-        self.last = 1
-        self.head = 8
-        self.tail = 8
+        self.last = 24
+        self.head = 0
+        self.tail = 0
         self.annotations = []
         self.path = file_path
         if file_path:
@@ -192,8 +192,6 @@ class MovClip(BaseClip):
 
 
 class ImageClip(BaseClip):
-    def __init__(self, *args, **kwargs):
-        super(ImageClip, self).__init__(*args, **kwargs)
 
     def loadFile(self, file_path):
         # Set the frames range, rate and shape
@@ -391,6 +389,8 @@ class timelineGLView(InteractiveGLView):
             self.annotatedLoad.emit(nearest, clip)
 
     def reset(self, clip):
+        #if hasattr(self.current_clip, 'geometry'):
+        #    self.current_clip.geometry.clear() # Not sure if this is relevant
         self.current_clip = clip
         self.graph = Graph(shader=self.primitive_shader)
         #self.controller.jumpFirst()

@@ -186,6 +186,9 @@
          </item>
          <item row="5" column="1">
           <widget class="QSlider" name="opacitySlider">
+           <property name="mouseTracking">
+            <bool>true</bool>
+           </property>
            <property name="styleSheet">
             <string notr="true">QSlider::groove:horizontal {
     background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 255, 255, 255));
@@ -224,6 +227,9 @@ QSlider::handle:horizontal {
          </item>
          <item row="4" column="1">
           <widget class="QSlider" name="valueSlider">
+           <property name="mouseTracking">
+            <bool>true</bool>
+           </property>
            <property name="styleSheet">
             <string notr="true">QSlider::groove:horizontal {
     background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
@@ -267,6 +273,9 @@ QSlider::handle:horizontal {
          </item>
          <item row="3" column="1">
           <widget class="QSlider" name="saturationSlider">
+           <property name="mouseTracking">
+            <bool>true</bool>
+           </property>
            <property name="styleSheet">
             <string notr="true">QSlider::groove:horizontal {
     background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(0, 255, 0, 255));

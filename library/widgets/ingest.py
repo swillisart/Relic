@@ -1,33 +1,35 @@
-import os
 import json
 from functools import partial
 
-from colorcheckerDetection import detectColorChecker
+from imagine.colorchecker_detection import detectColorChecker
 from sequencePath import sequencePath as Path
-from library.ui.ingestion import Ui_IngestForm
-from library.io.ingest import ConversionRouter, IngestionThread, INGEST_PATH, applyImageModifications
-from library.objectmodels import (polymorphicItem, db, references, modeling,
-                                elements, lighting, shading, software, alusers,
-                                mayatools, nuketools, relationships, temp_asset, tags)
-from library.widgets.assets import assetItemModel
-from library.widgets.util import ListViewFiltered, SimpleAsset
-
-from library.config import (MOVIE_EXT, SHADER_EXT, RAW_EXT, LDR_EXT, HDR_EXT, FILM_EXT,
-                            LIGHT_EXT, DCC_EXT, TOOLS_EXT, GEO_EXT, RELIC_PREFS)
 
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,
                             QRect, QRegularExpression, QSize,
-                            QSortFilterProxyModel, Qt, QTextStream, Signal,
-                            Slot, QThread)
+                            QSortFilterProxyModel, Qt, QTextStream, QThread,
+                            Signal, Slot, QThreadPool)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
-                           QIcon, QPainter, QPixmap, QMovie, QImage,
+                           QIcon, QImage, QMovie, QPainter, QPixmap,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QDialog, QDockWidget, QFrame, QLabel, QLayout,
-                               QLineEdit, QListView, QMenu, QScrollArea,
-                               QStyledItemDelegate, QTreeView, QVBoxLayout,
-                               QWidget, QMessageBox)
+                               QLineEdit, QListView, QMenu, QMessageBox,
+                               QScrollArea, QStyledItemDelegate, QTreeView,
+                               QVBoxLayout, QWidget)
+
+from library.config import (DCC_EXT, FILM_EXT, GEO_EXT, HDR_EXT, LDR_EXT,
+                            LIGHT_EXT, MOVIE_EXT, RAW_EXT, RELIC_PREFS,
+                            SHADER_EXT, TOOLS_EXT)
+from library.io.ingest import (INGEST_PATH, TaskRunner, ConversionRouter, IngestionThread,
+                               applyImageModifications, blendRawExposures)
+from library.objectmodels import (alusers, db, elements, lighting, mayatools,
+                                  modeling, nuketools, polymorphicItem,
+                                  references, relationships, shading, software,
+                                  tags, temp_asset)
+from library.ui.ingestion import Ui_IngestForm
+from library.widgets.assets import assetItemModel
+from library.widgets.util import ListViewFiltered, SimpleAsset
 
 CLOSE_MSG = """
 You have not completed categorizing the collected files.
@@ -75,14 +77,15 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.next_disabled = partial(self.nextButton.setEnabled, False)
         self.collectedListView.compactMode()
         self.actionGetMatrix = QAction('Get Color Matrix', self)
-        self.actionSetMatrix = QAction('Set Color Matrix', self)
-        self.actionApplyMods = QAction('Apply Image Modifications', self)
-        self.actionApplyMods.triggered.connect(self.applyImageModifications)
+        #self.actionDenoise = QAction('Denoise', self)
+        self.actionBlendExposures = QAction('Align And Blend Exposures', self)
+        self.actionReprocessImage = QAction('Re-Process Image', self)
+        self.actionReprocessImage.triggered.connect(self.reprocessImage)
         self.actionGetMatrix.triggered.connect(self.getColorMatrix)
-        self.actionSetMatrix.triggered.connect(self.setColorMatrix)
+        self.actionBlendExposures.triggered.connect(self.alignBlendExposures)
 
         self.collectedListView.additional_actions.extend(
-            [self.actionGetMatrix, self.actionSetMatrix, self.actionApplyMods])
+            [self.actionGetMatrix, self.actionReprocessImage, self.actionBlendExposures])
         self.newAssetListView.compactMode()
 
         self.collect_item_model = assetItemModel(self.collectedListView)
@@ -110,6 +113,13 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.processLoadingLabel.hide()
         self.processCompleteLabel.hide()
         self.keep_original_name = False 
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        mods = event.modifiers()
+        if mods == Qt.ControlModifier and key == Qt.Key_V:
+            self.setColorMatrix()
+        return super(IngestForm, self).keyPressEvent(event)
 
     @Slot()
     def assetIngested(self, asset):
@@ -260,6 +270,7 @@ class IngestForm(Ui_IngestForm, QDialog):
 
             self.collectedListView.setRowHidden(index.row(), True)
             self.newAssetListView.addAsset(asset)
+            self.processLoadingLabel.show()
             extra_files = temp_asset.dependencies
             self.ingest_thread.load([temp_filename, asset, extra_files])
 
@@ -427,34 +438,60 @@ class IngestForm(Ui_IngestForm, QDialog):
             temp_asset.id, temp_asset.path.ext)
         return temp_path, temp_asset
 
-    @Slot()
-    def applyImageModifications(self):
-        for index in self.collectedListView.selectedIndexes():
-            temp_path, temp_asset = self.getCollectedPath(index)
-            if not temp_path.exists:
-                temp_asset.path.copyTo(temp_path)
-            applyImageModifications(temp_path, temp_asset)
-
-    @Slot()
-    def setColorMatrix(self):
+    def setColorMatrix(self): 
         clipboard = QApplication.clipboard()
         for index in self.collectedListView.selectedIndexes():
             temp_path, temp_asset = self.getCollectedPath(index)
             ccm = json.loads(clipboard.text())
             if ccm:
                 temp_asset.colormatrix = ccm
-            else:
-                msg = 'Was unable to auto-detect a colorchecker within the selected image.'
-                QMessageBox.information(self, 'Detection Failed', msg)
+
+    @Slot()
+    def reprocessImage(self):
+        pool = QThreadPool.globalInstance()
+        for index in self.collectedListView.selectedIndexes():
+            temp_path, temp_asset = self.getCollectedPath(index)
+            func = partial(applyImageModifications, temp_path, temp_asset)
+            worker = TaskRunner(func)
+            pool.start(worker)
 
     @Slot()
     def getColorMatrix(self):
         index = self.collectedListView.selectedIndexes()[-1]
         temp_path, temp_asset = self.getCollectedPath(index)
-        ccm = detectColorChecker(str(temp_path))
+        if temp_asset.path.ext != '.exr' or not temp_asset.path.exists:
+            msg = 'Wrong image format "{}" needs to be exr.'.format(temp_asset.path.stem)
+            QMessageBox.information(self, 'Detection Failed', msg)
+            return
+        func = partial(detectColorChecker, str(temp_asset.path))
+        worker = TaskRunner(func, signal=True)
+        worker.signal.completed.connect(self.updateClipboard)
+        pool = QThreadPool.globalInstance()
+        pool.start(worker)
 
+    @Slot(tuple)
+    def updateClipboard(self, ccm):
         clipboard = QApplication.clipboard()
         if ccm:
             clipboard.setText(json.dumps(ccm))
         else:
+            msg = 'Was unable to auto-detect a colorchecker within the selected image.'
+            QMessageBox.information(self, 'Detection Failed', msg)
             clipboard.clear()
+
+    @Slot()
+    def alignBlendExposures(self):
+        indices = self.collectedListView.selectedIndexes()
+        if len(indices) < 2:
+            msg = 'Select more than one asset.'
+            QMessageBox.information(self, 'Invalid Selection', msg)
+            return
+
+        # Pack the data by path key.
+        assets_by_file = {k:v for k, v in map(self.getCollectedPath, indices)}
+        # Hide the extra bracketed exposure assets.
+        [self.collectedListView.setRowHidden(x.row(), True) for x in indices[1:]]
+        self.updateLabelCounts(None)
+        worker = TaskRunner(partial(blendRawExposures, assets_by_file))
+        pool = QThreadPool.globalInstance()
+        pool.start(worker)

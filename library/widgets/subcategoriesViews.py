@@ -720,6 +720,14 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         self.ContentFrame.setVisible(False)
         self.pressing = False
 
+    @property
+    def expand_height(self):
+        return self.height_store
+
+    @expand_height.setter
+    def expand_height(self, h):
+        self.height_store = h if h > 120 else 76
+
     def mousePressEvent(self, event):
         super(ExpandableTab, self).mousePressEvent(event)
         self.global_start = self.mapToGlobal(event.pos())
@@ -755,9 +763,9 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
     def toggleState(self):
         self.state = not self.state
         if self.state:
-            self.setFixedHeight(self.height_store)
+            self.setFixedHeight(self.expand_height)
         else:
-            self.height_store = self.size().height()
+            self.expand_height = self.size().height()
             self.setFixedHeight(29)
         self.checkButton.nextCheckState()
         self.ContentFrame.setVisible(self.state)

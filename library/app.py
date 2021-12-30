@@ -312,9 +312,13 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def updateAssetView(self, obj=None):
         sender = self.sender()
-        if self.assets_view.editor:
-            self.assets_view.editor.close()
-        self.pool.clear()
+        pool = self.pool
+        assets_view = self.assets_view
+        library = self.library
+
+        if assets_view.editor:
+            assets_view.editor.close()
+        pool.clear()
         if isinstance(obj, dict):
             categories = obj.copy()
         else:
@@ -323,38 +327,38 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         # Only re-query the database if the searchbox has changed
         new_search = False
 
-        categories_to_search = self.library.validateCategories(categories)
+        categories_to_search = library.validateCategories(categories)
         # Split text into list of search term keywords
         text = self.searchBox.text()
         if text:
             categories_to_search['keywords'] = text.split(' ')
         use_collections = self.collectionRadioButton.isChecked()
         categories_to_search['exclude_type'] = 5 if use_collections else 3
-        new_search = self.library.search(categories_to_search)
-        asset_total = len(self.library.assets)
+        new_search = library.search(categories_to_search)
+        asset_total = len(library.assets)
             
-        self.assets_view.clear()
+        assets_view.clear()
 
         if new_search or sender not in [self.searchBox, self.category_manager]:
             page = self.pageSpinBox.value()
             load_icons = not self.assets_grid.isVisible()
-            for asset in self.library.load(page, PAGE_LIMIT, categories, icons=load_icons):
+            for asset in library.load(page, PAGE_LIMIT, categories, icons=load_icons):
                 if load_icons:
                     on_complete = partial(setattr, asset, 'icon')
                     icon_path = asset.network_path.suffixed('_icon', '.jpg')
                     if not icon_path.exists:
                         copyRelatedIcon(asset)
                     worker = LocalThumbnail(icon_path, on_complete)
-                    self.pool.start(worker)
-                self.assets_view.addAsset(asset)
-            asset_total = len(self.library.assets_filtered)
-            self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
+                    pool.start(worker)
+                assets_view.addAsset(asset)
+            asset_total = len(library.assets_filtered)
+            assets_view.scrollTo(assets_view.model.index(0, 0, QModelIndex()))
 
         if asset_total == 0:
             self.noSearchResultsPage.show()
-            self.assets_view.hide()
+            assets_view.hide()
         else:
-            self.assets_view.show()
+            assets_view.show()
             self.noSearchResultsPage.hide()
         page_count = math.ceil(asset_total / PAGE_LIMIT) or 1
         self.pageSpinBox.setSuffix('/' + str(page_count))

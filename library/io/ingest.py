@@ -5,19 +5,17 @@ import json
 import subprocess
 from functools import partial
 
-import libraw
 import numpy as np
-import cv2
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
-from library.config import (DCC_EXT, MOVIE_EXT, RELIC_PREFS, TOOLS_EXT,
+from library.config import (DCC_EXT, MOVIE_EXT, RELIC_PREFS, TOOLS_EXT, RAW_EXT,
                             getAssetSourceLocation, log, logFunction)
 from library.objectmodels import BaseFields, relic_asset, temp_asset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QMutex, QMutexLocker, QObject, QPoint,
                             QPropertyAnimation, QRect, QRegularExpression,
                             QSize, QSortFilterProxyModel, Qt, QTextStream,
-                            QThread, QWaitCondition, Signal, Slot)
+                            QThread, QWaitCondition, Signal, Slot, QRunnable)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
                            QIcon, QImage, QPainter, QPixmap,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
@@ -27,28 +25,22 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget)
 from sequencePath import sequencePath as Path
-from colorcheckerDetection import autoExpose
+from imagine import hdr, libraw
+from imagine.colorchecker_detection import autoExpose
+from imagine.exif import EXIFTOOL
+
 
 INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 CREATE_NO_WINDOW = 0x08000000
 
-SIZE = ImageDimensions(288, 192)
+TSIZE = ImageDimensions(288, 192)
 
 PS_CMD = 'powershell -ExecutionPolicy bypass -command "{}"'
 
 EXE_ICON_CMD = """Add-Type -AssemblyName System.Drawing;
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon('{}');
 $icon.ToBitmap().Save('{}')"""
-
-NEAT_IMAGE_CMD = [
-    'E:/OneDrive/Apps/Neat Image v8 Standalone/NeatImageCL.exe', '"{}"',
-    '-sp',
-    '-ow',
-    '-e',
-    '-b=M',
-    '-s=',
-]
 
 def getMovInfo(fpath):
     """
@@ -71,26 +63,23 @@ def getRawInfo(fpath):
     """
     Gets Exif metadata from Canon cameras raw .cr2.
     """
-    keys = [
-        'CreateDate',
-        'CameraModelName',
-        'LensType',
-        'Orientation',
-        'ShutterSpeed',
-        'Aperture',
-        'ISO',
-        'FocalLength',
+    fields = [
+        '-CreateDate',
+        '-CameraModelName',
+        '-LensType',
+        '-Orientation#',
+        '-ShutterSpeed',
+        '-Aperture',
+        '-ISO',
+        '-FocalLength',
 
-        'WhiteBalance',
-        'ColorTemperature',
-        'ExposureProgram',
-        'CanonFlashMode',
+        '-WhiteBalance',
+        '-ColorTemperature',
+        '-ExposureProgram',
+        '-CanonFlashMode',
     ]
-    flags = '-' + ' -'.join(keys)
-    cmd = f'exiftool -json {flags} "{fpath}"'
-    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW)
-    result = json.loads(output)[0]
-    return result.items()
+    result = EXIFTOOL.getFields(str(fpath), fields, {})
+    return result
 
 def generatePreviews(img_buf, path):
     """Makes Proxy & Icon previews from an OpenImageIO image buffer"""
@@ -103,7 +92,7 @@ def generatePreviews(img_buf, path):
     proxy_spec['compression'] = 'jpeg:75'
     proxy_buf = oiio.ImageBuf(proxy_spec)
 
-    icon_spec = oiio.ImageSpec(SIZE.w, SIZE.h, 3, oiio.UINT8)
+    icon_spec = oiio.ImageSpec(TSIZE.w, TSIZE.h, 3, oiio.UINT8)
     icon_spec['compression'] = 'jpeg:40'
     icon_buf = oiio.ImageBuf(icon_spec)
 
@@ -121,9 +110,8 @@ def generatePreviews(img_buf, path):
     comp = oiio.ImageBufAlgo.over(icon_buf, bg)
     
     # Write to disk
-    path.ext = '.jpg'
-    icon_path = path.suffixed('_icon')
-    proxy_path = path.suffixed('_proxy')
+    icon_path = path.suffixed('_icon', ext='.jpg')
+    proxy_path = path.suffixed('_proxy', ext='.jpg')
     icon_buf.write(str(icon_path))
     proxy_buf.write(str(proxy_path))
     return icon_path
@@ -222,7 +210,7 @@ class ConversionRouter(QObject):
         width, height = res.split('x')
 
         icon_path = out_img_path.suffixed('_icon', ext='.jpg')
-        w, h = SIZE.w, SIZE.h
+        w, h = TSIZE.w, TSIZE.h
         FILTER_GRAPH_ICON = [
             f'setpts=PTS/{pts}',
             f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
@@ -290,7 +278,7 @@ class ConversionRouter(QObject):
         spec = a_input.spec()
         a_input.close()
         pts = ((framelength * 24) / 100) / 24
-        w, h = SIZE.w, SIZE.h
+        w, h = TSIZE.w, TSIZE.h
         width = spec.full_width
         height = spec.full_height 
         FILTER_GRAPH_ICON = [
@@ -390,17 +378,17 @@ class ConversionRouter(QObject):
             temp_path = out_path.suffixed('', '.bmp')
             cmd = PS_CMD.format(EXE_ICON_CMD.format(in_path, temp_path))
             subprocess.call(cmd)
-            out_img = QImage(SIZE.w, SIZE.h, QImage.Format_RGB888)
+            out_img = QImage(TSIZE.w, TSIZE.h, QImage.Format_RGB888)
             out_img.fill(QColor(65, 65, 65, 255))
 
             src_img = QImage(str(temp_path))
-            scaled_img = src_img.scaled(SIZE.w, SIZE.h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            scaled_img = src_img.scaled(TSIZE.w, TSIZE.h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             
             painter = QPainter(out_img)
             painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
             
             # calculate size offset image to center it.
-            width_diff = int((SIZE.w - scaled_img.width()) / 2)
+            width_diff = int((TSIZE.w - scaled_img.width()) / 2)
 
             painter.drawImage(width_diff, 0, scaled_img)
             painter.end()
@@ -429,77 +417,32 @@ class ConversionRouter(QObject):
         return asset
 
     @staticmethod
-    def processRAW(in_img_path, out_img_path, denoise=False):
-        proc = libraw.LibRaw()
-
-        # Read RAW data
-        proc.open_file(str(in_img_path))
-        proc.unpack()
-
-        # Set libraw parameters
-        proc.set_output_color(ctypes.c_int(6))
-        proc.set_no_auto_bright(ctypes.c_int(1))
-
-        proc.dcraw_process()
-
-        raw_img_data = proc.imgdata.image
-        img_data = raw_img_data[:, :, :-1] # remove alpha
-        
-        size = ImageDimensions.fromArray(img_data)
-        # convert ACES2065-1 to ACEScg 
-        spec = oiio.ImageSpec(size.w, size.h, size.channels, oiio.HALF)
-        buf = oiio.ImageBuf(spec)
-        buf.set_pixels(spec.roi, img_data)
-        ACESCG_MATRIX = (
-            1.4514393161,  -0.0765537734, 0.0083161484, 0,
-            -0.2365107469,  1.1762296998, -0.0060324498, 0,
-            -0.2149285693, -0.0996759264,  0.9977163014, 0,
-            0,         0,         0,       1
-        )
-        buf = oiio.ImageBufAlgo.colormatrixtransform(buf, ACESCG_MATRIX)
-        # Embed the Exif camera metadata into the exr metadata.
-        for key, value in getRawInfo(in_img_path):
+    def processRAW(in_img_path, out_img_path):
+        img_data = EXIFTOOL.getPreview(str(in_img_path))
+        buf = hdr.bufFromArray(img_data)
+        buf = oiio.ImageBufAlgo.channels(buf, (2, 1, 0, 3))
+        ## Embed the Exif camera metadata into the metadata.
+        raw_meta = getRawInfo(in_img_path)
+        for key, value in raw_meta.items():
             buf.specmod().attribute(f'exif/{key}', value)
 
-        out_img_path.ext = '.exr' # Raw is always converted to exr.
-        in_img_path.ext = '.exr' # Raw is always converted to exr.
-        if denoise:
-            denoise_path = out_img_path.suffixed('_dn', '.tif')
-            tif_path = out_img_path.suffixed('_orig', '.tif')
+        jpeg_path = out_img_path.suffixed('_proxy', ext='.jpg')
+        buf.write(str(jpeg_path))
 
-            tifbuf = oiio.ImageBuf(
-                oiio.ImageSpec(spec.width, spec.height, 3, oiio.UINT16)
-            )
-            offset = 0.01
-            buf = oiio.ImageBufAlgo.add(buf, offset)
-            oiio.ImageBufAlgo.pow(tifbuf, buf, (0.227, 0.227, 0.227))
+        icon_spec = oiio.ImageSpec(TSIZE.w, TSIZE.h, 3, oiio.UINT8)
+        icon_spec['compression'] = 'jpeg:40'
+        icon_buf = oiio.ImageBuf(icon_spec)
+        oiio.ImageBufAlgo.fit(icon_buf, buf, filtername='cubic', exact=True)
+        # Composite icon image over constant grey
+        bg = oiio.ImageBuf(icon_buf.spec())
+        oiio.ImageBufAlgo.fill(bg, (0.247, 0.247, 0.247, 1.0))
+        comp = oiio.ImageBufAlgo.over(icon_buf, bg)
 
-            tifbuf.write(str(denoise_path))
-            NEAT_IMAGE_CMD[1] = '"{}"'.format(str(denoise_path))
-            subprocess.call(' '.join(NEAT_IMAGE_CMD), stdout=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
+        icon_path = out_img_path.suffixed('_icon', ext='.jpg')
+        icon_buf.write(str(icon_path))
 
-            denoise_buf = oiio.ImageBuf(str(denoise_path))
-            denoise_buf = oiio.ImageBufAlgo.pow(denoise_buf, (4.4, 4.4, 4.4))
-            tifbuf = oiio.ImageBufAlgo.pow(tifbuf, (4.4, 4.4, 4.4))
-
-            dn = (denoise_buf.get_pixels(oiio.FLOAT) - offset)
-            og = (tifbuf.get_pixels(oiio.FLOAT) - offset)
-
-            noise = og - dn
-            out_denoised = (buf.get_pixels() - offset) - noise
-            buf.set_pixels(buf.spec().roi, out_denoised)
-            #buf.specmod().attribute('compression', 'dwaa:15')
-            os.remove(str(denoise_path))
-
-        buf.write(str(out_img_path))
-
-        formatted = oiio.ImageBuf(
-            oiio.ImageSpec(spec.width, spec.height, 3, oiio.UINT8)
-        )
-        oiio.ImageBufAlgo.pow(formatted, buf, (0.454, 0.454, 0.454))
-        icon_path = generatePreviews(formatted, out_img_path)
-        asset = assetFromStill(spec, icon_path, in_img_path)
-
+        asset = assetFromStill(buf.spec(), icon_path, in_img_path)
+        in_img_path.copyTo(out_img_path)
         return asset
 
     @staticmethod
@@ -516,31 +459,62 @@ class ConversionRouter(QObject):
 
 
 def applyImageModifications(img_path, temp_asset):
-    img_buf = oiio.ImageBuf(str(img_path))
-    spec = img_buf.spec()
+    """Makes modifications in-place to the staged image data.
+    Crops from an annotation, denoises raw, applies color from a detected matrix, 
+    aligns the image rotation to the detected physical camera capture orientation,
+    embeds exif data from source file and compresses exrs.
+
+    Parameters
+    ----------
+    img_path : sequencePath
+        
+    temp_asset : temp_asset
+        temporary asset object with custom processing fields for this function.
+
+    """
+    if not img_path.exists:
+        temp_asset.path.copyTo(img_path)
+        temp_asset.path = img_path
+
+    is_raw = img_path.ext in RAW_EXT
+    if is_raw:
+        raw_path = str(img_path)
+        img_data = libraw.decodeRaw(raw_path)
+        img_buf = hdr.bufFromArray(img_data)
+        img_path.ext = '.exr'
+        temp_asset.path = img_path
+    else:
+        img_buf = oiio.ImageBuf(str(img_path))
+
+    # Apply color changes before denoise.
     if temp_asset.colormatrix:
         img_buf = oiio.ImageBufAlgo.colormatrixtransform(img_buf, temp_asset.colormatrix)
+    elif is_raw or temp_asset.aces:
+        #img_buf = autoExpose(img_buf)
+        img_buf = hdr.acesToCG(img_buf)
+        temp_asset.aces = False
+
+    # Denoise the full image before cropping.
+    if is_raw or temp_asset.denoise:
+        denoise_path = img_path.suffixed('_dn', '.tif')
+        img_buf = hdr.neatDenoise(img_buf, str(denoise_path))
+        temp_asset.denoise = False
 
     # Crop using annotation BoundingBox
     annotated = img_path.parents(0) / 'annotations' / (img_path.name + '_proxy.1.png')
     if annotated.exists:
-        anno_buf = oiio.ImageBuf(str(annotated))
-        anno_buf = oiio.ImageBufAlgo.pow(anno_buf, (2.2, 2.2, 2.2))
+        img_buf = hdr.annotationCrop(img_buf, str(annotated))
 
-        alpha = anno_buf.get_pixels(oiio.UINT8)[:, :, 3]
-        alpha = cv2.Canny(alpha, 2, 48)
-        contours, _hierarchy = cv2.findContours(alpha, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        for i, cnt in enumerate(contours):
-            x, y, w, h = cv2.boundingRect(cnt)
-            img_buf = oiio.ImageBufAlgo.cut(img_buf, roi=oiio.ROI(x, (x + w), y, (y + h)))
-            spec = img_buf.spec()
-            break
-        os.remove(str(annotated))
-    elif not temp_asset.colormatrix:
-        img_buf = autoExpose(img_buf)
+    # Set the meta attributes and write the file.
+    if is_raw:
+        raw_meta = getRawInfo(raw_path)
+        for key, value in raw_meta.items():
+            img_buf.specmod().attribute(key, value)
 
     img_buf.specmod().attribute('compression', 'dwaa:15')
+    img_buf = oiio.ImageBufAlgo.reorient(img_buf)
     img_buf.write(str(img_path))
+    spec = img_buf.spec()
 
     # generate new previews from modified image.
     formatted = oiio.ImageBuf(
@@ -548,7 +522,51 @@ def applyImageModifications(img_path, temp_asset):
     )
     oiio.ImageBufAlgo.pow(formatted, img_buf, (0.454, 0.454, 0.454))
     icon_path = generatePreviews(formatted, img_path)
+    temp_asset.resolution = '{}x{}x{}'.format(spec.full_width, spec.full_height, spec.nchannels)
+    if is_raw: # Clean up
+        del img_buf
+        del img_data
+        os.remove(raw_path)
+
     temp_asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
+
+
+def blendRawExposures(assets_by_file):
+    primary_asset = list(assets_by_file.values())[0]
+    primary_path = list(assets_by_file.keys())[0]
+    out_file = primary_path.suffixed('', ext='.exr')
+    hdr.blendExposures(assets_by_file.keys(), out_file, align=True)
+    primary_asset.path = out_file
+    primary_asset.aces = True
+
+    raw_meta = getRawInfo(primary_path)
+    img_buf = oiio.ImageBuf(str(out_file))
+    for key, value in raw_meta.items():
+        img_buf.specmod().attribute(key, value)
+    [os.remove(str(x)) for x in assets_by_file.keys()]
+
+
+class TaskRunnerSignals(QObject):
+    completed = Signal(tuple)
+
+
+class TaskRunner(QRunnable):
+    
+    def __init__(self, task, callback=None, signal=None):
+        super(TaskRunner, self).__init__(signal)
+        if signal:
+            self.signal = TaskRunnerSignals()
+        else:
+            self.signal = None
+        self.task = task
+        self.callback = callback
+
+    def run(self):
+        result = self.task()
+        if self.callback:
+            self.callback(result)
+        if self.signal and result:
+            self.signal.completed.emit(result)
 
 
 class IngestionThread(QThread):
@@ -571,7 +589,6 @@ class IngestionThread(QThread):
         else:
             self.stopped = False
             self.condition.wakeOne()
-
 
     def stop(self):
         with QMutexLocker(self.mutex):
@@ -612,8 +629,7 @@ class IngestionThread(QThread):
                 else:
                     files_map[in_path] = out_path
 
-                # Add extra auxillary files to the packaged content.
-                if extra_files:
+                if extra_files: # Add extra auxillary files to the packaged content.
                     for extra in extra_files:
                         subfolder = getAssetSourceLocation(extra)
                         filename = Path(extra).stem
@@ -621,7 +637,7 @@ class IngestionThread(QThread):
 
                         files_map[Path(extra)] = new_path
 
-                if in_path.ext in ['.ma', '.mb']:
+                if in_path.ext in DCC_EXT:
                     formats = [
                         ['', '.mtlx'],
                         ['_icon', '.jpg'],
@@ -662,6 +678,7 @@ class IngestionThread(QThread):
                     files_map[in_icon] = out_icon
                     files_map[in_proxy] = out_proxy
 
+                # Migrate the staged ingest files to their library location.
                 for src, dst in files_map.items():
                     src.checkSequence()
                     if src.sequence_path:
@@ -672,9 +689,11 @@ class IngestionThread(QThread):
                             src.moveTo(dst)
                     else:
                         src.moveTo(dst)
+
+                # Calculate the final hash and size of the asset.
                 item.filehash = out_path.parents(0).hash
                 item.filesize = out_path.parents(0).size
-                # Clear the Id to allow for database creation
+
                 self.queue.pop(0)
                 self.itemDone.emit(item)
 

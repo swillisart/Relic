@@ -565,7 +565,9 @@ class temp_asset(BaseFields):
         'framerate',
         'polycount',
         'textured',
-        'colormatrix'
+        'colormatrix',
+        'aces',
+        'denoise',
     ]
     __slots__ = tuple(
         relic_asset.base + attrs + relic_asset.extra

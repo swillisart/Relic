@@ -75,8 +75,8 @@ class timelineControl(QTimeLine):
         self.setDuration(miliseconds_duration)
         # Block update signals to prevent recursive loop.
         self.blockSignals(True)
-        new = (self.frame + 1) * (1000 / (rate))
-        self.setCurrentTime( new * duration_div)
+        new = self.frame * (1000 / (rate))
+        self.setCurrentTime(new * duration_div)
         self.blockSignals(False)
 
     def play(self):
@@ -93,11 +93,11 @@ class timelineControl(QTimeLine):
         self.setCurrentTime(self.endTime)
 
     def stepForward(self):
-        new_time = (((self.frame - 1) + self.fps) * self.millisec_fps)
+        new_time = ((self.frame + self.fps) * self.millisec_fps)
         self.setCurrentTime(new_time)
 
     def stepBackward(self):
-        new_time = ((self.frame - self.fps) * self.millisec_fps)
+        new_time = ((self.frame - 1 - self.fps) * self.millisec_fps)
         self.setCurrentTime(new_time)
 
     def oneFrameForward(self):
@@ -142,6 +142,9 @@ class FrameEngine(QObject):
         self.is_caching = False
         self.cache_end = 0
         self.deferred_frame_jump = None
+        self.mid = 0
+        self.query = 0
+        self.updat = 0
 
     @Slot(int)
     def onFrameJump(self, frame):
@@ -162,8 +165,9 @@ class FrameEngine(QObject):
         self.timeline_control.setFrame(frame)
 
     def setRegionCache(self):
-        if self.timeline.selected_clips:
-            clip = self.timeline.selected_clips[-1]
+        selection = self.timeline.graph.selected_clips
+        if selection:
+            clip = selection[-1]
             clip_size = (clip.geometry.pixels.nbytes * clip.duration)
             if io.util.fitsInMemory(clip_size):
                 self.mode = FrameEngine.REGION
@@ -176,8 +180,8 @@ class FrameEngine(QObject):
     @Slot()
     def onCacheFinished(self):
         self.is_caching = False
-        self.timeline.makeCurrent()
-        self.timeline.drawViewport()
+        #self.timeline.makeCurrent()
+        #self.timeline.drawViewport()
 
     @Slot(int)
     def updateCache(self, frame):
@@ -200,11 +204,16 @@ class FrameEngine(QObject):
 
     @Slot(int)
     def onFrameChange(self, timeline_frame):
+        if timeline_frame > 200:
+            print('\n\n')
+            print(self.query)
+            print(self.mid)
+        start = timeit.default_timer()
         viewport = self.viewport
         timeline = self.timeline
         clip, clip_frame = timeline.updatedFrame(timeline_frame)
-        if not clip_frame:
-            return
+        self.query += timeit.default_timer() - start
+        start = timeit.default_timer() 
 
         if isinstance(clip, ImageClip):
             img_data = clip.geometry.pixels
@@ -216,11 +225,15 @@ class FrameEngine(QObject):
         if not isinstance(img_data, np.ndarray):
             if self.timeline_control.state() == 2:
                 self.parent.playbackToggle()
-
+            if not clip:
+                self.timeline.makeCurrent()
+                self.timeline.drawViewport()
+                return
             if (timeline_frame - 2) < self.minc or timeline_frame > (self.maxc + 2):
                 if self.mode == FrameEngine.LOOK_AHEAD:
                     self.clearFrameCache(timeline_frame)
             self.startCaching(clip, clip_frame, timeline_frame, new_clip=True)
+        
             update_framerate = True
         else:
             if not self.is_caching: # Don't attempt frame queries while caching.
@@ -240,7 +253,7 @@ class FrameEngine(QObject):
 
             viewport.makeCurrent()
             geo = clip.geometry
-            viewport.image_plane = geo 
+            viewport.image_plane = geo
             geo.updateTexture(img_data)
 
             if not geo.no_annotation:
@@ -249,12 +262,14 @@ class FrameEngine(QObject):
             viewport.update()
 
         if timeline_frame == clip.timeline_in or update_framerate:
-            self.parent.playbackToggle()
-            self.timeline_control.setFramerate(clip.framerate)
-            self.parent.playbackToggle()
+            if clip.framerate != self.timeline_control.fps:
+                self.parent.playbackToggle()
+                self.timeline_control.setFramerate(clip.framerate)
+                self.parent.playbackToggle()
 
         self.timeline.makeCurrent()
         self.timeline.drawViewport()
+        self.mid += timeit.default_timer() - start
 
     def regionCaching(self, clip):
         self.clearFrameCache(clip.timeline_in, update=False)
@@ -325,9 +340,7 @@ class FrameEngine(QObject):
         self.minc = timeline_frame
         self.maxc = timeline_frame
         self.cache_number = 0
-        self.timeline.updateCacheSize(self.minc, self.maxc)
-        self.timeline.makeCurrent()
-        self.timeline.drawViewport()
+        #self.timeline.updateCacheSize(self.minc, self.maxc)
 
 
 class ViewerTitleBar(CompactTitleBar):
@@ -482,13 +495,15 @@ class PlayerAppWindow(QMainWindow):
         SHORTCUTS[VIEW].append(QShortcut(QKeySequence('g'), self, shuffle_green))
         SHORTCUTS[VIEW].append(QShortcut(QKeySequence('b'), self, shuffle_blue))
         SHORTCUTS[VIEW].append(QShortcut(QKeySequence('p'), self, self.paintContext))
-        SHORTCUTS[VIEW].append(QShortcut(QKeySequence('c'), self, self.cacheModeToggle))
+        SHORTCUTS[VIEW].append(QShortcut(QKeySequence('m'), self, self.cacheModeToggle))
+        SHORTCUTS[VIEW].append(QShortcut(QKeySequence('c'), self, self.timeline.cut))
 
         play_control = self.frame_engine.timeline_control
         QShortcut(QKeySequence('right'), self, play_control.oneFrameForward)
         QShortcut(QKeySequence('left'), self, play_control.oneFrameBackward)
         QShortcut(QKeySequence('ctrl+left'), self, play_control.stepBackward)
         QShortcut(QKeySequence('ctrl+right'), self, play_control.stepForward)
+        QShortcut(QKeySequence('ctrl+a'), self, self.timeline.selectAll)
         QShortcut(QKeySequence('`'), self, self.theatreMode)
 
         self.viewport.setColorConfig()
@@ -664,13 +679,14 @@ class PlayerAppWindow(QMainWindow):
 
     @Slot()
     def playbackToggle(self, stop=False):
-        if stop and self.frame_engine.timeline_control.state() != 2:
+        timeline_control = self.frame_engine.timeline_control 
+        if stop and timeline_control.state() != 2:
             return
-        if self.frame_engine.timeline_control.state() == 2:
+        if timeline_control.state() == 2:
             self.player.play.setChecked(False)
         else:
             self.player.play.setChecked(True)
-        self.frame_engine.timeline_control.play()
+        timeline_control.play()
         self.viewport.makeCurrent()
 
     def dragEnterEvent(self, event):
@@ -724,11 +740,12 @@ class PlayerAppWindow(QMainWindow):
         file_path = Path(stripped, checksequence=True)
         # Resolve the sequence and set the timeline offset
         offset = 0
-        if self.timeline.graph.nodes.count and not reset:
-            try:
-                offset = self.timeline.graph.clips[-1][-1].timeline_out
-            except:
-                pass
+        if not reset:
+            sequences = self.timeline.graph.sequences
+            clips = self.timeline.graph.clips
+            for key, sequence in sequences.items():
+                if sequence:
+                    offset = max([clips[x].timeline_out for x in sequence])
 
         self.viewport.makeCurrent() # Need this for clip image plane geometry creation
 
@@ -743,19 +760,22 @@ class PlayerAppWindow(QMainWindow):
 
         # Now we modify the timeline
         self.timeline.makeCurrent()
-        if reset or self.timeline.graph.nodes.count == 0:
+        if reset:
             self.frame_engine.clearFrameCache(offset)
             self.timeline.reset(clip)
 
-        self.timeline.graph.appendClip(clip, 0)
-        self.timeline.updateNodeGlyphs()
-        #self.timeline.frameGeometry()
-        # Finally update the viewport again
-        self.frame_engine.onFrameChange(clip.timeline_in)
+        if not file_path.ext in io.MOVIE:
+            self.timeline.graph.appendClip(clip, 0)
+            self.timeline.updateNodeGlyphs()
+            # Finally update the viewport again
+            #self.frame_engine.onFrameChange(clip.timeline_in)
+            #callback = partial(self.frame_engine.timeline_control.setFrame, clip.timeline_in)
+            #deferred_frame = QTimer.singleShot(600, callback)
+        self.viewport.makeCurrent()
         self.viewport.frameGeometry()
 
     def hide(self):
-        self.frame_engine.clearFrameCache()
+        self.frame_engine.clearFrameCache(self.timeline.current_frame)
         super(PlayerAppWindow, self).hide()
 
     def closeEvent(self, event):
@@ -797,9 +817,12 @@ def main(args):
     window.show()
     server = StrandServer('peak')
     server.incomingFile.connect(window.loadFile)
+    app.processEvents() # draw the initial ui before loading stuff
     if args:
         if args.path:
-            window.loadFile(args.path)
+            #for x in range(100):
+            for file_path in args.path.split(','):
+                window.loadFile(file_path, reset=False)
         if args.annotate:
             window.paint_dock.setFloating(False)
             window.paintContext()

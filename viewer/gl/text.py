@@ -1,7 +1,7 @@
 import sys, string, calendar, os
 from ctypes import c_void_p
 import datetime as dt
-import functools
+from functools import partial
 
 # Third-party
 from OpenGL.GL import *
@@ -21,7 +21,7 @@ def createFontAtlas(file_path):
     if font_file.open(QFile.ReadOnly):
         stream = font_file.readAll()
         # hack for getting qt resource bytes into freetype memory load.  
-        stream.read = functools.partial(bytes, stream)
+        stream.read = partial(bytes, stream)
         face = freetype.Face(stream)
     else:
         raise OSError('Unable to open font : {}'.format(file_path))
@@ -128,10 +128,7 @@ class glyphContainer(object):
         self.shader = shader
         self.color = glm.vec4(1.0, 1.0, 1.0, 1.0)
         self.z = z
-        self.indices = np.array([], dtype=np.int16)
-        self.elements = np.array([], dtype=np.float32)
-        self.indices_count = 0
-        self.ids = np.array([0, 1, 2, 2, 3, 0], dtype=np.int16)
+        self.reset()
         self.undo = []
 
     def createFontAtlasTexture(self, font_atlas):
@@ -163,6 +160,7 @@ class glyphContainer(object):
 
     def addText(self, text, coordinate, scale, char_map=None):
         o = 0
+        z = self.z
         if not char_map:
             char_map = self.char_map
         for i, c in enumerate(text):
@@ -180,7 +178,6 @@ class glyphContainer(object):
                 ur = char.u_right - 0.0005
             left = (char.offset - (char.width + char.bearing.x))
 
-            z = self.z
             w = (right - left)
             x = (w / 2) 
             y = (48 / 2)
@@ -233,24 +230,98 @@ class glyphContainer(object):
         
             glDrawElements(GL_TRIANGLES, self.indices_count, GL_UNSIGNED_SHORT, c_void_p(0))
 
-
-    def move(self, text, offset, position):
+    def moveAll(self, text, start, position):
         byte_size = (len(text) * 4 * 5)
-        end = offset + byte_size
-
-        self.elements[offset:end][0::5] += position.x
-        self.elements[offset:end][1::5] += position.y
+        end = start + byte_size
+        self.elements[start:end][0::5] += position.x
+        self.elements[start:end][1::5] += position.y
         with self.vbo:
             self.vbo.implementation.glBufferSubData(
                 self.vbo.target, 0, self.elements
             )
 
+    def move(self, text, start, position):
+        byte_size = (len(text) * 4 * 5)
+        end = start + byte_size
 
-class frameGlyphs(glyphContainer):
+        data = self.elements[start:end]
+        aslice = self.elements[:start]
+        data[0::5] += position.x
+        data[1::5] += position.y
+        offset = aslice.nbytes
+        with self.vbo:
+            self.vbo.implementation.glBufferSubData(
+                self.vbo.target, offset, data.nbytes, data)
+
+
+class FrameGlyphs(glyphContainer):
 
     def __init__(self, *args, **kwargs):
-        super(frameGlyphs, self).__init__(*args, **kwargs)
+        super(FrameGlyphs, self).__init__(*args, **kwargs)
         self.color = glm.vec4(0.5, 0.9, 0.65, 1.0)
+        self.reset()
+        self.text = '        ' # empty spaces '00:00:00:00'
+
+    def updateCharacter(self,
+            char_map,
+            elements,
+            coordinate,
+            py,
+            ny,
+            z,
+            scale,
+            index,
+            char_str,
+        ):
+        char = char_map[char_str]
+        if char_str == ' ':
+            right = char.offset + 16
+            ul = ur = 10
+            z = -2
+        else:
+            right = char.offset
+            ul = char.u_left - 0.00075
+            ur = char.u_right - 0.0005
+        left = (char.offset - (char.width + char.bearing.x))
+
+        w = (right - left)
+        x = (w / 2)
+        o = index * 24
+        px = ((x + o) * scale) + coordinate.x
+        nx = ((-x + o) * scale) + coordinate.x
+        new_data = [
+            nx, py, z, ul, 0.0, # BL
+            px, py, z, ur, 0.0, # BR
+            px, ny, z, ur, 1.0, # TR
+            nx, ny, z, ul, 1.0, # TL
+        ]
+        begin = index * 20
+        end = begin + 20
+        elements[begin:end] = new_data
+
+    def updateText(self, text, coordinate, scale):
+        z = self.z
+        py = (24 * scale) + coordinate.y #y = (48 / 2)
+        ny = (-24 * scale) + coordinate.y #y = (48 / 2)
+        padded = ''.join([text, self.text[len(text):]])
+        char_map = self.char_map
+        elements = self.elements
+        vbo = self.vbo
+        addition = partial(self.updateCharacter,
+            char_map,
+            elements,
+            coordinate,
+            py,
+            ny,
+            z,
+            scale
+        )
+        #[addition(i, char) for i, char in enumerate(padded)]
+        list(map(addition, range(len(padded)), padded))
+
+        with vbo:
+            vbo.implementation.glBufferSubData(
+                vbo.target, 0, elements)
 
 class HandleGlyphs(glyphContainer):
 

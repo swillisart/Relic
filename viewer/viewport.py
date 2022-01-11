@@ -18,6 +18,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtOpenGL import *
 from PySide2.QtWidgets import *
+from shiboken2 import VoidPtr
 
 # -- Module --
 from viewer.gl.widgets import InteractiveGLView
@@ -55,6 +56,27 @@ R_CHANNEL = {
     GL_HALF_FLOAT: GL_R16F,
     GL_FLOAT: GL_R32F
 }
+
+class BaseWrapper(object):
+
+    def __enter__(self):
+        self.bind()
+        return self
+
+    def __exit__(self, *args):
+        self.release()
+
+
+class Buffer(QOpenGLBuffer, BaseWrapper):
+    def __init__(self, *args, **kwargs):
+        super(Buffer, self).__init__(*args, **kwargs)
+        self.create()
+
+    def allocate(self, allocation):
+        if isinstance(allocation, np.ndarray):
+            return super(Buffer, self).allocate(allocation, allocation.nbytes)
+        return super(Buffer, self).allocate(allocation)
+
 
 class BrushStroke(QObject):
 
@@ -532,18 +554,15 @@ class colorFramebuffer(object):
         glBindTexture(GL_TEXTURE_3D, self.lut3d_target_texture)
 
 
-        self.quad_vbo.bind()
-        self.quad_ibo.bind()
+        with self.quad_ibo, self.quad_vbo:
+            glVertexAttribPointer(0, 3, GL_FLOAT, False, 5 * 4, c_void_p(0))
+            glEnableVertexAttribArray(0)
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, False, 5 * 4, c_void_p(0))
-        glEnableVertexAttribArray(0)
+            glVertexAttribPointer(1, 2, GL_FLOAT, False, 5 * 4, c_void_p(3 * 4))
+            glEnableVertexAttribArray(1)
 
-        glVertexAttribPointer(1, 2, GL_FLOAT, False, 5 * 4, c_void_p(3 * 4))
-        glEnableVertexAttribArray(1)
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, c_void_p(0))
 
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, c_void_p(0))
-        self.quad_vbo.unbind()
-        self.quad_ibo.unbind()
         glBindTexture(GL_TEXTURE_2D, 0)
         glBindTexture(GL_TEXTURE_3D, 0)
 
@@ -641,12 +660,16 @@ class ImagePlane(object):
         self.vbo = vbo.VBO(self.elements)
 
         self.texture_id = glGenTextures(1)
-        #print(self.texture_id)
 
-        #glActiveTexture(GL_TEXTURE0)
+        self.pbo = Buffer(QOpenGLBuffer.PixelUnpackBuffer)
+
+        with self.pbo as pbo:
+            pbo.setUsagePattern(QOpenGLBuffer.StreamDraw)
+            pbo.allocate(pixels.nbytes)
+
         glBindTexture(GL_TEXTURE_2D, self.texture_id)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
@@ -716,26 +739,22 @@ class ImagePlane(object):
         self.updateAnnotation(pixels)
 
     def updateTexture(self, pixels):
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glBindTexture(GL_TEXTURE_2D, self.texture_id)
-        self.f.glTexSubImage2D(
-            GL_TEXTURE_2D,
-            0,
-            0,
-            0,
-            self.shape.x,
-            self.shape.y,
-            self.order,
-            self.gl_format,#GL_HALF_FLOAT,
-            pixels
-        )
+        #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        #glFlush()
+        null = VoidPtr(0)
+        shape = self.shape
+        with self.pbo as pbo:
+            glBindTexture(GL_TEXTURE_2D, self.texture_id)
+            self.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, shape.x, shape.y, self.order, self.gl_format, null)
+            #glBufferData(GL_PIXEL_UNPACK_BUFFER, pixels.nbytes, c_void_p(0), GL_STREAM_DRAW)
+            pbo.write(0, pixels, pixels.nbytes)
+            glBindTexture(GL_TEXTURE_2D, 0)
+
         self.pixels = pixels
-        glBindTexture(GL_TEXTURE_2D, 0)
 
     def updateAnnotation(self, pixels):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glBindTexture(GL_TEXTURE_2D, self.annotation_id)
-        #print(pixels.dtype, pixels.shape, self.shape.x, self.shape.y)
         glTexSubImage2D(
             GL_TEXTURE_2D,
             0,
@@ -770,24 +789,20 @@ class ImagePlane(object):
         # Handle Texturing
         glUniform1i(self.shader.tex2D, 1)
 
-        self.ibo.bind()
-        self.vbo.bind()
+        with self.ibo, self.vbo:
+            glUniformMatrix4fv(self.shader.MVP, 1, GL_FALSE, glm.value_ptr(transpose_mvp))
 
-        glUniformMatrix4fv(self.shader.MVP, 1, GL_FALSE, glm.value_ptr(transpose_mvp))
+            # Positions
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, False, 5 * 4, c_void_p(0))
 
-        # Positions
-        glEnableVertexAttribArray(0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, False, 5 * 4, c_void_p(0))
+            # UV
+            glEnableVertexAttribArray(1)
+            glVertexAttribPointer(1, 2, GL_FLOAT, False, 5 * 4, c_void_p(3 * 4))
 
-        # UV
-        glEnableVertexAttribArray(1)
-        glVertexAttribPointer(1, 2, GL_FLOAT, False, 5 * 4, c_void_p(3 * 4))
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, c_void_p(0))
 
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, c_void_p(0))
-        self.ibo.unbind()
-        self.vbo.unbind()
         glBindTexture(GL_TEXTURE_2D, 0)
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
 
 
 class Viewport(InteractiveGLView):
@@ -849,45 +864,54 @@ class Viewport(InteractiveGLView):
 
     def paintGL(self, scene=True):
         super(Viewport, self).paintGL()
+        image_plane = self.image_plane
+        paint_engine = self.paint_engine
         if scene:
             # Draw our scene
-            with self.framebuffer:
-                if self.image_plane:
-                    glBindTexture(GL_TEXTURE_2D, self.image_plane.texture_id)
-                    with self.image_plane.shader:
-                        self.image_plane.draw(self.MVP)
+            if image_plane:
+                null = VoidPtr(0)
+                glBindTexture(GL_TEXTURE_2D, image_plane.texture_id)
+                with image_plane.pbo as pbo:
+                    x = image_plane.shape.x
+                    y = image_plane.shape.y
+                    image_plane.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, x, y, image_plane.order, image_plane.gl_format, null)
+                    
 
+                with self.framebuffer:
+                    with image_plane.shader:
+                        image_plane.draw(self.MVP)
             # Draw the actual screen-space framebuffer quad
             with self.framebuffer.shader:
                 self.framebuffer.draw()
 
         # Annotation overlay
-        if self.image_plane:
-            glBindTexture(GL_TEXTURE_2D, self.image_plane.annotation_id)
-            with self.image_plane.shader:
-                annotation_transform = glm.translate(glm.mat4(1.0), glm.vec3(0, 0.0, -1.0))
-                scale = glm.scale(annotation_transform, glm.vec3(OVERSCAN))
-                annotation_mvp = self.camera.perspective * self.glmview * scale
-                self.image_plane.draw(annotation_mvp)
+        if image_plane:
+            if not image_plane.no_annotation or paint_engine.enabled:
+                glBindTexture(GL_TEXTURE_2D, image_plane.annotation_id)
+                with image_plane.shader:
+                    annotation_transform = glm.translate(glm.mat4(1.0), glm.vec3(0, 0.0, -1.0))
+                    scale = glm.scale(annotation_transform, glm.vec3(OVERSCAN))
+                    annotation_mvp = self.camera.perspective * self.glmview * scale
+                    image_plane.draw(annotation_mvp)
 
         # GL primitives and visual Gizmos
         mv = self.camera.perspective * self.glmview
-        if self.paint_engine.enabled:
+        if paint_engine.enabled:
             # Draw the cursor cylinder 3 times 1 white then slightly smaller black
             # and finally cutout them by painting a transparent circle first. 
-            radius = self.paint_engine.brush.radius
+            radius = paint_engine.brush.radius
             w_scale = mv * glm.scale(self.cursorTransform, glm.vec3(radius))
             t_scale = mv * glm.scale(self.cursorTransform, glm.vec3(radius - (4 * self.zoom2d)))
             b_scale = mv * glm.scale(self.cursorTransform, glm.vec3(radius - (2 * self.zoom2d)))
-            brush_rgba = self.paint_engine.brush.color.getRgbF()
+            brush_rgba = paint_engine.brush.color.getRgbF()
             self.brushCursor.color = glm.vec4(*brush_rgba) # Transparent
             self.brushCursor.draw(t_scale)
             self.brushCursor.color = glm.vec4(0.0, 0.0, 0.0, 1.0) # Brush Color
             self.brushCursor.draw(b_scale)
             self.brushCursor.color = glm.vec4(1.0) # White
             self.brushCursor.draw(w_scale)
-        self.paint_engine.shapes.active.draw(mv)
-        for primitive in self.paint_engine.shapes.primitives:
+        paint_engine.shapes.active.draw(mv)
+        for primitive in paint_engine.shapes.primitives:
             primitive.draw(mv)
         glBindTexture(GL_TEXTURE_2D, 0)
 
@@ -895,8 +919,8 @@ class Viewport(InteractiveGLView):
         super(Viewport, self).resizeGL(width, height)
         self.framebuffer.build(width, height)
 
-    def drawViewport(self, orbit=False, scale=False, pan2d=False):
-        super(Viewport, self).drawViewport(orbit, scale, pan2d)
+    def drawViewport(self, orbit=False, scale=False, pan=False):
+        super(Viewport, self).drawViewport(orbit, scale, pan)
         if scale:
             percent = int(100 / self.zoom2d)
             self.zoomChanged.emit(percent)
@@ -1033,6 +1057,7 @@ class Viewport(InteractiveGLView):
             roi = self.paint_engine.drawOnCanvas(x, y, self.image_plane.paint_canvas)
         self.image_plane.updateAnnotation(roi)
 
+    @useGL
     def paintSimpleStroke(self):
         canvas_lastpos = self.screenToCanvas(self.m_lastpos)
         canvas_pos = self.screenToCanvas(self.m_pos)
@@ -1051,6 +1076,7 @@ class Viewport(InteractiveGLView):
         if roi is not None:
             self.image_plane.updateAnnotation(roi)
 
+    @useGL
     def createShape(self):
         b = glm.vec2(self.w_pos.x(), self.w_pos.y())
         a = self.w_firstpos
@@ -1216,6 +1242,7 @@ class Viewport(InteractiveGLView):
         self.key_callback = None
         super(Viewport, self).keyPressEvent(event)
 
+    @useGL
     def scalePaintEngineBrush(self):
         size = self.m_pos - self.m_lastpos
         if abs(size.x) <= abs(size.y):
@@ -1226,7 +1253,6 @@ class Viewport(InteractiveGLView):
         self.c_pos = self.c_firstpos
         self.update()
 
-    @useGL
     def mouseMoveEvent(self, event):
         super(Viewport, self).mouseMoveEvent(event)
 

@@ -1,8 +1,9 @@
 import glob
 import re
-import timeit
 from ctypes import c_void_p
-
+from collections import defaultdict
+from functools import partial
+import timeit
 # -- Third-party --
 from OpenGL.GL import *
 from OpenGL.arrays import vbo
@@ -19,15 +20,14 @@ import numpy as np
 import glm
 
 # -- Module --
-
+import sys
 from viewer.viewport import ImagePlane
 from viewer.gl.text import (
-    glyphContainer, tickGlyphs, frameGlyphs, createFontAtlas, TextShader, HandleGlyphs
+    glyphContainer, tickGlyphs, FrameGlyphs, createFontAtlas, TextShader, HandleGlyphs
 )
 from viewer.gl.primitives import (
     TickGrid, TimeCursor, CacheProgress, AnnotationCursors, PrimitiveShader,
     BasePrimitive, LineRect, HandleCursors, Line)
-from viewer.gl.nodes import baseNode
 from viewer.gl.util import Camera, ticksFromView, useGL, CursorSnapper
 from viewer.gl.widgets import InteractiveGLView
 from viewer.gl.shading import BaseProgram
@@ -71,10 +71,11 @@ class BaseClip(object):
     def __init__(self, file_path=None, timeline_in=1):
         self.first = 0
         self.last = 24
-        self.head = 0
-        self.tail = 0
+        self.head = 4
+        self.tail = 4
         self.annotations = []
         self.path = file_path
+        self.glyph_offset = 0
         if file_path:
             self.loadFile(file_path)
             self.label = file_path.name
@@ -137,6 +138,13 @@ class BaseClip(object):
         for k, v in kwargs.items():
             setattr(obj, k, v)
         return obj
+
+    def clear(self):
+        self.label = ''
+        self.path = ''
+        self.timeline_in = 0
+        self.timeline_in = -1
+        self.timeline_out = -2
 
     def loadGeometricFile(self, file_path):
         # TODO: 
@@ -256,11 +264,11 @@ class ClipNodes(LineRect):
         self.count = 0
 
     def rect(self, index, scale):
-        address = (index + 1) * 4
+        address = index * 4
         v_reverse = self.vertices[::-1]
         right, top = v_reverse[address, :2]
         left, bot = v_reverse[address+2, :2]
-        return QRectF(QPointF(left, top), QPointF(right, bot*scale))
+        return QRectF(QPointF(left, top*scale), QPointF(right, bot*scale))
 
     def buildFromVertices(self, vertices): 
         self.vbo = vbo.VBO(vertices)
@@ -276,37 +284,53 @@ class ClipNodes(LineRect):
             [last, y-2, -1.0], [last, y, -1.0],
             ], dtype=np.float32
         )
-
-        self.vertices = np.append(vertices, self.vertices, axis=0)
-        self.buildFromVertices(self.vertices)
+        if not self.vertex_count:
+            self.vertices = vertices
+        else:
+            self.vertices = np.append(vertices, self.vertices, axis=0)
         self.count += 1
+        self.buildFromVertices(self.vertices)
+
+    def moveAll(self, clip, movement):
+        vertices = self.vertices
+        reverse = vertices[::-1]
+        reverse[:,0] += movement.x
+        reverse[:,1] += movement.y
+
+        with self.vbo:
+            self.vbo.implementation.glBufferSubData(
+                self.vbo.target, 0, vertices)
 
     def updateDuration(self, clip, duration):
-        start = (clip.index + 1) * 4
+        start = clip.index * 4
         end = start + 4
-        self.vertices[::-1][start:end][0, 0] += duration
-        self.vertices[::-1][start:end][1, 0] += duration
-        #self.vertices[::-1][start:end][-1, :1] += duration
+        reverse = self.vertices[::-1]
+
+        reverse[start:end][0, 0] += duration
+        reverse[start:end][1, 0] += duration
+        offset = reverse[end:].nbytes
+        data = reverse[start:end]
 
         with self.vbo:
             self.vbo.implementation.glBufferSubData(
-                self.vbo.target, 0, self.vertices
-            )
+                self.vbo.target, offset, data.nbytes, data)
 
     def move(self, clip, movement):
-        start = (clip.index + 1) * 4
+        start = clip.index * 4
         end = start + 4
+        vertices = self.vertices
 
-        self.vertices[::-1][start:end][:,0] += movement.x
-        self.vertices[::-1][start:end][:,1] += movement.y
-
+        reverse = vertices[::-1]
+        reverse[start:end][:,0] += movement.x
+        reverse[start:end][:,1] += movement.y
+    
+        aslice = reverse[end:]
+        data = reverse[start:end]
+        offset = aslice.nbytes
+        # Optimize the exact 'offset' and 'size' in bytes for partial GPU upload.
         with self.vbo:
             self.vbo.implementation.glBufferSubData(
-                self.vbo.target, 0, self.vertices
-            )
-        #with self.vbo: # TODO: optimize with byte offsets to lighten upload payload
-        #    self.vbo.implementation.glBufferSubData(
-        #        self.vbo.target, self.vertices.nbytes, len(vertices)*4, vertices)
+                self.vbo.target, offset, data.nbytes, data)
 
     def draw(self, transpose_mvp, mode, size=4.0, color=None):
         self.color = color or self.color
@@ -325,28 +349,87 @@ class ClipNodes(LineRect):
         glLineWidth(1.0)
 
 
+class SelectionOverlay(ClipNodes):
+
+    def __init__(self, *args, **kwargs):
+        super(SelectionOverlay, self).__init__(*args, **kwargs)
+        self.color = glm.vec4(0.4, 0.35, 0.9, 0.8)
+        self.vertices = np.ndarray([], dtype=np.float32)
+        self.vertex_count = None
+
+
 class Graph(object):
     def __init__(self, shader):
         self.nodes = ClipNodes(shader)
+        self.nodes.vertices = None
+        self.nodes.vertex_count = None
         self.hover = ClipNodes(shader)
-        self.clips = [[]] # Each list is a sequence
-        self.sequence_num = 0
-        self.selection = None
+        self.clips = [] # Flat list of all clips.
+        self.selection = SelectionOverlay(shader)
+        self.selected_clips = []
+        self.sequences = defaultdict(list)
+        self.sequence_callbacks = defaultdict(int)
+        self.empty_clip_indices = []
 
-    def appendClip(self, clip, sequence):
-        clip.index = self.nodes.count #len(self.GRAPH.clips[sequence])
-        self.nodes.append(clip.timeline_in, clip.timeline_out, sequence)
-        self.clips[sequence].append(clip)
-        clip.sequence = sequence #slice(sequence, len(self.clips[sequence]))
+    def appendClip(self, clip, sequence_index):
+        clip.sequence = sequence_index
+        if self.empty_clip_indices:
+            clip.index = self.empty_clip_indices.pop(0)
+            self.nodes.move(clip, glm.vec2(clip.timeline_in, clip.sequence))
+            self.nodes.updateDuration(clip, clip.duration + 1)
+            self.clips[clip.index] = clip
+            self.sequences[sequence_index].append(clip.index)
+        else:
+            clip.index = self.nodes.count
+            self.nodes.append(clip.timeline_in, clip.timeline_out, sequence_index * 2)
+            self.sequences[sequence_index].append(len(self.clips))
+            self.clips.append(clip)
 
-    def iterateSequence(self, sequence=None, clip=0):
-        for clip in self.clips[sequence][clip:]:
-            yield sequence, clip
+    def deleteClip(self, clip):
+        self.nodes.move(clip, glm.vec2(-clip.timeline_in, -clip.sequence))
+        self.nodes.updateDuration(clip, -clip.duration - 1)
+        self.sequences[clip.sequence].remove(clip.index)
+        clip.clear()
+        self.empty_clip_indices.append(clip.index)
 
-    def iterateSequences(self, clip=0):
-        for sequence in range(self.sequence_num + 1):
-            for clip in self.clips[sequence][clip:]:
-                yield sequence, clip
+    def snapToSelected(self):
+        a_vtx = self.selection.vertices[::-1]
+        b_vtx = self.nodes.vertices[::-1]
+        x, y, z = range(3)
+        for i, clip in enumerate(self.selected_clips):
+            # Destination Highlighting here
+            a_index = i * 4
+            b_index = clip.index * 4
+            a_x_pos = a_vtx[a_index][x]
+            a_y_pos = a_vtx[a_index][y]
+            b_x_pos = b_vtx[b_index][x]
+            b_y_pos = b_vtx[b_index][y]
+            x_diff = a_x_pos - b_x_pos
+            y_diff = a_y_pos - b_y_pos
+            self.nodes.move(clip, glm.vec2(x_diff, y_diff))
+
+    def iterateSequences(self):
+        clips = self.clips
+        for sequence, clip_indices in reversed(self.sequences.items()):
+            for index in clip_indices:
+                yield sequence, clips[index]
+
+    def reassignClips(self):
+        callbacks = self.sequence_callbacks
+        sequences = self.sequences
+        for clip in self.selected_clips:
+            new_sequence = callbacks.pop(clip)
+            old_idx = sequences[clip.sequence].index(clip.index)
+            sequences[clip.sequence].pop(old_idx)
+            clip.sequence += int(new_sequence)
+            sequences[clip.sequence].append(clip.index)
+
+        ordered = defaultdict(list)
+        for x in sorted(sequences.keys()):
+            values = sequences[x]
+            if values:
+                ordered[x] = values
+        self.sequences = ordered
 
 
 class timelineGLView(InteractiveGLView):
@@ -365,8 +448,8 @@ class timelineGLView(InteractiveGLView):
         self.current_clip = None
         self.snap_cursor = CursorSnapper()
         self.scrubbing = None
-        self.selected_clips = []
         self.edit_mode = None
+        self.setScreenDimensions()
 
     @Slot()
     def _toAnnotatedFrame(self, direction):
@@ -393,7 +476,6 @@ class timelineGLView(InteractiveGLView):
         #    self.current_clip.geometry.clear() # Not sure if this is relevant
         self.current_clip = clip
         self.graph = Graph(shader=self.primitive_shader)
-        #self.controller.jumpFirst()
         self.current_frame = 0
         self.updateNodeGlyphs()
 
@@ -408,21 +490,16 @@ class timelineGLView(InteractiveGLView):
     @useGL
     def updatedFrame(self, frame):
         self.current_frame = frame
-        if not self.graph.nodes.count:
-            return None, None
+        #local_frame = False
+        #if len(self.graph.sequences) < 2 and self.current_clip:
+        #    local_frame = self.current_clip.mapToLocalFrame(frame)
 
-        try:
-            local_frame = self.current_clip.mapToLocalFrame(frame)
-        except: # no clip currently
-            local_frame = False
-        if local_frame:
-            return self.current_clip, local_frame
-        else:
-            clip, local_frame = self.getClipOnFrame(frame)
-            if clip:
-                self.current_clip = clip
+        #if local_frame:
+        #    return self.current_clip, local_frame
+        #else:
+        self.current_clip, local_frame = self.getClipOnFrame(frame)
 
-            return clip, local_frame
+        return self.current_clip, local_frame
 
     def initializeGL(self):
         super(timelineGLView, self).initializeGL()
@@ -443,27 +520,31 @@ class timelineGLView(InteractiveGLView):
         glLineWidth(2.0)
         self.drawViewport(orbit=True)
 
+    def resizeGL(self, width, height):
+        self.setScreenDimensions()
+        self.drawViewport(orbit=True)
 
     def paintGL(self):
         super(timelineGLView, self).paintGL()
         frame = self.current_frame
         frame_translation = glm.translate(glm.mat4(1.0), glm.vec3(frame, 0, 0))
         ct = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, 0.0))
-        clip_scale = glm.scale(ct, glm.vec3(1, self.zoom2d*7, 1))
+        clip_scale = glm.scale(ct, glm.vec3(1, self.zoom2d * 7.0756, 1))
 
         time_mvp = self.camera.perspective * self.glmview * frame_translation
         clip_mvp = self.camera.perspective * self.glmview * clip_scale
 
         self.grid.draw(self.MVP)
-        if self.graph.selection:
-            self.graph.selection.draw(clip_mvp, GL_LINE_LOOP, size=2,
-                color=glm.vec4(0.41, 0.66, 0.8, 1))
-        self.graph.nodes.draw(clip_mvp, GL_LINE_LOOP, size=3.0,
-            color=glm.vec4(0.23, 0.26, 0.34, 1))
-        self.graph.nodes.draw(clip_mvp, GL_QUADS,
-            color=glm.vec4(0.299, 0.33, 0.442, 1))
-        self.graph.hover.draw(self.MVP, GL_LINE_LOOP, size=1.0,
-            color=glm.vec4(0.4, 0.48, 0.6, 1))
+        if self.graph.nodes.vertex_count:
+            if self.graph.selected_clips:
+                self.graph.selection.draw(clip_mvp, GL_LINE_LOOP, size=2,
+                    color=glm.vec4(0.41, 0.66, 0.8, 1))
+            self.graph.nodes.draw(clip_mvp, GL_LINE_LOOP, size=3.0,
+                color=glm.vec4(0.23, 0.26, 0.34, 1))
+            self.graph.nodes.draw(clip_mvp, GL_QUADS,
+                color=glm.vec4(0.299, 0.33, 0.442, 1))
+            #self.graph.hover.draw(self.MVP, GL_LINE_LOOP, size=1.0,
+            #    color=glm.vec4(0.4, 0.48, 0.6, 1))
 
         self.frame_glyphs.draw(self.MVP)
         self.annotation_cursors.draw(self.MVP)
@@ -477,67 +558,71 @@ class timelineGLView(InteractiveGLView):
         self.selection_rect.draw(self.MVP, GL_QUADS, size=1, color=glm.vec4(0.8, 0.75, 0.75, 0.15))
         self.time_cursor.draw(time_mvp)
 
-
-    def drawViewport(self, orbit=False, scale=False, pan2d=False):
+    def setScreenDimensions(self):
         dpi_scale = getPrimaryScreenPixelRatio()
-        self.font_scale = self.zoom2d * 0.266
-
-        w = int(self.width())
-        h = int(self.height())
         x = y = 0
-        glViewport(x, y, int(w * dpi_scale), int(h * dpi_scale))
-        center = glm.vec2((w / 2), (h / 2)) * self.zoom2d
+        w = int(self.width() * dpi_scale)
+        h = int(self.height() * dpi_scale)
+        self._screen_dimensions = (x, y, w, h)
+
+    def drawViewport(self, orbit=False, scale=False, pan=False):
+        self.font_scale = self.zoom2d * 0.266
+        x, y, w, h = self._screen_dimensions
+        glViewport(x, y, w, h)
         #TODO: reimplement this in the camera class instead of the view.
-        if self.camera.ortho:  # Place ortho camera
-            if pan2d:
-                self.pan2d.x = (
-                    (self.m_pos.x - self.m_lastpos.x) * self.lastzoom2d
-                ) + self.pan2d.x
-                self.pan2d.y = (
-                    (self.m_pos.y - self.m_lastpos.y) * self.lastzoom2d
-                ) + self.pan2d.y
-            elif scale:
-                self.zoom2d = self.zoom2d + (
-                    (-(self.m_pos.x - self.m_lastpos.x) * self.zoom2d) * 0.002
-                )
-                if self.zoom2d < 0.002:
-                    self.zoom2d = 0.002
+        cam = self.camera
+        pan2d = self.pan2d
+        last_zoom = self.lastzoom2d
+        if pan:
+            pan2d.x = (
+                (self.m_pos.x - self.m_lastpos.x) * last_zoom
+            ) + pan2d.x
+            pan2d.y = (
+                (self.m_pos.y - self.m_lastpos.y) * last_zoom
+            ) + pan2d.y
+        elif scale:
+            self.zoom2d = self.zoom2d + (
+                (-(self.m_pos.x - self.m_lastpos.x) * self.zoom2d) * 0.002
+            )
+            if self.zoom2d < 0.002:
+                self.zoom2d = 0.002
 
-                center = glm.vec2((w / 2), (h / 2)) * self.zoom2d
+            center = glm.vec2((w / 2), (h / 2)) * self.zoom2d
 
-                origin = self.origin_pos
-                offsetx = (((origin.x) - (w / 2)) * self.lastzoom2d) - self.pan2d.x
-                offsety = (((origin.y) - (h / 2)) * self.lastzoom2d) - self.pan2d.y
+            origin = self.origin_pos
+            offsetx = (((origin.x) - (w / 2)) * last_zoom) - pan2d.x
+            offsety = (((origin.y) - (h / 2)) * last_zoom) - pan2d.y
 
-                worldoffset_x = (origin.x * self.zoom2d) - center.x
-                worldoffset_y = (origin.y * self.zoom2d) - center.y
-                self.pan2d.x = worldoffset_x - offsetx
-                # Disabled zooming on Y axis
-                #self.pan2d.y = worldoffset_y - offsety
+            worldoffset_x = (origin.x * self.zoom2d) - center.x
+            worldoffset_y = (origin.y * self.zoom2d) - center.y
+            pan2d.x = worldoffset_x - offsetx
+            #pan2d.y = worldoffset_y - offsety # Enable zooming on Y axis
 
-            if -self.pan2d.x <= center.x:
-                self.pan2d.x = -center.x + (self.font_scale * 20)
-            self.camera.left = -(center.x + self.pan2d.x)
-            self.camera.right = center.x - self.pan2d.x
-            self.camera.bottom = -(center.y + self.pan2d.y)
-            self.camera.top = center.y - self.pan2d.y
-            self.camera.updatePerspective()
+        if orbit | scale | pan:
+            center = glm.vec2((w / 2), (h / 2)) * self.zoom2d
+            if -pan2d.x <= center.x:
+                pan2d.x = -center.x + self.clip_scale
+            cam.left = -(center.x + pan2d.x)
+            cam.right = center.x - pan2d.x
+            cam.bottom = -(center.y + pan2d.y)
+            cam.top = center.y - pan2d.y
+            cam.updatePerspective()
+            self.pan2d = pan2d
+            # Update time Cursor size
+            self.time_cursor.resize(cam.top, cam.bottom)
+            self.scrub_area.resize(cam.left, cam.right, cam.top-(28*self.font_scale))
+            self.cache_cursor.move(cam.bottom)
 
-        # Update time Cursor size
-        self.time_cursor.resize(self.camera.top, self.camera.bottom)
-        self.scrub_area.resize(self.camera.left, self.camera.right, self.camera.top-(28*self.font_scale))
-        self.cache_cursor.move(self.camera.bottom)
+            self.glmview = cam.getMVP()
+            self.updateTicks()
 
-        self.updateTicks()
         self.updateFrameGlyphs()
-        #self.updateNodeGlyphs()
-        self.glmview = self.camera.getMVP()
-        self.update()
+
 
     def updateCacheSize(self, left, right):
         """Update Cache display size
         """
-        #self.makeCurrent()
+        self.makeCurrent()
         self.cache_cursor.resize(left, right)
         #self.drawViewport()
 
@@ -545,7 +630,7 @@ class timelineGLView(InteractiveGLView):
         """Update Ticks spacing and labels
         """
         frames_array, step = ticksFromView(self.camera)
-        top = self.camera.top - (self.font_scale * 25) 
+        top = self.camera.top - self.clip_scale
         self.tick_glyphs = tickGlyphs(z=-0.1, shader=self.text_shader)
         self.tick_glyphs.buildFromArray(
             frames_array, step, self.font_scale, top
@@ -558,21 +643,28 @@ class timelineGLView(InteractiveGLView):
     def updateFrameGlyphs(self):
         """Update frame glyph position
         """
-        self.frame_glyphs = frameGlyphs(shader=self.text_shader)
-        x = self.current_frame + (self.font_scale * 25)
-        bot = self.camera.bottom + (self.font_scale * 36)
-        self.frame_glyphs.addText(str(self.current_frame), glm.vec2(x, bot), self.font_scale * 1.125)
-        self.frame_glyphs.rebuild()
+        frame = self.current_frame
+        font_scale = self.font_scale
+        x = frame + self.clip_scale
+        y = self.camera.bottom + (font_scale * 36)
+        self.frame_glyphs.updateText(str(frame), glm.vec2(x, y), font_scale * 1.125)
+    
+        #self.frame_glyphs = FrameGlyphs(shader=self.text_shader)
+        #self.frame_glyphs.addText(str(frame), glm.vec2(x, y), font_scale * 1.125)
+        #self.frame_glyphs.rebuild()
 
     def updateNodeGlyphs(self):
         # Update Node names & sizes
-        self.node_glyphs = glyphContainer(shader=self.text_shader)
-        self.annotation_cursors = AnnotationCursors(shader=self.primitive_shader)
-        self.handle_cursors = HandleCursors(shader=self.primitive_shader)
-        self.handle_glyphs = HandleGlyphs(shader=self.text_shader)
-
+        annotation_cursors = AnnotationCursors(shader=self.primitive_shader)
+        handle_cursors = HandleCursors(shader=self.primitive_shader)
+        # Text glyphs & Fonts
+        node_glyphs = glyphContainer(shader=self.text_shader)
+        handle_glyphs = HandleGlyphs(shader=self.text_shader)
+        
+        clip_scale = self.clip_scale
+        font_scale = self.font_scale
         switch = True
-        fontscaled = (self.font_scale * 25)
+
         for sequence, clip in self.graph.iterateSequences():
             # Build clip glyph text
             if self.tick_step >= 50 and switch:
@@ -580,51 +672,56 @@ class timelineGLView(InteractiveGLView):
                 continue
             
             local_center = (clip.duration / 2)
-            clip_center = clip.timeline_in + local_center
-            text_width = ((len(clip.label) / 2) * fontscaled)
+            text_width = ((len(clip.label) / 2) * clip_scale)
             # Don't add if text is larger than clip bounds.
             if int(text_width) < int(local_center):
+                clip_center = clip.timeline_in + local_center
                 x = clip_center - text_width
-                y = (sequence * 25) - fontscaled
-                # Label
+                y = ((sequence * (self.zoom2d * 7.0756)) * 2) - clip_scale
+
+                # Label 
                 position = glm.vec2(x, y)
-                clip.glyph_offset = len(self.node_glyphs.elements)
-                self.node_glyphs.addText(clip.label, position, self.font_scale)
+                clip.glyph_offset = len(node_glyphs.elements)
+                node_glyphs.addText(clip.label, position, font_scale)
 
                 ins_text = ' {} |'.format(clip.first)
                 out_text = '| {}'.format(clip.last - 1)
 
                 # In / Out frames
-                in_pos = glm.vec2(clip.timeline_in, y)
-                self.node_glyphs.addText(ins_text, in_pos, self.font_scale)
+                in_pos = glm.vec2(clip.timeline_in, position.y)
+                node_glyphs.addText(ins_text, in_pos, font_scale)
 
-                text_width = len(out_text) * fontscaled
-                out_pos = glm.vec2(clip.timeline_out - text_width, y)
-                self.node_glyphs.addText(out_text, out_pos, self.font_scale)
+                text_width = len(out_text) * clip_scale
+                out_pos = glm.vec2(clip.timeline_out - text_width, position.y)
+                node_glyphs.addText(out_text, out_pos, font_scale)
             
                 # Handles
                 head_text = ' ' + str(clip.head)
                 tail_text = str(clip.tail) + ' '
 
-                h_pos = clip.timeline_in + (len(ins_text)) * fontscaled
-                t_pos = clip.timeline_out - (len(out_text + tail_text) * fontscaled)
-                self.handle_glyphs.addText(head_text, glm.vec2(h_pos, y), self.font_scale)
-                self.handle_glyphs.addText(tail_text, glm.vec2(t_pos, y), self.font_scale)
+                h_pos = clip.timeline_in + (len(ins_text)) * clip_scale
+                t_pos = clip.timeline_out - (len(out_text + tail_text) * clip_scale)
+                handle_glyphs.addText(head_text, glm.vec2(h_pos, position.y), font_scale)
+                handle_glyphs.addText(tail_text, glm.vec2(t_pos, position.y), font_scale)
 
                 # Handle bars
-                top = (sequence * 25) - (fontscaled * 2.5)
-                self.handle_cursors.append(clip.timeline_in, clip.timeline_in + clip.head, top)
-                self.handle_cursors.append(clip.timeline_out - clip.tail, clip.timeline_out, top)
+                top = ((sequence * (self.zoom2d * 7.0756)) * 2) - (clip_scale * 2)
+                handle_cursors.append(clip.timeline_in, clip.timeline_in + clip.head, top)
+                handle_cursors.append(clip.timeline_out - clip.tail, clip.timeline_out, top)
 
             # Annotations
             for local_frame in clip.annotations:
                 timeline_frame = clip.mapToGlobalFrame(local_frame)
-                self.annotation_cursors.append(timeline_frame, (self.font_scale * 50))
+                annotation_cursors.append(timeline_frame, (font_scale * 50))
 
 
-        self.handle_cursors.build()
-        self.annotation_cursors.build()
+        self.node_glyphs = node_glyphs
         self.node_glyphs.rebuild()
+        self.annotation_cursors = annotation_cursors
+        self.annotation_cursors.build()
+        self.handle_cursors = handle_cursors
+        self.handle_cursors.build()
+        self.handle_glyphs = handle_glyphs
         self.handle_glyphs.rebuild()
         self.update()
 
@@ -635,18 +732,17 @@ class timelineGLView(InteractiveGLView):
         self.tick_glyphs = tickGlyphs(z=-0.1, shader=self.text_shader)
         self.node_glyphs = glyphContainer(shader=self.text_shader)
         self.handle_glyphs = HandleGlyphs(shader=self.text_shader)
-
-        self.frame_glyphs = frameGlyphs(shader=self.text_shader)
+        self.frame_glyphs = FrameGlyphs(shader=self.text_shader)
 
         glyphContainer.atlas_texture = self.tick_glyphs.createFontAtlasTexture(font_atlas)
         glyphContainer.char_map = char_map
 
         self.tick_glyphs.addText(str(0), glm.vec2(0, 12), 0.050)
+        self.frame_glyphs.addText(self.frame_glyphs.text, glm.vec2(0, 12), 0.050)
         self.tick_glyphs.rebuild()
         self.node_glyphs.rebuild()
         self.frame_glyphs.rebuild()
         self.handle_glyphs.rebuild()
-
 
     @useGL
     def mousePressEvent(self, event):
@@ -662,20 +758,26 @@ class timelineGLView(InteractiveGLView):
                 return
 
             clip = self.cursorOverNode()
-            append = mods == Qt.ShiftModifier
+            extend = mods == Qt.ShiftModifier
             detach = mods == Qt.ControlModifier
             if clip:
-                self.selectNode(clip, append, detach)
+                if not extend:
+                    extend = clip in self.graph.selected_clips
+                self.selectNode(clip, append=extend, detach=detach)
                 self.edit_mode = MOVE_CLIP
             else:
                 self.selectNodes()
+
+    @useGL
+    def selectAll(self):
+        make_selection = self.selectNode
+        for seq_index, clip in self.graph.iterateSequences():
+            make_selection(clip, append=True)
+
     @useGL
     def mouseMoveEvent(self, event):
         super(timelineGLView, self).mouseMoveEvent(event)
         buttons = event.buttons()
-        
-        if not self.cursorOverNode():
-            self.graph.hover.resize(-2, -1, 0, 0)
 
         if self.scrubbing or self.withinScrubArea():
             self.setCursor(QCursor(Qt.SizeHorCursor))
@@ -685,22 +787,54 @@ class timelineGLView(InteractiveGLView):
 
         if self.pressing and buttons == Qt.LeftButton:
             if self.edit_mode:
-                movement = self.w_pos - self.screenToWorld(self.m_lastpos)
-                y = movement.y() / (self.font_scale * 25) or 0
-                snap_movement = glm.vec2(movement.x(), y)
-                test = glm.vec2(movement.x(), movement.y())
-                # TODO: lock this in.
-                #for clip in self.selected_clips:
-                #    self.graph.nodes.move(clip, snap_movement)
-                #    self.node_glyphs.move(clip.label, clip.glyph_offset, test)
+                self.moveSelectedClips()
             elif self.scrubbing:
                 self.jumpToCursor()
             else:
                 self.selectNodes()
+        elif not self.cursorOverNode():
+            self.graph.hover.resize(-2, -1, 0, 0)
+
+    def moveSelectedClips(self):
+        movement = self.w_pos - self.screenToWorld(self.m_lastpos)
+        position = glm.vec2(movement.x(), movement.y())
+        y = position.y / self.clip_scale or 0
+
+        snap_movement = glm.vec2(position.x, y)
+        graph = self.graph
+        nodes = self.graph.nodes
+        glyphs = self.node_glyphs
+
+        a_vtx = self.graph.selection.vertices[::-1]
+        b_vtx = nodes.vertices[::-1]
+        x, y, = range(2)
+        for i, clip in enumerate(self.graph.selected_clips):
+            nodes.move(clip, snap_movement)
+            glyphs.move(clip.label, clip.glyph_offset, position)
+
+            # Destination Highlighting here
+            a_idx = i * 4
+            b_idx = clip.index * 4
+            a_x_pos = a_vtx[a_idx][x]
+            a_y_pos = a_vtx[a_idx][y]
+            b_x_pos = b_vtx[b_idx][x]
+            b_y_pos = b_vtx[b_idx][y]
+
+            x_diff = b_x_pos - a_x_pos
+            y_diff = b_y_pos - a_y_pos
+            rounded = glm.vec2(round(x_diff, 0), round(y_diff, 0))
+            rounded.y = rounded.y - (rounded.y % 2)
+            sequence_offset = rounded.y / 2
+            graph.sequence_callbacks[clip] += sequence_offset
+
+            clip.timeline_in += int(rounded.x)
+            clip.setTimelineOut()
+
+        graph.selection.moveAll(clip, rounded)
 
     def withinScrubArea(self):
         top = self.camera.top
-        bot = self.camera.top - (self.font_scale * 25 * 2)
+        bot = self.camera.top - (self.clip_scale * 2)
         y = self.w_pos.y()
         if y <= top and y >= bot:
             return True
@@ -709,63 +843,80 @@ class timelineGLView(InteractiveGLView):
         cursor_frame = int(self.w_pos.x() + 0.5)
         self.frameJump.emit(cursor_frame)
 
-    def selectNode(self, clip, append, detach):
+    def selectNode(self, clip, append=True, detach=False):
+        graph = self.graph
+        selected_clips = graph.selected_clips
+
         if detach:
-            for index, sel_clip in enumerate(self.selected_clips):
+            for index, sel_clip in enumerate(selected_clips):
                 if sel_clip is clip:
-                    self.selected_clips.pop(index)
+                    selected_clips.pop(index)
                     break
             
-            self.graph.selection = ClipNodes(self.primitive_shader)
-            for clip in self.selected_clips:
-                self.graph.selection.append(clip.timeline_in, clip.timeline_out, clip.sequence)
+            graph.selection = SelectionOverlay(self.primitive_shader)
+            for clip in selected_clips:
+                graph.selection.append(clip.timeline_in, clip.timeline_out, clip.sequence * 2)
             return
 
-        if not append or not self.graph.selection:
-            self.graph.selection = ClipNodes(self.primitive_shader)
-            self.selected_clips = []
+        elif not append:
+            graph.selection = SelectionOverlay(self.primitive_shader)
+            graph.selected_clips = []
 
-        self.selected_clips.append(clip)
-        self.graph.selection.append(clip.timeline_in, clip.timeline_out, clip.sequence)
+        if clip and clip not in graph.selected_clips:
+            graph.selected_clips.append(clip)
+            graph.selection.append(clip.timeline_in, clip.timeline_out, clip.sequence * 2)
+
 
     def selectNodes(self):
         a = self.w_firstpos
         b = glm.vec2(self.w_pos.x(), self.w_pos.y())
         sel_rect = QRectF(QPointF(a.x, a.y), QPointF(b.x, b.y))
-        selection = ClipNodes(self.primitive_shader)
-        local_scale = (self.font_scale * 25)
-        self.selected_clips = []
-        for seq_index, clip in self.graph.iterateSequences():
-            clip_rect = self.graph.nodes.rect(clip.index, local_scale)
+        local_scale = self.clip_scale
+        make_selection = self.selectNode
+        graph = self.graph
+        clear_selection = True
+        for seq_index, clip in graph.iterateSequences():
+            clip_rect = graph.nodes.rect(clip.index, local_scale)
             if clip_rect.intersects(sel_rect):
-                selection.append(clip.timeline_in, clip.timeline_out, seq_index)
-                self.selected_clips.append(clip)
-
-        if self.selected_clips:
-            self.graph.selection = selection
+                make_selection(clip, append=True)
+                clear_selection = False
+                
+        if clear_selection:
+            make_selection(None, append=False)
         else:
-            self.graph.selection = None
+            for clip in graph.selected_clips:
+                clip_rect = graph.nodes.rect(clip.index, local_scale)
+                if not clip_rect.intersects(sel_rect):
+                    make_selection(clip, append=False, detach=True)
 
         self.selection_rect.resize(
             sel_rect.left(), sel_rect.right(), sel_rect.bottom(), sel_rect.top())
 
+    @property
+    def clip_scale(self):
+        return self.font_scale * 26.6
+
     def cursorOverNode(self):
-        local_scale = (self.font_scale * 25)
-        for seq_index, clip in self.graph.iterateSequences():
-            clip_rect = self.graph.nodes.rect(clip.index, local_scale)
-            if clip_rect.contains(self.w_pos):
-                top = seq_index * local_scale
-                bot = seq_index - (local_scale*2)
-                l = clip.timeline_in
-                r = clip.timeline_out
-                self.graph.hover.resize(l, r, top, bot)
-                return clip
+        local_scale = self.clip_scale
+        for sequence, clip in self.graph.iterateSequences():
+             if self.graph.nodes.vertex_count:
+                clip_rect = self.graph.nodes.rect(clip.index, local_scale)
+                if clip_rect.contains(self.w_pos):
+                    top = sequence * local_scale
+                    bot = sequence - (local_scale*2)
+                    l = clip.timeline_in
+                    r = clip.timeline_out
+                    self.graph.hover.resize(l, r, top, bot)
+                    return clip
         return False
 
     @useGL
     def mouseReleaseEvent(self, event):
         super(timelineGLView, self).mouseReleaseEvent(event)
         self.selection_rect.resize(-1,-1.1,0.1,0)
+        if self.graph.sequence_callbacks:
+            self.graph.reassignClips()
+            self.graph.snapToSelected()
         self.updateNodeGlyphs()
         self.mouseInteracted.emit(True)
         self.scrubbing = False
@@ -779,16 +930,22 @@ class timelineGLView(InteractiveGLView):
 
     @useGL
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_F:
+        key = event.key()
+        if key == Qt.Key_F:
             self.frameGeometry()
-
+        if key == Qt.Key_Delete:
+            selection = self.graph.selected_clips
+            if selection:
+                list(map(self.graph.deleteClip, selection))
+                self.updateNodeGlyphs()
+    
     @useGL
     def frameGeometry(self):
         clip = self.current_clip
-        if self.selected_clips:
-            first = self.selected_clips[0].timeline_in
-            last = self.selected_clips[0].timeline_out
-            for clip in self.selected_clips:
+        if self.graph.selected_clips:
+            first = self.graph.selected_clips[0].timeline_in
+            last = self.graph.selected_clips[0].timeline_out
+            for clip in self.graph.selected_clips:
                 if clip.timeline_in < first:
                     first = clip.timeline_in
                 if clip.timeline_out > last:
@@ -804,8 +961,12 @@ class timelineGLView(InteractiveGLView):
         self.zoom2d = (clip_duration + 20) / self.width()
         self.pan2d = glm.vec2(-clip_center, 0)
         self.origin_pos = self.pan2d
-        self.drawViewport()
+        self.drawViewport(orbit=True)
         self.updateNodeGlyphs()
         self.updateTicks()
         self.updateFrameGlyphs()
         self.cursorOverNode()
+
+    @useGL
+    def cut(self):
+        pass

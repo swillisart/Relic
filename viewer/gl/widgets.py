@@ -112,7 +112,7 @@ class InteractiveGLView(QGLWidget):
         elif buttons == Qt.RightButton and mods == Qt.AltModifier:
             self.drawViewport(scale=True)
         elif buttons == Qt.MiddleButton and mods == Qt.AltModifier:
-            self.drawViewport(pan2d=True)
+            self.drawViewport(pan=True)
         elif buttons == Qt.RightButton and mods == Qt.ShiftModifier:
             self.moveParentWindow()
 
@@ -125,7 +125,7 @@ class InteractiveGLView(QGLWidget):
             self.scaleParentWindow(delta)
         else:
             self.zoom(delta)
-        self.drawViewport()
+        self.drawViewport(orbit=True)
         self.update()
 
     def moveParentWindow(self):
@@ -230,6 +230,7 @@ class InteractiveGLView(QGLWidget):
         ) - self.pan2d.y)
 
         return QPointF(offsetx, offsety)
+
 
     @property
     def cursorTransform(self):

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>211</width>
+    <width>217</width>
     <height>384</height>
    </rect>
   </property>
@@ -235,7 +235,7 @@
       <item>
        <widget class="QToolBox" name="toolBox">
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <property name="tabSpacing">
          <number>2</number>
@@ -245,8 +245,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>185</width>
-           <height>174</height>
+           <width>191</width>
+           <height>168</height>
           </rect>
          </property>
          <attribute name="icon">
@@ -279,6 +279,12 @@
             </property>
             <property name="editTriggers">
              <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="dragEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::DragOnly</enum>
             </property>
             <property name="alternatingRowColors">
              <bool>false</bool>
@@ -331,8 +337,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>185</width>
-           <height>174</height>
+           <width>191</width>
+           <height>168</height>
           </rect>
          </property>
          <attribute name="icon">
@@ -365,6 +371,12 @@
             </property>
             <property name="editTriggers">
              <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="dragEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::DragDrop</enum>
             </property>
             <property name="alternatingRowColors">
              <bool>false</bool>
@@ -417,8 +429,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>185</width>
-           <height>174</height>
+           <width>191</width>
+           <height>168</height>
           </rect>
          </property>
          <attribute name="icon">
@@ -451,6 +463,12 @@
             </property>
             <property name="editTriggers">
              <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="dragEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::DragOnly</enum>
             </property>
             <property name="alternatingRowColors">
              <bool>false</bool>

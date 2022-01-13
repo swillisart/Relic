@@ -3,22 +3,29 @@
 ################################################################################
 ## Form generated from reading UI file 'dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.2.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QGroupBox,
+    QHBoxLayout, QLineEdit, QListView, QSizePolicy,
+    QToolBox, QToolButton, QVBoxLayout, QWidget)
 import resources_rc
 
 class Ui_ScreenCapture(object):
     def setupUi(self, ScreenCapture):
         if not ScreenCapture.objectName():
             ScreenCapture.setObjectName(u"ScreenCapture")
-        ScreenCapture.resize(211, 384)
+        ScreenCapture.resize(217, 384)
         icon = QIcon()
         icon.addFile(u":/resources/icons/app_icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         ScreenCapture.setWindowIcon(icon)
@@ -126,7 +133,7 @@ class Ui_ScreenCapture(object):
         self.toolBox.setObjectName(u"toolBox")
         self.page = QWidget()
         self.page.setObjectName(u"page")
-        self.page.setGeometry(QRect(0, 0, 185, 174))
+        self.page.setGeometry(QRect(0, 0, 191, 168))
         self.verticalLayout_2 = QVBoxLayout(self.page)
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -135,6 +142,8 @@ class Ui_ScreenCapture(object):
         self.screenshotListView.setObjectName(u"screenshotListView")
         self.screenshotListView.setContextMenuPolicy(Qt.ActionsContextMenu)
         self.screenshotListView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.screenshotListView.setDragEnabled(True)
+        self.screenshotListView.setDragDropMode(QAbstractItemView.DragOnly)
         self.screenshotListView.setAlternatingRowColors(False)
         self.screenshotListView.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.screenshotListView.setIconSize(QSize(128, 128))
@@ -154,7 +163,7 @@ class Ui_ScreenCapture(object):
         self.toolBox.addItem(self.page, icon3, u"Screenshots")
         self.page_2 = QWidget()
         self.page_2.setObjectName(u"page_2")
-        self.page_2.setGeometry(QRect(0, 0, 185, 174))
+        self.page_2.setGeometry(QRect(0, 0, 191, 168))
         self.verticalLayout_3 = QVBoxLayout(self.page_2)
         self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
@@ -163,6 +172,8 @@ class Ui_ScreenCapture(object):
         self.videosListView.setObjectName(u"videosListView")
         self.videosListView.setContextMenuPolicy(Qt.ActionsContextMenu)
         self.videosListView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.videosListView.setDragEnabled(True)
+        self.videosListView.setDragDropMode(QAbstractItemView.DragDrop)
         self.videosListView.setAlternatingRowColors(False)
         self.videosListView.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.videosListView.setIconSize(QSize(128, 128))
@@ -184,7 +195,7 @@ class Ui_ScreenCapture(object):
         self.toolBox.addItem(self.page_2, icon8, u"Videos")
         self.page_3 = QWidget()
         self.page_3.setObjectName(u"page_3")
-        self.page_3.setGeometry(QRect(0, 0, 185, 174))
+        self.page_3.setGeometry(QRect(0, 0, 191, 168))
         self.verticalLayout_4 = QVBoxLayout(self.page_3)
         self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
@@ -193,6 +204,8 @@ class Ui_ScreenCapture(object):
         self.gifListView.setObjectName(u"gifListView")
         self.gifListView.setContextMenuPolicy(Qt.ActionsContextMenu)
         self.gifListView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.gifListView.setDragEnabled(True)
+        self.gifListView.setDragDropMode(QAbstractItemView.DragOnly)
         self.gifListView.setAlternatingRowColors(False)
         self.gifListView.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.gifListView.setIconSize(QSize(128, 128))
@@ -220,7 +233,7 @@ class Ui_ScreenCapture(object):
         self.retranslateUi(ScreenCapture)
         self.expandButton.toggled.connect(self.historyGroupBox.setVisible)
 
-        self.toolBox.setCurrentIndex(0)
+        self.toolBox.setCurrentIndex(1)
         self.toolBox.layout().setSpacing(2)
 
 

@@ -1,24 +1,20 @@
 import subprocess
-from PySide2.QtMultimedia import (
-    QAudioDeviceInfo,
+from PySide6.QtMultimedia import (
     QAudioFormat,
-    QAudioInput
+    QMediaDevices,
+    QAudioSource,
 )
-from PySide2.QtCore import QObject
+from PySide6.QtCore import QObject
 CREATE_NO_WINDOW = 0x08000000
 
 class AudioRecord(QObject):
     def __init__(self, audio_path):
         super(AudioRecord, self).__init__()
-        inputDevice = QAudioDeviceInfo.defaultInputDevice()
-        formatAudio = QAudioFormat()
-        #formatAudio.setSampleRate(8000)
-        formatAudio.setSampleRate(44100)
-        formatAudio.setChannelCount(1) # 1 mono, 2 stereo
-        formatAudio.setSampleSize(8)
-        formatAudio.setCodec("audio/pcm")
-        formatAudio.setByteOrder(QAudioFormat.LittleEndian)
-        formatAudio.setSampleType(QAudioFormat.UnSignedInt)
+        input_device = QMediaDevices.defaultAudioInput()
+        audio_format = QAudioFormat()
+        audio_format.setSampleRate(44100)
+        audio_format.setChannelCount(1) # 1 mono, 2 stereo
+        audio_format.setSampleFormat(QAudioFormat.UInt8)
 
         self.cmd = [
             'ffmpeg',
@@ -37,14 +33,15 @@ class AudioRecord(QObject):
             stdout=subprocess.DEVNULL,
             creationflags=CREATE_NO_WINDOW,
         )
-        self.audioInput = QAudioInput(inputDevice, formatAudio, self)
-        self.ioDevice = self.audioInput.start()
-        self.ioDevice.readyRead.connect(self._readyRead)
+
+        self._audio_input = QAudioSource(input_device, audio_format, self)
+        self._io_device = self._audio_input.start()
+        self._io_device.readyRead.connect(self._readyRead)
 
     def stop(self):
         self.ffproc.stdin.close()
-        self.audioInput.stop()
+        self._audio_input.stop()
 
     def _readyRead(self):
-        data = self.ioDevice.readAll()
+        data = self._io_device.readAll()
         self.ffproc.stdin.write(data.data())

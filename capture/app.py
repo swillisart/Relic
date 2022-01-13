@@ -8,29 +8,38 @@ import timeit
 from datetime import datetime
 from functools import partial
 
-from qtshared2.utils import loadStyleFromFile
+from qtshared6.utils import loadStyleFromFile
 
 # -- Third-party --
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
-import cv2
-import numpy as np
 from sequencePath import sequencePath as Path
 # -- Module --
 import capture.resources
 from capture.ui.dialog import Ui_ScreenCapture
 from capture.io import AudioRecord
-from strand2.client import StrandClient
-from strand2.server import StrandServer
+from imagine.exif import EXIFTOOL
+
+from strand.client import StrandClient
+from strand.server import StrandServer
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
-OUT_FORMATS = ['.png', '.mp4', '.webp', '.gif']
-PNG, MP4, WEBP, GIF = range(4)
-CREATE_NO_WINDOW = 0x08000000
+PNG, MP4, WEBP, GIF = ['.png', '.mp4', '.webp', '.gif']
+NO_WINDOW = subprocess.CREATE_NO_WINDOW
 MOVIES = {}
+
+def mouseMoveEvent(obj, event):
+    if event.buttons() == Qt.LeftButton:
+        if indices := obj.selectedIndexes():
+            text = indices[0].data(role=Qt.UserRole)
+            drag = QDrag(obj)
+            mimeData = QMimeData()
+            mimeData.setUrls([QUrl.fromLocalFile(text)])
+            drag.setMimeData(mimeData)
+            drag.exec(Qt.CopyAction)
 
 class ScreenOverlay(QDialog):
 
@@ -123,10 +132,10 @@ class ScreenOverlay(QDialog):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.origin_pos = event.globalPos()
-    
+            self.origin_pos = event.globalPosition().toPoint()
+
     def mouseMoveEvent(self, event):
-        self.active_pos = event.globalPos()
+        self.active_pos = event.globalPosition().toPoint()
         pos_compare = self.active_pos - self.origin_pos
         if all([event.buttons() == Qt.LeftButton,
             pos_compare.manhattanLength() >= 16
@@ -146,11 +155,8 @@ class ScreenOverlay(QDialog):
         QRect
             unified screen geometry rectangle 
         """
-        desktop = QApplication.desktop()
-        combined_screens_rect = QRect()
-        for i in range(desktop.screenCount()):
-            combined_screens_rect = combined_screens_rect.united(desktop.screenGeometry(i))
-        return combined_screens_rect
+        screen = QGuiApplication.primaryScreen()
+        return screen.virtualGeometry()
 
 
 class CaptureWindow(QWidget, Ui_ScreenCapture):
@@ -199,6 +205,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             view.addAction(self.actionOpen_File_Location)
             view.addAction(self.actionRename)
             view.addAction(self.actionDelete)
+            view.mouseMoveEvent = partial(mouseMoveEvent, view)
 
         self.video_icon = QPixmap(":resources/icons/video96.png").scaledToWidth(24, Qt.SmoothTransformation)
     
@@ -209,13 +216,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 archive = in_path.parents(0) / 'old' / in_path.stem
                 in_path.moveTo(archive)
                 continue
-            if infile.suffix == OUT_FORMATS[PNG]:
+            if infile.suffix == PNG:
                 self.appendToModel(str(infile), self.snap_model)
-            elif infile.suffix == OUT_FORMATS[MP4]:
+            elif infile.suffix == MP4:
                 self.appendToModel(str(infile), self.video_model)
-            elif infile.suffix == OUT_FORMATS[WEBP]:
+            elif infile.suffix == WEBP:
                 self.appendToModel(str(infile), self.gif_model)
-            elif infile.suffix == OUT_FORMATS[GIF]:
+            elif infile.suffix == GIF:
                 self.appendToModel(str(infile), self.gif_model)
 
         
@@ -245,10 +252,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 self.proxy_model.setSourceModel(self.gif_model)
                 
     def searchChanged(self, text):
-        syntax = QRegExp.PatternSyntax(0)
-        #text = self.searchLine.text()
-        regex = QRegExp(text, Qt.CaseInsensitive, syntax)
-        self.proxy_model.setFilterRegExp(regex)
+        regex = QRegularExpression(text, QRegularExpression.CaseInsensitiveOption)
+        self.proxy_model.setFilterRegularExpression(regex)
 
     def getActiveViewSelection(self):
         result = []
@@ -313,7 +318,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         message.addButton('Yes', QMessageBox.AcceptRole)
         message.addButton('No', QMessageBox.RejectRole)
 
-        if message.exec_() == QMessageBox.AcceptRole:
+        if message.exec() == QMessageBox.AcceptRole:
             preview_path = path.parents(0) / 'previews' / (path.name + '.jpg')
             item.model().removeRow(item.index().row())
             if path.ext in ['.webp', '.gif']:
@@ -367,7 +372,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 '-loop', '65535',
                 out_path,
             ]
-            subprocess.call(cmd, creationflags=CREATE_NO_WINDOW)
+            subprocess.call(cmd, creationflags=NO_WINDOW)
             self.appendToModel(out_path, self.gif_model, sort=True)        
 
     @Slot()
@@ -391,8 +396,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 '-filter_complex', 'fps=30,paletteuse',
                 '{}/{}.gif'.format(path.parents(0), path.name),
             ]
-            subprocess.call(cmd1)#, creationflags=CREATE_NO_WINDOW)
-            subprocess.call(cmd2)#, creationflags=CREATE_NO_WINDOW)
+            subprocess.call(cmd1)#, creationflags=NO_WINDOW)
+            subprocess.call(cmd2)#, creationflags=NO_WINDOW)
             self.appendToModel(str(out_path), self.gif_model, sort=True)
             os.remove(str(gif_filter))
 
@@ -406,7 +411,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.hide()
         screen_overlay = ScreenOverlay()
         screen_overlay.clipped.connect(self.saveScreenshot)
-        screen_overlay.exec_()
+        screen_overlay.exec()
     
     @Slot()
     def performRecording(self, state):
@@ -415,23 +420,17 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.hide()
             screen_overlay = ScreenOverlay()
             screen_overlay.clipped.connect(self.startRecording)
-            screen_overlay.exec_()
+            screen_overlay.exec()
         else:
             self.recording = False
             self.ffproc.stdin.close()
             self.audio_recorder.stop()
             # Combine audio with video and remove old files.
             out_file = str(self.out_video).replace('.mp4', '_.mp4')
-            a_duration_str = subprocess.check_output(
-                'exiftool -fast -s3 -Duration# {}'.format(self.out_audio),
-                creationflags=CREATE_NO_WINDOW
-                )
-            v_duration_str = subprocess.check_output(
-                'exiftool -fast -s3 -Duration# {}'.format(self.out_video),
-                creationflags=CREATE_NO_WINDOW
-            )
-            a_duration = float(a_duration_str.decode('utf-8').strip())
-            v_duration = float(v_duration_str.decode('utf-8').strip())
+
+            audio_duration = EXIFTOOL.getFields(str(self.out_audio), ['-Duration#'], float)
+            video_duration = EXIFTOOL.getFields(str(self.out_video), ['-Duration#'], float)
+
             self.post_cmd = [
                 'ffmpeg',
                 '-loglevel', 'error',
@@ -441,14 +440,14 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 #'-c:v', 'copy',
                 #'-c:a', 'aac',
                 #'-filter:a', 'atempo=1.0',#{}'.format(a_duration / v_duration),
-                '-filter:v', 'setpts=PTS*{}'.format(a_duration / v_duration),
+                '-filter:v', 'setpts=PTS*{}'.format(audio_duration / video_duration),
                 #'-map', '[v]',
                 #'-map', '1:a',
                 '-r', '24', # FPS
                 #'-shortest',
                 out_file,
             ]
-            subprocess.call(self.post_cmd)#,# creationflags=CREATE_NO_WINDOW)
+            subprocess.call(self.post_cmd, creationflags=NO_WINDOW)
             os.remove(str(self.out_audio))
             os.remove(str(self.out_video))
             self.appendToModel(out_file, self.video_model, sort=True)
@@ -489,7 +488,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             cmd,
             stdin=subprocess.PIPE,
             #stdout=subprocess.DEVNULL,
-            #creationflags=CREATE_NO_WINDOW,
+            #creationflags=NO_WINDOW,
         )
         self.capsnap = QTimer()
         self.capsnap.setInterval(self.delay)
@@ -539,12 +538,14 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @staticmethod
     def imageToClipboard(image):
-        QApplication.clipboard().setImage(image, QClipboard.Clipboard)
+        clipboard = QApplication.clipboard()
+        clipboard.setImage(image, QClipboard.Clipboard)
     
-    @staticmethod
-    def textToClipboard(text):
-        cmd = '"{}" | clip'.format(text.strip())
-        subprocess.Popen(['powershell', cmd])
+    def textToClipboard(self, text):
+        mime_data = QMimeData()
+        mime_data.setUrls([QUrl.fromLocalFile(text)])
+        clipboard = QApplication.clipboard()
+        clipboard.setMimeData(mime_data)
 
     def copyToClipboard(self):
         for child in self.toolBox.currentWidget().children():
@@ -552,7 +553,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 if indices := child.selectedIndexes():
                     text = indices[0].data(role=Qt.UserRole)
                     self.textToClipboard(text)
-            if isinstance(child, QListView):
+            elif isinstance(child, QListView):
                 if indices := child.selectedIndexes():
                     img = QImage(indices[0].data(role=Qt.UserRole))
                     self.imageToClipboard(img)
@@ -612,7 +613,8 @@ def main(args):
     window.show()
     server = StrandServer('capture')
     server.incomingFile.connect(window.performScreenshot)
-    sys.exit(app.exec_())
+    ret = app.exec()
+    sys.exit(ret)
 
 
 if __name__ == "__main__":

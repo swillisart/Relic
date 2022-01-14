@@ -12,8 +12,6 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
-from qtshared2.utils import getPrimaryScreenPixelRatio
-
 from sequencePath import sequencePath as Path
 
 import numpy as np
@@ -28,7 +26,7 @@ from viewer.gl.text import (
 from viewer.gl.primitives import (
     TickGrid, TimeCursor, CacheProgress, AnnotationCursors, PrimitiveShader,
     BasePrimitive, LineRect, HandleCursors, Line)
-from viewer.gl.util import Camera, ticksFromView, useGL, CursorSnapper
+from viewer.gl.util import Camera, ticksFromView, CursorSnapper
 from viewer.gl.widgets import InteractiveGLView
 from viewer.gl.shading import BaseProgram
 from viewer import io
@@ -71,8 +69,8 @@ class BaseClip(object):
     def __init__(self, file_path=None, timeline_in=1):
         self.first = 0
         self.last = 24
-        self.head = 4
-        self.tail = 4
+        self.head = 0
+        self.tail = 0
         self.annotations = []
         self.path = file_path
         self.glyph_offset = 0
@@ -228,11 +226,8 @@ class SeqClip(BaseClip):
     def loadFile(self, file_path):
         frames = sorted(glob.glob(file_path.sequence_path))
         self.first = int(re.search(file_path.SEQUENCE_REGEX, frames[0]).group(1))
-        self.last = self.first + len(frames)
+        self.last = (self.first - 1) + len(frames)
         self.setImageGeometry(frames[0])
-
-    def setTimelineOut(self):
-        self.timeline_out = self.timeline_in + (self.last - self.first) - 1
 
 
 #class GeoClip(BaseClip):
@@ -449,11 +444,9 @@ class timelineGLView(InteractiveGLView):
         self.snap_cursor = CursorSnapper()
         self.scrubbing = None
         self.edit_mode = None
-        self.setScreenDimensions()
 
     @Slot()
     def _toAnnotatedFrame(self, direction):
-        self.makeCurrent()
         filtered = []
         frame = self.current_frame + 0.5 # need to bias for direction opertors
         clip = self.current_clip
@@ -487,7 +480,7 @@ class timelineGLView(InteractiveGLView):
 
         return False, False
 
-    @useGL
+
     def updatedFrame(self, frame):
         self.current_frame = frame
         #local_frame = False
@@ -498,8 +491,16 @@ class timelineGLView(InteractiveGLView):
         #    return self.current_clip, local_frame
         #else:
         self.current_clip, local_frame = self.getClipOnFrame(frame)
+        super(timelineGLView, self).paintGL()
+        frame_translation = glm.translate(glm.mat4(1.0), glm.vec3(frame, 0, 0))
+        time_mvp = self.camera.perspective * self.glmview * frame_translation
 
+        self.frame_glyphs.draw(self.MVP)
+        self.time_cursor.draw(time_mvp)
+        self.update()
         return self.current_clip, local_frame
+
+
 
     def initializeGL(self):
         super(timelineGLView, self).initializeGL()
@@ -518,10 +519,6 @@ class timelineGLView(InteractiveGLView):
 
         self.createGlyphs()
         glLineWidth(2.0)
-        self.drawViewport(orbit=True)
-
-    def resizeGL(self, width, height):
-        self.setScreenDimensions()
         self.drawViewport(orbit=True)
 
     def paintGL(self):
@@ -558,12 +555,6 @@ class timelineGLView(InteractiveGLView):
         self.selection_rect.draw(self.MVP, GL_QUADS, size=1, color=glm.vec4(0.8, 0.75, 0.75, 0.15))
         self.time_cursor.draw(time_mvp)
 
-    def setScreenDimensions(self):
-        dpi_scale = getPrimaryScreenPixelRatio()
-        x = y = 0
-        w = int(self.width() * dpi_scale)
-        h = int(self.height() * dpi_scale)
-        self._screen_dimensions = (x, y, w, h)
 
     def drawViewport(self, orbit=False, scale=False, pan=False):
         self.font_scale = self.zoom2d * 0.266
@@ -622,9 +613,8 @@ class timelineGLView(InteractiveGLView):
     def updateCacheSize(self, left, right):
         """Update Cache display size
         """
-        self.makeCurrent()
         self.cache_cursor.resize(left, right)
-        #self.drawViewport()
+        self.update()
 
     def updateTicks(self):
         """Update Ticks spacing and labels
@@ -648,10 +638,6 @@ class timelineGLView(InteractiveGLView):
         x = frame + self.clip_scale
         y = self.camera.bottom + (font_scale * 36)
         self.frame_glyphs.updateText(str(frame), glm.vec2(x, y), font_scale * 1.125)
-    
-        #self.frame_glyphs = FrameGlyphs(shader=self.text_shader)
-        #self.frame_glyphs.addText(str(frame), glm.vec2(x, y), font_scale * 1.125)
-        #self.frame_glyphs.rebuild()
 
     def updateNodeGlyphs(self):
         # Update Node names & sizes
@@ -685,7 +671,7 @@ class timelineGLView(InteractiveGLView):
                 node_glyphs.addText(clip.label, position, font_scale)
 
                 ins_text = ' {} |'.format(clip.first)
-                out_text = '| {}'.format(clip.last - 1)
+                out_text = '| {}'.format(clip.last)
 
                 # In / Out frames
                 in_pos = glm.vec2(clip.timeline_in, position.y)
@@ -744,7 +730,7 @@ class timelineGLView(InteractiveGLView):
         self.frame_glyphs.rebuild()
         self.handle_glyphs.rebuild()
 
-    @useGL
+
     def mousePressEvent(self, event):
         super(timelineGLView, self).mousePressEvent(event)
         buttons = event.buttons()
@@ -768,13 +754,13 @@ class timelineGLView(InteractiveGLView):
             else:
                 self.selectNodes()
 
-    @useGL
+
     def selectAll(self):
         make_selection = self.selectNode
         for seq_index, clip in self.graph.iterateSequences():
             make_selection(clip, append=True)
+        self.update()
 
-    @useGL
     def mouseMoveEvent(self, event):
         super(timelineGLView, self).mouseMoveEvent(event)
         buttons = event.buttons()
@@ -910,7 +896,7 @@ class timelineGLView(InteractiveGLView):
                     return clip
         return False
 
-    @useGL
+
     def mouseReleaseEvent(self, event):
         super(timelineGLView, self).mouseReleaseEvent(event)
         self.selection_rect.resize(-1,-1.1,0.1,0)
@@ -922,13 +908,12 @@ class timelineGLView(InteractiveGLView):
         self.scrubbing = False
         self.edit_mode = None
 
-    @useGL
     def wheelEvent(self, event):
         super(timelineGLView, self).wheelEvent(event)
         self.updateNodeGlyphs()
         self.cursorOverNode()
 
-    @useGL
+
     def keyPressEvent(self, event):
         key = event.key()
         if key == Qt.Key_F:
@@ -939,7 +924,7 @@ class timelineGLView(InteractiveGLView):
                 list(map(self.graph.deleteClip, selection))
                 self.updateNodeGlyphs()
     
-    @useGL
+
     def frameGeometry(self):
         clip = self.current_clip
         if self.graph.selected_clips:
@@ -967,6 +952,6 @@ class timelineGLView(InteractiveGLView):
         self.updateFrameGlyphs()
         self.cursorOverNode()
 
-    @useGL
+
     def cut(self):
         pass

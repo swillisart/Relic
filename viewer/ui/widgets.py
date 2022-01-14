@@ -4,7 +4,7 @@ from PySide2.QtWidgets import *
 import numpy as np
 from .paint_dock import Ui_AnnotateDock
 from .color_picker import Ui_ColorPickerDock
-import cv2
+from ..gl.color_picker import ColorPickerGL
 import glm
 
 
@@ -115,6 +115,11 @@ class ColorPickerkDock(Ui_ColorPickerDock, QDockWidget):
 	def __init__(self, *args, **kwargs):
 		super(ColorPickerkDock, self).__init__(*args, **kwargs)
 		self.setupUi(self)
+		self.color_wheel = ColorPickerGL()
+		color_wheel_container = QWidget.createWindowContainer(self.color_wheel)
+		color_wheel_container.setMinimumSize(QSize(64, 64))
+		self.horizontalLayout.insertWidget(1, color_wheel_container)
+
 		self._color = QColor(255,255,255)
 
 		self.opacitySlider.valueChanged.connect(self.opacity_from_slider)
@@ -127,7 +132,7 @@ class ColorPickerkDock(Ui_ColorPickerDock, QDockWidget):
 		self.saturationControl.valueChanged.connect(self.saturation_from_control)
 	
 		self.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable|QDockWidget.DockWidgetClosable)
-		self.colorWheelGLView.userPickedColor.connect(self.colorPicked)
+		self.color_wheel.userPickedColor.connect(self.colorPicked)
 
 		self.slider_events = DragFilter()
 		self.opacitySlider.installEventFilter(self.slider_events)
@@ -191,7 +196,7 @@ class ColorPickerkDock(Ui_ColorPickerDock, QDockWidget):
 
 	@Slot()
 	def saturation_from_control(self, sat):
-		self.colorWheelGLView.positionFromSaturation(sat)
+		self.color_wheel.positionFromSaturation(sat)
 		h, s, v, a = self.color.getHsvF()
 		new_color = QColor.fromHsvF(h, sat, v, a)
 		self.color = new_color

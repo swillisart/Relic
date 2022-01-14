@@ -166,7 +166,7 @@ class FrameEngine(QObject):
 
     def setRegionCache(self):
         selection = self.timeline.graph.selected_clips
-        if selection:
+        if selection and self.mode != FrameEngine.REGION:
             clip = selection[-1]
             clip_size = (clip.geometry.pixels.nbytes * clip.duration)
             if io.util.fitsInMemory(clip_size):
@@ -180,7 +180,6 @@ class FrameEngine(QObject):
     @Slot()
     def onCacheFinished(self):
         self.is_caching = False
-        #self.timeline.makeCurrent()
         #self.timeline.drawViewport()
 
     @Slot(int)
@@ -226,7 +225,6 @@ class FrameEngine(QObject):
             if self.timeline_control.state() == 2:
                 self.parent.playbackToggle()
             if not clip:
-                self.timeline.makeCurrent()
                 self.timeline.drawViewport()
                 return
             if (timeline_frame - 2) < self.minc or timeline_frame > (self.maxc + 2):
@@ -251,7 +249,6 @@ class FrameEngine(QObject):
                     if next_clip_frame and self.cache_end < next_clip.timeline_out:
                         self.startCaching(next_clip, next_clip.first, next_clip.timeline_in, new_clip=True)
 
-            viewport.makeCurrent()
             geo = clip.geometry
             viewport.image_plane = geo
             geo.updateTexture(img_data)
@@ -267,7 +264,6 @@ class FrameEngine(QObject):
                 self.timeline_control.setFramerate(clip.framerate)
                 self.parent.playbackToggle()
 
-        self.timeline.makeCurrent()
         self.timeline.drawViewport()
         self.mid += timeit.default_timer() - start
 
@@ -441,13 +437,16 @@ class PlayerAppWindow(QMainWindow):
         close_action.triggered.connect(self.close)
         self.tray.setContextMenu(tray_menu)
 
-        self.viewport = Viewport(self)
-        self.setCentralWidget(self.viewport)
+        self.viewport = Viewport()
+        viewport_container = QWidget.createWindowContainer(self.viewport)
+        self.setCentralWidget(viewport_container)
         self.title_bar = ViewerTitleBar(self)
-        self.timeline = timelineGLView(self)
+        self.timeline = timelineGLView()
         self.timelineFrame = QFrame(self)
         timeline_layout = QHBoxLayout()
-        timeline_layout.addWidget(self.timeline)
+        timeline_container = QWidget.createWindowContainer(self.timeline)
+
+        timeline_layout.addWidget(timeline_container)
         timeline_layout.setContentsMargins(4, 0, 4, 0)
         timeline_layout.setSpacing(2)
         self.timelineFrame.setLayout(timeline_layout)
@@ -515,10 +514,10 @@ class PlayerAppWindow(QMainWindow):
             message = 'Caching in Look Ahead mode.'
         elif mode == FrameEngine.REGION:
             message = 'Caching in Region mode.'
-        self.statusbar.showMessage(message, 2000)
+        self.statusbar.showMessage(message, 1500)
 
     def movieDataRecieved(self, clip, data):
-        self.viewport.makeCurrent()
+        timeline = self.timeline
         if data.get('DisplayHeight'):
             data['ImageSize'] = '{}x{}'.format(data.get('DisplayWidth'), data.get('DisplayHeight'))
         clip.loadFile(
@@ -527,13 +526,12 @@ class PlayerAppWindow(QMainWindow):
             data.get('VideoFrameRate') or data.get('SampleRate')
         )
         self.viewport.update()
-        self.timeline.makeCurrent()
-        self.timeline.graph.appendClip(clip, 0)
-        if self.timeline.current_frame == clip.timeline_in:
-            self.timeline.current_clip = clip
+        timeline.graph.appendClip(clip, 0)
+        if timeline.current_frame in (clip.timeline_in, clip.timeline_in - 1):
+            timeline.current_clip = clip
             self.frame_engine.onFrameChange(clip.timeline_in)
-            self.timeline.frameGeometry()
-        self.timeline.update()
+            timeline.frameGeometry()
+        timeline.update()
 
     @Slot()
     def setZoomValue(self, percent):
@@ -547,16 +545,15 @@ class PlayerAppWindow(QMainWindow):
 
     @Slot()
     def newSession(self):
-        self.viewport.makeCurrent()
+        self.frame_engine.clearFrameCache(-2, update=False)
         self.viewport.image_plane = None
         self.viewport.update()
-        self.timeline.makeCurrent()
         clip = SeqClip(timeline_in=0)
         clip.setBlankImage()
         self.timeline.reset(clip)
         self.timeline.frameGeometry()
+        self.timeline.updateNodeGlyphs()
         self.frame_engine.onFrameChange(clip.timeline_in)
-        self.viewport.frameGeometry()
 
     def setShorctutMode(self, mode):
         for index in SHORTCUTS:
@@ -578,7 +575,6 @@ class PlayerAppWindow(QMainWindow):
     @Slot()
     def clearAnnotation(self):
         self.viewport.paint_engine.clear()
-        self.viewport.makeCurrent()
         self.viewport.image_plane.resetAnnotation()
 
         clip = self.timeline.current_clip
@@ -590,7 +586,6 @@ class PlayerAppWindow(QMainWindow):
         remove_path = clip.annotated(frame)
         if remove_path.exists:
             os.remove(str(remove_path))
-        self.timeline.makeCurrent()
         self.timeline.updateNodeGlyphs()
 
     @Slot()
@@ -604,12 +599,10 @@ class PlayerAppWindow(QMainWindow):
         if not folder.exists:
             folder.path.mkdir()
         image.save(str(save_path))
-        self.timeline.makeCurrent()
         self.timeline.updateNodeGlyphs()
 
     @Slot()
     def viewAnnotated(self, frame, clip):
-        self.viewport.makeCurrent()
         annotation_img = clip.loadAnnotation(frame)
         clip.geometry.setAnnotation(annotation_img)
         clip.geometry.no_annotation = False
@@ -687,7 +680,6 @@ class PlayerAppWindow(QMainWindow):
         else:
             self.player.play.setChecked(True)
         timeline_control.play()
-        self.viewport.makeCurrent()
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls:
@@ -703,16 +695,13 @@ class PlayerAppWindow(QMainWindow):
 
     @Slot()
     def refreshViewport(self):
-        self.viewport.makeCurrent()
         self.viewport.update()
 
     @Slot()
     def refreshTimeline(self):
-        self.timeline.makeCurrent()
         self.timeline.update()
 
     def dropEvent(self, event):
-        self.viewport.makeCurrent()
         data = event.mimeData()
         if data.hasUrls:
             if data.hasFormat('application/x-relic'):
@@ -747,7 +736,6 @@ class PlayerAppWindow(QMainWindow):
                 if sequence:
                     offset = max([clips[x].timeline_out for x in sequence])
 
-        self.viewport.makeCurrent() # Need this for clip image plane geometry creation
 
         if file_path.ext in io.MOVIE:
             clip = MovClip(file_path=file_path, timeline_in=offset)
@@ -759,7 +747,6 @@ class PlayerAppWindow(QMainWindow):
                 clip = ImageClip(file_path=file_path, timeline_in=offset)
 
         # Now we modify the timeline
-        self.timeline.makeCurrent()
         if reset:
             self.frame_engine.clearFrameCache(offset)
             self.timeline.reset(clip)
@@ -768,10 +755,9 @@ class PlayerAppWindow(QMainWindow):
             self.timeline.graph.appendClip(clip, 0)
             self.timeline.updateNodeGlyphs()
             # Finally update the viewport again
-            #self.frame_engine.onFrameChange(clip.timeline_in)
-            #callback = partial(self.frame_engine.timeline_control.setFrame, clip.timeline_in)
-            #deferred_frame = QTimer.singleShot(600, callback)
-        self.viewport.makeCurrent()
+            self.frame_engine.onFrameChange(clip.timeline_in)
+            callback = partial(self.frame_engine.timeline_control.setFrame, clip.timeline_in)
+            deferred_frame = QTimer.singleShot(600, callback)
         self.viewport.frameGeometry()
 
     def hide(self):
@@ -797,11 +783,12 @@ class PlayerAppWindow(QMainWindow):
 
 
 def main(args):
+    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     # Sets a 4x MSAA surface format to all QGLWidgets creatin in this application
-    gl_format = QGLFormat()
-    gl_format.setSamples(4)
-    QGLFormat.setDefaultFormat(gl_format)
+    gl_format = QSurfaceFormat()
+    gl_format.setSamples(2)
+    QSurfaceFormat.setDefaultFormat(gl_format)
 
     # C Python Windowing
     ctypes.windll.kernel32.SetConsoleTitleW("Peak")

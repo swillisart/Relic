@@ -22,7 +22,6 @@ from shiboken2 import VoidPtr
 
 # -- Module --
 from viewer.gl.widgets import InteractiveGLView
-from viewer.gl.util import useGL
 from viewer.gl.shading import BaseProgram
 from viewer.gl.primitives import Circle, ColorWheel, Line, LineRect, Ellipse
 from viewer.gl.text import glyphContainer, TextShader, createFontAtlas
@@ -816,7 +815,7 @@ class Viewport(InteractiveGLView):
         self.image_plane = None
         self.setColorConfig()
         self.paint_engine = PaintEngine()
-        self.color_sampler = colorSampler(self)
+        self.color_sampler = colorSampler()
         self.key_callback = None
         self.active_tool = AnnotationDock.Brush
         self.is_painting = False
@@ -941,7 +940,6 @@ class Viewport(InteractiveGLView):
             
         self.colorConfigChanged.emit(self.color_views)
 
-    @useGL
     def undo(self):
         if self.active_tool == AnnotationDock.Brush:
             pass
@@ -951,7 +949,6 @@ class Viewport(InteractiveGLView):
             self.paint_engine.shapes.undo()
             self.paint_engine.shapes.glyphs.reset()
 
-    @useGL
     def redo(self):
         if self.active_tool == AnnotationDock.Brush:
             pass
@@ -975,17 +972,14 @@ class Viewport(InteractiveGLView):
 
         self.active_tool = tool
 
-    @useGL
     @Slot()
     def setExposure(self, value):
         self.framebuffer.exposure = value
 
-    @useGL
     @Slot()
     def setGamma(self, value):
         self.framebuffer.gamma = value
 
-    @useGL
     @Slot()
     def setColorspace(self, value):
         displayColorSpace = self.color_config.getDisplayColorSpaceName(
@@ -996,13 +990,13 @@ class Viewport(InteractiveGLView):
         )
         if hasattr(self, 'framebuffer'):
             self.framebuffer.setColorProcessor(color_processor)
+        self.update()
 
-    @useGL
     @Slot()
     def setColorChannel(self, channel):
         self.framebuffer.compileShader(channel)
+        self.update()
 
-    @useGL
     def frameGeometry(self):
         if self.camera.ortho and self.image_plane:
             self.pan2d = glm.vec2(0, 0)
@@ -1026,7 +1020,6 @@ class Viewport(InteractiveGLView):
         #            )
         self.drawViewport()
 
-    @useGL
     def setZoom(self, value):
         self.zoom2d = 100 / value
         self.drawViewport()
@@ -1057,7 +1050,6 @@ class Viewport(InteractiveGLView):
             roi = self.paint_engine.drawOnCanvas(x, y, self.image_plane.paint_canvas)
         self.image_plane.updateAnnotation(roi)
 
-    @useGL
     def paintSimpleStroke(self):
         canvas_lastpos = self.screenToCanvas(self.m_lastpos)
         canvas_pos = self.screenToCanvas(self.m_pos)
@@ -1076,7 +1068,6 @@ class Viewport(InteractiveGLView):
         if roi is not None:
             self.image_plane.updateAnnotation(roi)
 
-    @useGL
     def createShape(self):
         b = glm.vec2(self.w_pos.x(), self.w_pos.y())
         a = self.w_firstpos
@@ -1159,7 +1150,6 @@ class Viewport(InteractiveGLView):
                 self.paint_engine.strokes.clear()
                 if save:
                     self.finishAnnotation.emit(annotated_comp)
-                self.makeCurrent()
                 self.image_plane.resetAnnotation()
 
         return self.paint_engine.enabled
@@ -1242,7 +1232,6 @@ class Viewport(InteractiveGLView):
         self.key_callback = None
         super(Viewport, self).keyPressEvent(event)
 
-    @useGL
     def scalePaintEngineBrush(self):
         size = self.m_pos - self.m_lastpos
         if abs(size.x) <= abs(size.y):

@@ -64,22 +64,6 @@
           </widget>
          </item>
          <item>
-          <widget class="ColorPickerGL" name="colorWheelGLView" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>64</width>
-             <height>64</height>
-            </size>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QToolButton" name="colorPaletteToolButton">
            <property name="text">
             <string/>
@@ -356,14 +340,6 @@ QSlider::handle:horizontal {
    </layout>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>ColorPickerGL</class>
-   <extends>QWidget</extends>
-   <header location="global">..gl.color_picker.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

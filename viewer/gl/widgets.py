@@ -1,6 +1,5 @@
 import os
 import sys
-from ctypes import c_void_p
 
 # -- Third-party -- 
 import glm
@@ -19,15 +18,11 @@ from viewer.gl.util import Camera
 # ------------------------------- Globals ---------------------------------
 
 
-class InteractiveGLView(QGLWidget):
+class InteractiveGLView(QOpenGLWindow):
 
     def __init__(self, *args, **kwargs):
         super(InteractiveGLView, self).__init__(*args, **kwargs)
-        self.setFocusPolicy(Qt.StrongFocus)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setAutoBufferSwap(True)
-        self.setMouseTracking(True)
-        self.setAutoFillBackground(True)
+        self.setScreenDimensions()
         self.m_pos = self.m_lastpos = self.origin_pos = self.pan2d = glm.vec2(0, 0)
         self.zoom2d = 1.0
         self.lastzoom2d = 1.0
@@ -59,8 +54,17 @@ class InteractiveGLView(QGLWidget):
         self.glmview = self.camera.getMVP()
         self.cmodeltransformation = glm.mat4(1.0)
 
+    def setScreenDimensions(self):
+        dpi_scale = getPrimaryScreenPixelRatio()
+        x = y = 0
+        w = int(self.width() * dpi_scale)
+        h = int(self.height() * dpi_scale)
+        self._screen_dimensions = (x, y, w, h)
+
     def resizeGL(self, width, height):
-        self.drawViewport()
+        self.makeCurrent()
+        self.setScreenDimensions()
+        self.drawViewport(orbit=True)
         self.camera.setAspect(width / height)
 
     def paintGL(self):
@@ -69,10 +73,10 @@ class InteractiveGLView(QGLWidget):
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
         glDepthFunc(GL_LESS)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) #| GL_STENCIL_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         # GL_MULTISAMPLE
         glActiveTexture(GL_TEXTURE1)
-        glEnable(0x809D)
+        glEnable(GL_MULTISAMPLE)
         #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         self.MVP = self.camera.perspective * self.glmview * self.cmodeltransformation
@@ -153,13 +157,8 @@ class InteractiveGLView(QGLWidget):
         self.zoom2d = self.zoom2d * delta
 
     def drawViewport(self, orbit=False, scale=False, pan2d=False):
-        self.makeCurrent()
-        dpi_scale = getPrimaryScreenPixelRatio()
-
-        w = int(self.width())
-        h = int(self.height())
-        x = y = 0
-        glViewport(x, y, int(w * dpi_scale), int(h * dpi_scale))
+        x, y, w, h = self._screen_dimensions
+        glViewport(x, y, w, h)
         center = glm.vec2((w / 2), (h / 2)) * self.zoom2d
 
         if self.camera.ortho:  # Place ortho camera

@@ -12,8 +12,6 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
-from ..gl.color_picker import ColorPickerGL
-
 
 class Ui_ColorPickerDock(object):
     def setupUi(self, ColorPickerDock):
@@ -40,17 +38,6 @@ class Ui_ColorPickerDock(object):
         self.colorPickerToolButton.setCheckable(True)
 
         self.horizontalLayout.addWidget(self.colorPickerToolButton)
-
-        self.colorWheelGLView = ColorPickerGL(self.frame)
-        self.colorWheelGLView.setObjectName(u"colorWheelGLView")
-        sizePolicy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.colorWheelGLView.sizePolicy().hasHeightForWidth())
-        self.colorWheelGLView.setSizePolicy(sizePolicy)
-        self.colorWheelGLView.setMinimumSize(QSize(64, 64))
-
-        self.horizontalLayout.addWidget(self.colorWheelGLView)
 
         self.colorPaletteToolButton = QToolButton(self.frame)
         self.colorPaletteToolButton.setObjectName(u"colorPaletteToolButton")

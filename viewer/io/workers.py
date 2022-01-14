@@ -3,7 +3,7 @@ import concurrent.futures
 from functools import partial
 from collections import deque
 
-from PySide2.QtCore import (
+from PySide6.QtCore import (
     Signal, QMutex, QMutexLocker, QPoint, QSize, Qt, QThread, QWaitCondition,
     QRunnable, QThreadPool, QObject
 )

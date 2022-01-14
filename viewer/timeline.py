@@ -3,14 +3,13 @@ import re
 from ctypes import c_void_p
 from collections import defaultdict
 from functools import partial
-import timeit
 # -- Third-party --
 from OpenGL.GL import *
 from OpenGL.arrays import vbo
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 from sequencePath import sequencePath as Path
 

@@ -3,15 +3,21 @@
 ################################################################################
 ## Form generated from reading UI file 'paint_dock.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.2.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QApplication, QComboBox, QDockWidget, QFrame,
+    QGridLayout, QHBoxLayout, QLabel, QPushButton,
+    QScrollArea, QSizePolicy, QToolButton, QWidget)
 import resources_rc
 
 class Ui_AnnotateDock(object):
@@ -44,21 +50,48 @@ class Ui_AnnotateDock(object):
 
         self.scrollArea = QScrollArea(self.dockWidgetContents)
         self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setAutoFillBackground(False)
+        self.scrollArea.setStyleSheet(u"")
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 157, 169))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 157, 166))
+        self.scrollAreaWidgetContents.setStyleSheet(u"")
         self.gridLayout_4 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.gridLayout_4.setContentsMargins(4, 4, 4, 4)
+        self.shapeFrame = QFrame(self.scrollAreaWidgetContents)
+        self.shapeFrame.setObjectName(u"shapeFrame")
+        self.shapeFrame.setFrameShape(QFrame.StyledPanel)
+        self.shapeFrame.setFrameShadow(QFrame.Raised)
+        self.gridLayout_2 = QGridLayout(self.shapeFrame)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.shapeTypeCombobox = QComboBox(self.shapeFrame)
+        self.shapeTypeCombobox.addItem("")
+        self.shapeTypeCombobox.addItem("")
+        self.shapeTypeCombobox.addItem("")
+        self.shapeTypeCombobox.addItem("")
+        self.shapeTypeCombobox.setObjectName(u"shapeTypeCombobox")
+        self.shapeTypeCombobox.setFrame(True)
+
+        self.gridLayout_2.addWidget(self.shapeTypeCombobox, 0, 1, 1, 1)
+
+        self.shapeTypeLabel = QLabel(self.shapeFrame)
+        self.shapeTypeLabel.setObjectName(u"shapeTypeLabel")
+        self.shapeTypeLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+
+        self.gridLayout_2.addWidget(self.shapeTypeLabel, 0, 0, 1, 1)
+
+
+        self.gridLayout_4.addWidget(self.shapeFrame, 1, 0, 1, 1)
+
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setSpacing(3)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.horizontalLayout_2.setContentsMargins(3, 3, 3, 3)
         self.brushToolButton = QToolButton(self.scrollAreaWidgetContents)
         self.brushToolButton.setObjectName(u"brushToolButton")
-        self.brushToolButton.setStyleSheet(u"")
         icon = QIcon()
         icon.addFile(u":/resources/brush_tool.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.brushToolButton.setIcon(icon)
@@ -95,31 +128,6 @@ class Ui_AnnotateDock(object):
 
         self.gridLayout_4.addLayout(self.horizontalLayout_2, 0, 0, 1, 1)
 
-        self.shapeFrame = QFrame(self.scrollAreaWidgetContents)
-        self.shapeFrame.setObjectName(u"shapeFrame")
-        self.shapeFrame.setFrameShape(QFrame.StyledPanel)
-        self.shapeFrame.setFrameShadow(QFrame.Raised)
-        self.gridLayout_2 = QGridLayout(self.shapeFrame)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.shapeTypeCombobox = QComboBox(self.shapeFrame)
-        self.shapeTypeCombobox.addItem("")
-        self.shapeTypeCombobox.addItem("")
-        self.shapeTypeCombobox.addItem("")
-        self.shapeTypeCombobox.addItem("")
-        self.shapeTypeCombobox.setObjectName(u"shapeTypeCombobox")
-        self.shapeTypeCombobox.setFrame(True)
-
-        self.gridLayout_2.addWidget(self.shapeTypeCombobox, 0, 1, 1, 1)
-
-        self.shapeTypeLabel = QLabel(self.shapeFrame)
-        self.shapeTypeLabel.setObjectName(u"shapeTypeLabel")
-        self.shapeTypeLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
-
-        self.gridLayout_2.addWidget(self.shapeTypeLabel, 0, 0, 1, 1)
-
-
-        self.gridLayout_4.addWidget(self.shapeFrame, 1, 0, 1, 1)
-
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
@@ -135,14 +143,14 @@ class Ui_AnnotateDock(object):
         AnnotateDock.setWindowTitle(QCoreApplication.translate("AnnotateDock", u"Annotate", None))
         self.saveButton.setText(QCoreApplication.translate("AnnotateDock", u"Save", None))
         self.clearButton.setText(QCoreApplication.translate("AnnotateDock", u"Clear", None))
-        self.brushToolButton.setText(QCoreApplication.translate("AnnotateDock", u"Brush", None))
-        self.shapeToolButton.setText(QCoreApplication.translate("AnnotateDock", u"Shape", None))
-        self.textToolButton.setText(QCoreApplication.translate("AnnotateDock", u"Text", None))
         self.shapeTypeCombobox.setItemText(0, QCoreApplication.translate("AnnotateDock", u"Rectangle", None))
         self.shapeTypeCombobox.setItemText(1, QCoreApplication.translate("AnnotateDock", u"Line", None))
         self.shapeTypeCombobox.setItemText(2, QCoreApplication.translate("AnnotateDock", u"Ellipse", None))
         self.shapeTypeCombobox.setItemText(3, QCoreApplication.translate("AnnotateDock", u"Circle", None))
 
         self.shapeTypeLabel.setText(QCoreApplication.translate("AnnotateDock", u"Type:", None))
+        self.brushToolButton.setText(QCoreApplication.translate("AnnotateDock", u"Brush", None))
+        self.shapeToolButton.setText(QCoreApplication.translate("AnnotateDock", u"Shape", None))
+        self.textToolButton.setText(QCoreApplication.translate("AnnotateDock", u"Text", None))
     # retranslateUi
 

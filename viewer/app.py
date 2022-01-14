@@ -8,19 +8,19 @@ from functools import partial
 
 # -- Third-party --
 import numpy as np
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtOpenGL import *
-from PySide2.QtWidgets import *
-#from qtshared2.styleWatcher import StylesheetWatcher
-from qtshared2.utils import loadStyleFromFile
-from qtshared2.svg import rasterizeSVG
-from qtshared2.widgets import (CompactTitleBar, HoverTintButton,
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtOpenGL import *
+from PySide6.QtWidgets import *
+#from qtshared6.styleWatcher import StylesheetWatcher
+from qtshared6.utils import loadStyleFromFile
+from qtshared6.svg import rasterizeSVG
+from qtshared6.widgets import (CompactTitleBar, HoverTintButton,
                               InteractiveSpinBox)
 # -- First-Party -- 
 from sequencePath import sequencePath as Path
-from strand2.server import StrandServer
-import relic_base
+from strand.server import StrandServer
+#import relic_base
 
 # -- Module --
 import resources_rc
@@ -52,7 +52,7 @@ class timelineControl(QTimeLine):
         self.fps = 24
         self.setFramerate()
         self.setLoopCount(0)
-        self.setCurveShape(QTimeLine.LinearCurve)
+        self.setEasingCurve(QEasingCurve.Linear)
         self.setUpdateInterval(0.25)
 
     @property
@@ -706,11 +706,12 @@ class PlayerAppWindow(QMainWindow):
         if data.hasUrls:
             if data.hasFormat('application/x-relic'):
                 assets = data.text()
-                for key, values in json.loads(assets).items():
-                    constructor = relic_base.asset_classes.getCategoryConstructor(key)
-                    for fields in values:
-                        asset = constructor(**fields)
-                        self.loadFile(asset.network_path, reset=False)
+                raise Exception('There is no handler for relic assets.')
+                #for key, values in json.loads(assets).items():
+                #    constructor = relic_base.asset_classes.getCategoryConstructor(key)
+                #    for fields in values:
+                #        asset = constructor(**fields)
+                #        self.loadFile(asset.network_path, reset=False)
             else:
                 event.setDropAction(Qt.CopyAction)
                 event.accept()
@@ -783,19 +784,20 @@ class PlayerAppWindow(QMainWindow):
 
 
 def main(args):
-    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    app = QApplication(sys.argv)
-    # Sets a 4x MSAA surface format to all QGLWidgets creatin in this application
     gl_format = QSurfaceFormat()
     gl_format.setSamples(2)
     QSurfaceFormat.setDefaultFormat(gl_format)
+    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+    app = QApplication(sys.argv)
+    # Sets a 4x MSAA surface format to all QGLWidgets creatin in this application
 
     # C Python Windowing
-    ctypes.windll.kernel32.SetConsoleTitleW("Peak")
+    ctypes.windll.kernel32.SetConsoleTitleW('Peak')
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.peak")
     app.setEffectEnabled(Qt.UI_AnimateCombo, False)
     window = PlayerAppWindow()
     window.setWindowIcon(QIcon(':resources/icons/peak.svg'))
+    window.setWindowTitle('Peak')
     loadStyleFromFile(window, ':style.qss')
 
     #watcher = StylesheetWatcher()

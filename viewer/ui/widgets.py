@@ -1,17 +1,17 @@
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 import numpy as np
 from .paint_dock import Ui_AnnotateDock
 from .color_picker import Ui_ColorPickerDock
 from ..gl.color_picker import ColorPickerGL
-import glm
 
 
 class colorSampler(QDialog):
 
 	def __init__(self, parent=None):
 		super(colorSampler, self).__init__(parent)
+		self.setWindowTitle('ColorSampler')
 		self.setGeometry(QRect(0, 0, 170, 52))
 		self.setWindowFlags(Qt.FramelessWindowHint)
 		self.setAttribute(Qt.WA_StaticContents)
@@ -23,18 +23,24 @@ class colorSampler(QDialog):
 			"QDialog {font-weight: bold; border: 1px solid rgb(66, 118, 150); background-color: rgb(68,68,68)}"
 		)
 		self.hide()
+		self.installEventFilter(self)
 
-	def setRGB(self, lutsample, rawsample, view):
-		self.hide()
+	def eventFilter(self, widget, event):
+		if event.type() == QEvent.WindowDeactivate:
+			self.hide()
+			return True
+		return False
+
+	def setRGB(self, lutsample, rawsample, pos, view):
 		self.view = view
 		self.lut_vec3data = lutsample
 		self.raw_vec3data = rawsample
 		size_str = ''.join(["{:.3f}".format(x) for x in rawsample])
 		size_str += view
 		window_width = QFontMetrics(self.font).boundingRect(size_str).width()
-		self.setGeometry(QRect(0, 0, window_width + 56, 52))
-		self.update()
+		self.setGeometry(QRect(pos.x() + 18, pos.y() + 18, window_width + 56, 52))
 		self.show()
+		self.update()
 
 	def paintEvent(self, event):
 		qp = QPainter(self)
@@ -296,7 +302,6 @@ class PaintDockWindow(QMainWindow):
 		super(PaintDockWindow, self).__init__(*args, **kwargs)
 		self.setWindowFlags(Qt.Widget)
 		self.setDockNestingEnabled(True)
-
 
 class PaintDock(QDockWidget):
 

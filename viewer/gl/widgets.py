@@ -6,11 +6,11 @@ import glm
 import numpy as np
 
 from OpenGL.GL import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtOpenGL import *
-from PySide2.QtWidgets import *
-from qtshared2.utils import getPrimaryScreenPixelRatio
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtOpenGL import *
+from PySide6.QtWidgets import *
+from qtshared6.utils import getPrimaryScreenPixelRatio
 
 # -- Module -- 
 from viewer.gl.util import Camera
@@ -97,7 +97,7 @@ class InteractiveGLView(QOpenGLWindow):
         self.makeCurrent()
         buttons = event.buttons()
         mods = event.modifiers()
-        self.c_pos = event.pos()
+        self.c_pos = event.position()
         self.update()
 
         self.m_lastpos = glm.vec2(self.m_pos.x, self.m_pos.y)
@@ -117,37 +117,34 @@ class InteractiveGLView(QOpenGLWindow):
             self.drawViewport(scale=True)
         elif buttons == Qt.MiddleButton and mods == Qt.AltModifier:
             self.drawViewport(pan=True)
-        elif buttons == Qt.RightButton and mods == Qt.ShiftModifier:
-            self.moveParentWindow()
+        elif buttons == Qt.LeftButton and mods == Qt.ShiftModifier:
+            self.moveParentWindow(event)#.globalPosition().toPoint())
 
     def wheelEvent(self, event):
         self.makeCurrent()
-        delta = (-(event.delta()) * 0.00075) + 1
+        px_delta = event.angleDelta().y()
+        delta = (-(px_delta) * 0.00075) + 1
 
         if event.modifiers() == Qt.ShiftModifier:
-            delta = event.delta() * 0.33
+            delta = px_delta * 0.33
             self.scaleParentWindow(delta)
         else:
             self.zoom(delta)
         self.drawViewport(orbit=True)
         self.update()
 
-    def moveParentWindow(self):
-        parent = self.parent()
-        win_geo = parent.geometry()
-        x = (win_geo.x() - self.lastPos.x()) + self.c_pos.x()
-        y = (win_geo.y() - self.lastPos.y()) + self.c_pos.y()
-        if self.c_pos != self.lastPos:
-            parent.setGeometry(x, y, parent.width(), parent.height())
+    def moveParentWindow(self, event):
+        if self.c_pos == self.lastPos:
+            return
+        self.parent().startSystemMove()
 
     def scaleParentWindow(self, delta): 
         # Resize the window
         delta_h = delta / 2
         parent = self.parent()
         new_size = parent.size() + QSize(delta, delta)
-        new_pos = parent.pos() + QPoint(-delta_h, -delta_h)
-        parent.resize(new_size)
-        parent.move(new_pos)
+        new_pos = parent.position() + QPoint(-delta_h, -delta_h)
+        parent.setGeometry(new_pos.x(), new_pos.y(), new_size.width(), new_size.height())
 
     def zoom(self, delta):
         # Prevent negative zoom level

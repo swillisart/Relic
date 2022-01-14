@@ -1,8 +1,6 @@
 from OpenGL.GL import *
-from PySide2.QtCore import Signal
-from PySide2.QtGui import Qt
-#from PySide2.QtOpenGL import *
-#from PySide2.QtWidgets import *
+from PySide6.QtCore import Signal
+from PySide6.QtGui import Qt
 from .widgets import InteractiveGLView
 from .primitives import ColorWheel, Crosshair
 import glm
@@ -41,7 +39,8 @@ class ColorPickerGL(InteractiveGLView):
 		self.draw_gl_cursor = True
 
 	def mouseMoveEvent(self, event):
-		pos = event.pos()
+		super(ColorPickerGL, self).mouseMoveEvent(event)
+		pos = event.position()
 		screen_pos = glm.vec2(pos.x(), -pos.y() + self.height())
 		screen_center = glm.vec2(self.width(), self.height()) / 2
 		world_pos = (screen_pos - screen_center) * self.zoom2d
@@ -62,6 +61,7 @@ class ColorPickerGL(InteractiveGLView):
 			color_sample = self.getColorAt(screen_pos)
 			hue = np.degrees(np.arctan2(world_pos.x, world_pos.y)) % 360
 			self.userPickedColor.emit(color_sample, hue)
+
 
 	def positionFromSaturation(self, saturation):
 		c_p = self.crosshair.position

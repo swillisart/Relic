@@ -14,11 +14,11 @@ import ocio.PyOpenColorIO as ocio
 from OpenGL.arrays import vbo
 from OpenGL.GL import *
 from OpenGL.GL import shaders as GLShaders
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtOpenGL import *
-from PySide2.QtWidgets import *
-from shiboken2 import VoidPtr
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtOpenGL import *
+from PySide6.QtWidgets import *
+from shiboken6 import VoidPtr
 
 # -- Module --
 from viewer.gl.widgets import InteractiveGLView
@@ -975,10 +975,12 @@ class Viewport(InteractiveGLView):
     @Slot()
     def setExposure(self, value):
         self.framebuffer.exposure = value
+        self.update()
 
     @Slot()
     def setGamma(self, value):
         self.framebuffer.gamma = value
+        self.update()
 
     @Slot()
     def setColorspace(self, value):
@@ -1125,16 +1127,18 @@ class Viewport(InteractiveGLView):
 
     def sampleColor(self):
         pos = self.screenToCanvas(self.m_pos, overscan=1.0)
-        #if self.image_plane.shape 
-        #TODO ensure pixel is not larger than image bounds
-        pixel = self.image_plane.pixels[
-            int(pos.y()),
-            int(pos.x())
-            ]
+        if not self.image_plane:
+            return 
+        try:
+            pixel = self.image_plane.pixels[
+                int(pos.y()),
+                int(pos.x())
+                ]
+        except: return
         lut_pixel = self.framebuffer.color_processor.applyRGB(pixel)
         raw_pixel = pixel
-        self.color_sampler.setRGB(lut_pixel, raw_pixel, 'Look')
-        self.color_sampler.move(self.c_pos.x() + 18, self.c_pos.y() + 18)
+        g_c_pos = self.mapToGlobal(self.c_pos)
+        self.color_sampler.setRGB(lut_pixel, raw_pixel, g_c_pos, 'Look')
 
     def togglePaintContext(self, save=True):
         self.paint_engine.enabled = not self.paint_engine.enabled

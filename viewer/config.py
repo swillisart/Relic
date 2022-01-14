@@ -1,4 +1,4 @@
-from qtshared2.utils import AppPreferences
+from qtshared6.utils import AppPreferences
 
 class Preferences(AppPreferences):
     DEFAULTS = {

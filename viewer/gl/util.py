@@ -5,18 +5,10 @@ from OpenGL.arrays import vbo
 from OpenGL.GL import *
 from ctypes import c_void_p
 #from OpenGL.GL import GL_ELEMENT_ARRAY_BUFFER
-from PySide2.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from sequencePath import sequencePath as Path
 from viewer.gl.shading import BaseProgram
 
-def useGL(clsfunction):
-	def wrapper(*args, **kwargs):
-		cls = args[0]
-		cls.makeCurrent()
-		result = clsfunction(*args, **kwargs)
-		cls.update()
-		return result
-	return wrapper
 
 class InstanceShader(BaseProgram):
 

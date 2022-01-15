@@ -220,6 +220,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def beginIngest(self):
         self.assets_view.hide()
+        self.attributeDock.hide()
         ingest = IngestForm()
         self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.Minimum) 
         ingest.setCategoryView(self.categoryDock, self.categoryLayout)
@@ -272,6 +273,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def onIngestClosed(self, dock):
         self.assets_view.show()
+        self.attributeDock.show()
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
         self.category_manager.blockSignals(False)
         try:

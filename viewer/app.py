@@ -320,6 +320,8 @@ class FrameEngine(QObject):
         worker.iterations = partial(range, cache_duration + 1)
 
     def removeTailFrames(self, amount):
+        if self.mode == FrameEngine.REGION:
+            return
         self.cache_number = self.cache_number - amount
         new_min = self.minc + amount
         func = partial(io.workers.FrameCacheIOThread.deleteCacheRange, self.minc, new_min)
@@ -703,22 +705,25 @@ class PlayerAppWindow(QMainWindow):
 
     def dropEvent(self, event):
         data = event.mimeData()
-        if data.hasUrls:
-            if data.hasFormat('application/x-relic'):
-                assets = data.text()
-                raise Exception('There is no handler for relic assets.')
-                #for key, values in json.loads(assets).items():
-                #    constructor = relic_base.asset_classes.getCategoryConstructor(key)
-                #    for fields in values:
-                #        asset = constructor(**fields)
-                #        self.loadFile(asset.network_path, reset=False)
-            else:
-                event.setDropAction(Qt.CopyAction)
-                event.accept()
-                for url in data.urls():
-                    self.loadFile(url.toLocalFile(), reset=False)
-        else:
+        if not data.hasUrls:
             event.ignore()
+            return
+        if data.hasFormat('application/x-relic'):
+            from library import objectmodels
+            assets = data.text()
+            for key, values in json.loads(assets).items():
+                constructor = objectmodels.getCategoryConstructor(key)
+                load = self.loadFile
+                if key == 'uncategorized':
+                    [load(constructor(**fields).path, reset=0) for fields in values]
+                else:
+                    [load(constructor(**fields).network_path, reset=0) for fields in values]
+        else:
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+            for url in data.urls():
+                self.loadFile(url.toLocalFile(), reset=False)
+
 
     def loadFile(self, path, reset=True):
         # Bring focus to the window

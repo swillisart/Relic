@@ -6,7 +6,7 @@ import json
 import subprocess
 from functools import partial
 from sequencePath import sequencePath as Path
-
+from collections import defaultdict
 # -- Module --
 import library.config as config
 from library.io.ingest import ConversionRouter
@@ -79,21 +79,21 @@ class assetItemModel(QStandardItemModel):
         yield asset
 
     def mimeData(self, indexes):
-        by_category = {}
+        by_category = defaultdict(list)
         unique_ids = []
 
         for index in indexes:
             primary_asset = copy.copy(index.data(polymorphicItem.Object))
-            #if primary_asset.busy():
-            #    return
-            unique_ids.append(primary_asset.id)
-            for asset in self.unpackAssetsDependencies(primary_asset, unique_ids):
-                # Insert asset into the payload
-                key = allCategories.__slots__[asset.category]
-                if by_category.get(key):
+
+            if isinstance(primary_asset, temp_asset):
+                by_category['uncategorized'].append(primary_asset.export)
+            else:
+                unique_ids.append(primary_asset.id)
+                for asset in self.unpackAssetsDependencies(primary_asset, unique_ids):
+                    # Insert asset into the payload
+                    key = allCategories.__slots__[asset.category]
                     by_category[key].append(asset.export)
-                else:
-                    by_category[key] = [asset.export]
+ 
 
         payload = json.dumps(by_category)
 
@@ -355,7 +355,6 @@ class assetListView(QListView):
         index = self.indexAt(event.pos())
         if event.mimeData().hasUrls() and index.isValid():
             self.setFocus()
-            self.update()
             event.acceptProposedAction()
 
     def dropEvent(self, event):
@@ -711,7 +710,7 @@ class BaseAssetEditor(AbstractDoubleClick):
         if Qt.RightButton == event.buttons():
             self.view.selmod.select(self.index, QItemSelectionModel.Select)
             self.view.showContextMenus(None)
-            self.view.update()
+            #self.view.update()
             self.close()
             return
         elif Qt.LeftButton == event.buttons():

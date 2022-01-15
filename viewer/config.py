@@ -1,6 +1,6 @@
-from qtshared6.utils import AppPreferences
+from qtshared6.utils import Preferences
 
-class Preferences(AppPreferences):
+class PeakPreferences(Preferences):
     DEFAULTS = {
         'exposure': 0.0,
         'gamma': 1.0,
@@ -8,10 +8,9 @@ class Preferences(AppPreferences):
         'color_view': '',
     }
     OPTIONS = {
-        'source_view': ['Proxy', 'Main'],
+        'source_view': ['Preview', 'Proxy', 'Main'],
     }
 
-PEAK_PREFS = Preferences('peak')
-
+PEAK_PREFS = PeakPreferences('Peak')
 FILE_ACTIONS = ['New', 'Exit'] # TODO: 'Open', 'Save',
 ZOOM_RATIOS = ['', 25, 50, 100, 150, 200] # percent

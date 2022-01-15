@@ -142,7 +142,6 @@ class subcategoryTreeView(QTreeView):
 
         if pop and event.buttons() == Qt.LeftButton:
             self.selection_model.select(index, QItemSelectionModel.Deselect)
-            self.update()
 
     def resizeToSel(self):
         self.resizeColumnToContents(0)
@@ -233,7 +232,6 @@ class subcategoryTreeView(QTreeView):
             self.scrollTo(proxy_index)
             # For some reason this doesn't work...
             self.selection_model.select(proxy_index, QItemSelectionModel.ClearAndSelect)
-            self.update()
             return item
 
         if item.hasChildren():
@@ -406,7 +404,6 @@ class subcategoryTreeView(QTreeView):
     def dragMoveEvent(self, event):
         if event.mimeData().hasUrls():
             self.setFocus()
-            self.update()
         super(subcategoryTreeView, self).dragMoveEvent(event)
         event.acceptProposedAction()
 

@@ -1,7 +1,6 @@
 import ctypes
 import glob
 import os
-import json
 import subprocess
 from functools import partial
 
@@ -43,21 +42,9 @@ $icon = [System.Drawing.Icon]::ExtractAssociatedIcon('{}');
 $icon.ToBitmap().Save('{}')"""
 
 def getMovInfo(fpath):
-    """
-    Gets Duration, Resolution and Framerate of supplied quicktime.
-
-    Returns
-    -------
-    list (duration, resolution, framerate)
-
-    EXAMPLE:
-        >>> getMovInfo('dev/test.mov')
-        >>> ['5.292', '912x899', '24']
-    """
-    cmd = 'exiftool -s3 -Duration# -ImageSize -VideoFrameRate "{}"'.format(fpath)
-    output = subprocess.check_output(cmd, creationflags=CREATE_NO_WINDOW)
-    result = output.decode("utf-8").split('\r\n')[:3]
-    return result
+    fields = ['-Duration#', '-ImageSize', '-VideoFrameRate']
+    mov_metadata = EXIFTOOL.getFields(str(fpath), fields, {})
+    return mov_metadata
 
 def getRawInfo(fpath):
     """
@@ -203,11 +190,14 @@ class ConversionRouter(QObject):
     @staticmethod
     @logFunction('Making preview from (MOV)')
     def processMOV(in_img_path, out_img_path):
-        duration, res, rate = getMovInfo(in_img_path)
-        duration = float(duration)
-        framerate = float(rate)
+        #""">>> ['5.292', '912x899', '24']"""
+        log.debug(str(in_img_path))
+        mov_metadata = getMovInfo(in_img_path)
+        log.debug(str(mov_metadata))
+        duration = float(mov_metadata.get('Duration'))
+        framerate = float(mov_metadata.get('VideoFrameRate'))
         pts = (((duration * framerate) * 24) / 100) / 24
-        width, height = res.split('x')
+        width, height = mov_metadata.get('ImageSize', '0x0').split('x')
 
         icon_path = out_img_path.suffixed('_icon', ext='.jpg')
         w, h = TSIZE.w, TSIZE.h
@@ -274,6 +264,8 @@ class ConversionRouter(QObject):
     def processSEQ(in_img_path, out_img_path):
         frames = sorted(glob.glob(str(in_img_path.sequence_path)))
         framelength = len(frames)
+        if framelength == 1:
+            return ConversionRouter.processHDR(in_img_path, out_img_path)
         a_input = oiio.ImageInput.open(frames[0])
         spec = a_input.spec()
         a_input.close()
@@ -495,7 +487,7 @@ def applyImageModifications(img_path, temp_asset):
         temp_asset.aces = False
 
     # Denoise the full image before cropping.
-    if is_raw or temp_asset.denoise:
+    if temp_asset.denoise or int(RELIC_PREFS.denoise):
         denoise_path = img_path.suffixed('_dn', '.tif')
         img_buf = hdr.neatDenoise(img_buf, str(denoise_path))
         temp_asset.denoise = False

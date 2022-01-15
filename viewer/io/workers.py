@@ -10,6 +10,7 @@ from PySide6.QtCore import (
 import numpy as np
 from .image import simpleRead
 import time, random
+from imagine.exif import EXIFTOOL
 import cv2
 
 class QuicktimeSignals(QObject):
@@ -98,7 +99,7 @@ class ExifWorker(QThread):
         super(ExifWorker, self).__init__(*args, **kwargs)
         self.mutex = QMutex()
         self.stopped = False
-        self.proc = None
+        self.proc = EXIFTOOL
         self.queue = deque()
 
     def addToQueue(self, path):
@@ -107,9 +108,7 @@ class ExifWorker(QThread):
     def stop(self):
         with QMutexLocker(self.mutex):
             self.stopped = True
-            if self.proc: # Kill the exiftool child process
-                pid = self.proc.pid
-                subprocess.call(f'taskkill /F /T /PID {pid}')
+            del self.proc
         self.wait(10)
 
     def start(self):
@@ -125,32 +124,17 @@ class ExifWorker(QThread):
                     self.msleep(10)
                     continue
 
-                if not self.proc:
-                    self.proc = subprocess.Popen(
-                        'exiftool -stay_open True -@ -',
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        creationflags=subprocess.CREATE_NO_WINDOW
-                    )
                 clip = self.queue.popleft()
-                cmd_text = ['-j', # JSON
+                fields = [
                     '-Duration#',
                     '-ImageSize',
                     '-VideoFrameRate',
                     '-SampleRate', # MXF framerate
                     '-DisplayHeight', # MXF
                     '-DisplayWidth', # MXF
-                    str(clip.path),
-                    '-execute\n']
-                self.proc.stdin.write(bytes('\n'.join(cmd_text), encoding='utf-8'))
-                self.proc.stdin.flush()
-                output = b''
-                while True:
-                    line = self.proc.stdout.readline()
-                    output += line
-                    if output.endswith(b'y}\r\n'):
-                        break
-                data = json.loads(output.decode('utf-8').replace('{ready}', ''))[0]
+                ]
+                    
+                data = self.proc.getFields(str(clip.path), fields, {})
                 self.metaLoaded.emit(clip, data)
 
 

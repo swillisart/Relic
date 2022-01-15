@@ -6,6 +6,7 @@ import subprocess
 from PySide6.QtCore import QCoreApplication, QSettings
 from sequencePath import sequencePath as Path
 from strand.client import StrandClient
+from qtshared6.utils import Preferences
 
 # -- Globals --
 NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL, IES, _2D_ELEMENT, _3D_ELEMENT, REFERENCE, TOOL = range(12)
@@ -68,7 +69,7 @@ def peakPreview(path):
     return True
 
 
-class Preferences(object):
+class RelicPreferences(Preferences):
 
     defaults = {
         'assets_per_page': 25,
@@ -76,68 +77,14 @@ class Preferences(object):
         'edit_mode': False,
         'view_scale': 2,
         'recurse_subcategories': 1,
+        'denoise' : 0,
     }
 
     options = {
         'host': ['http://localhost:8000/', 'https://yoursite.shotgunstudio.com/api/v1/'],
     }
-    
-    HOST_APP_NAME = QCoreApplication.applicationName()
 
-    def __init__(self):
-        """Entry point to QSettings for all of the Applications preferences.
-        when getting or setting attributes they are automatically saved on change
-        to an .INI file in the USERPROFILE location.
-        """
-        QSettings.setDefaultFormat(QSettings.IniFormat)
-
-    def __setattr__(self, name, value):
-        # All preference set are always in the user scope. 
-        QCoreApplication.setApplicationName('Relic')
-        QCoreApplication.setOrganizationName(os.getenv('username'))
-
-        user_path = USERPROFILE + '/.relic/settings'
-        QSettings.setPath(
-                    QSettings.IniFormat, QSettings.SystemScope, user_path)
-        QSettings().setValue(name, value)
-        QCoreApplication.setApplicationName(Preferences.HOST_APP_NAME)
-
-    def __getattr__(self, name):
-        shared_pref = self.getSitePref(name)
-        if shared_pref is not None:
-            return shared_pref
-        else:
-            user_pref = self.getUserPref(name)
-            if user_pref is not None:
-                return user_pref
-            else:
-                return Preferences.defaults.get(name)
-
-    @staticmethod
-    def getSitePref(name):
-        shared_path = os.getenv('relic_shared', USERPROFILE) + '/.relic/settings'
-        QCoreApplication.setApplicationName('Relic')
-        QCoreApplication.setOrganizationName('ResArts')
-
-        QSettings.setPath(
-                    QSettings.IniFormat, QSettings.SystemScope, shared_path)
-        result = QSettings().value(name, None)
-        QCoreApplication.setApplicationName(Preferences.HOST_APP_NAME)
-        return result
-
-    @staticmethod
-    def getUserPref(name):
-        user_path = USERPROFILE + '/.relic/settings'
-        QCoreApplication.setApplicationName('Relic')
-        QCoreApplication.setOrganizationName(os.getenv('username'))
-
-        QSettings.setPath(
-                    QSettings.IniFormat, QSettings.UserScope, user_path)
-        result = QSettings().value(name, None)
-        QCoreApplication.setApplicationName(Preferences.HOST_APP_NAME)
-        return result
-
-RELIC_PREFS = Preferences()
+RELIC_PREFS = RelicPreferences('Relic')
 
 # -- Logging --
 logging.basicConfig(

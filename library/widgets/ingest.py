@@ -77,7 +77,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.next_disabled = partial(self.nextButton.setEnabled, False)
         self.collectedListView.compactMode()
         self.actionGetMatrix = QAction('Get Color Matrix', self)
-        #self.actionDenoise = QAction('Denoise', self)
         self.actionBlendExposures = QAction('Align And Blend Exposures', self)
         self.actionReprocessImage = QAction('Re-Process Image', self)
         self.actionReprocessImage.triggered.connect(self.reprocessImage)

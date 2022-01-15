@@ -250,10 +250,6 @@ class BaseFields(object):
         db.accessor.videoStreamData.connect(slot)
         db.accessor.doStream(rc, self.id)
 
-    def busy(self):
-        status = db.accessor.response is not None
-        return status
-
     @property
     def export(self):
         indexed_attributes = {}
@@ -691,5 +687,8 @@ def getCategoryConstructor(category):
         category_name = allCategories.__slots__[category]
         constructor = globals()[category_name]
     elif isinstance(category, str):
-        constructor = globals()[category]
+        try:
+            constructor = globals()[category]
+        except:
+            constructor = temp_asset
     return constructor

@@ -32,6 +32,7 @@ class QuicktimeThread(QThread):
         self.cap = None
         self.clip_frame = 0
         self.frame = 0
+        self.sequence = 0
 
     @staticmethod
     def iterations():
@@ -47,6 +48,7 @@ class QuicktimeThread(QThread):
             self.cap.release()
             self.cap = None
         self.path = str(clip.path)
+        self.sequence = clip.sequence
         self.setFrame(clip_frame, frame)
 
     def stop(self):
@@ -65,7 +67,7 @@ class QuicktimeThread(QThread):
         while True:
             with QMutexLocker(self.mutex):
                 stop = self.stopped
-                cache = self.cache
+                cache = self.cache[self.sequence]
                 cap = self.cap
                 path = self.path
                 clip_frame = self.clip_frame
@@ -75,7 +77,6 @@ class QuicktimeThread(QThread):
                     cap.set(cv2.CAP_PROP_POS_FRAMES, clip_frame - 1)
 
             if cap and not stop:
-                #self.cap.set(cv2.CAP_PROP_POS_FRAMES, clip_frame - 1)
                 for index in QuicktimeThread.iterations():
                     timeline_frame = frame + index
                     if timeline_frame in cache:
@@ -160,20 +161,20 @@ class FrameThread(QThread):
         return range(0)
 
     @staticmethod
-    def fastRead(index, cache=None, frame=None, clip_frame=None, path=None):
+    def fastRead(index, cache=None, sequence=0, frame=0, clip_frame=0, path='',):
         timeline_frame = frame + index
         fp = path.padSequence(clip_frame + index)
         data = simpleRead(str(fp))
         #data = np.zeros(shape=(2160, 4096, 3), dtype=np.float16)
-        if frame in cache: # Frame expected by GUI (Not old or obsolete)
-            cache[timeline_frame] = data
+        if frame in cache[sequence]: # Frame expected by GUI (Not old or obsolete)
+            cache[sequence][timeline_frame] = data
             return timeline_frame
-    
+
     def run(self):
         while True:
             counter = 0
             with QMutexLocker(self.mutex):
-                cache = self.cache  
+                cache = self.cache
             func = partial(FrameThread.fastRead, cache=cache)
             for timeline_frame in self.pool.map(func, FrameThread.iterations()):
                 if timeline_frame:
@@ -201,14 +202,15 @@ class FrameCacheIOThread(QThread):
     def deleteCacheRange(_min, _max, cache):
         for x in range(_min, _max):
             try:
-                del cache[x]
+                for seq in cache:
+                    del cache[seq][x]
             except: pass
 
     def run(self):
         while True:
             with QMutexLocker(self.mutex):
-                    queue = self.queue
-                    cache = self.cache
+                queue = self.queue
+                cache = self.cache
             while queue:
                 func = queue.pop(0)
                 func(cache)

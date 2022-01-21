@@ -5,6 +5,7 @@ import sys
 import timeit
 import json
 from functools import partial
+from collections import defaultdict
 
 # -- Third-party --
 import numpy as np
@@ -115,7 +116,10 @@ class FrameEngine(QObject):
 
     LOOK_AHEAD = 0
     REGION = 1
-    CACHE = {}
+    CACHE = defaultdict(dict)
+    OVER = 0
+    STACK = 1
+    SPLIT = 2
 
     def __init__(self, parent, timeline, viewport):
         QObject.__init__(self, parent)
@@ -149,7 +153,9 @@ class FrameEngine(QObject):
     @Slot(int)
     def onFrameJump(self, frame):
         if self.is_caching:
-            if not frame in FrameEngine.CACHE and not self.deferred_frame_jump:
+            cache = FrameEngine.CACHE
+            all_frames = [item for items in [cache[i].keys() for i in cache] for item in items]
+            if not frame in all_frames and not self.deferred_frame_jump:
                 deferred_load = partial(self.onFrameJump, frame)
                 self.deferred_frame_jump = QTimer.singleShot(600, deferred_load)
                 return
@@ -167,20 +173,19 @@ class FrameEngine(QObject):
     def setRegionCache(self):
         selection = self.timeline.graph.selected_clips
         if selection and self.mode != FrameEngine.REGION:
-            clip = selection[-1]
-            clip_size = (clip.geometry.num_bytes * clip.duration)
+            clip_size = sum([clip.geometry.num_bytes * clip.duration for clip in selection])
             if io.util.fitsInMemory(clip_size):
                 self.mode = FrameEngine.REGION
-                self.regionCaching(clip)
+                self.regionCaching(selection)
         else:
             self.mode = FrameEngine.LOOK_AHEAD
+            self.clearFrameCache(self.timeline.current_frame, update=False)
 
         return self.mode
 
     @Slot()
     def onCacheFinished(self):
         self.is_caching = False
-        #self.timeline.drawViewport()
 
     @Slot(int)
     def updateCache(self, frame):
@@ -207,10 +212,9 @@ class FrameEngine(QObject):
         timeline = self.timeline
         clip, clip_frame = timeline.updatedFrame(timeline_frame)
         if isinstance(clip, ImageClip):
-            img_data = FrameEngine.CACHE.get(clip.label)
+            img_data = FrameEngine.CACHE[clip.sequence].get(clip.label)
         else:
-            img_data = FrameEngine.CACHE.get(timeline_frame)
-
+            img_data = FrameEngine.CACHE[clip.sequence].get(timeline_frame)
         update_framerate = False
 
         if not isinstance(img_data, np.ndarray):
@@ -258,24 +262,28 @@ class FrameEngine(QObject):
 
         self.timeline.drawViewport()
 
-    def regionCaching(self, clip):
-        self.clearFrameCache(clip.timeline_in, update=False)
-        self.is_caching = True
 
-        if isinstance(clip, MovClip):
-            worker = io.workers.QuicktimeThread
-            self.mov_thread.setClip(clip, clip.first, clip.timeline_in)
-        else:
-            worker = io.workers.FrameThread
-            # Update the cache methods frame mappings
-            worker.fastRead = partial(worker.fastRead,
-                frame=clip.timeline_in,
-                clip_frame=clip.first,
-                path=clip.path)
-        cache = FrameEngine.CACHE
-        [cache.update({x:None}) for x in range(clip.timeline_in, clip.timeline_out + 1)]
-        self.cache_end = clip.timeline_out
-        worker.iterations = partial(range, clip.duration + 1)
+    def regionCaching(self, clips):
+        head = min([clip.timeline_in for clip in clips])
+        tail = max([clip.timeline_out for clip in clips])
+        self.clearFrameCache(head, update=False)
+        self.cache_end = tail
+        self.is_caching = True
+        for clip in clips:
+            cache = FrameEngine.CACHE[clip.sequence]
+            [cache.update({x:None}) for x in range(head, tail + 1)]
+            if isinstance(clip, MovClip):
+                worker = io.workers.QuicktimeThread
+                self.mov_thread.setClip(clip, clip.first, clip.timeline_in)
+            else:
+                worker = io.workers.FrameThread
+                # Update the cache methods frame mappings
+                worker.fastRead = partial(worker.fastRead,
+                    sequence=clip.sequence,
+                    frame=clip.timeline_in,
+                    clip_frame=clip.first,
+                    path=clip.path)
+            worker.iterations = partial(range, clip.duration + 1)
 
     def startCaching(self, clip, clip_frame, timeline_frame, new_clip=False):
         # Don't re-queue if thread is already running
@@ -294,12 +302,13 @@ class FrameEngine(QObject):
             worker = io.workers.FrameThread
             # Update the cache methods frame mappings
             worker.fastRead = partial(worker.fastRead,
+                sequence=clip.sequence,
                 frame=timeline_frame,
                 clip_frame=clip_frame,
                 path=clip.path)
         else:
             img_data = io.image.simpleRead(str(clip.path))
-            cache = FrameEngine.CACHE
+            cache = FrameEngine.CACHE[clip.sequence]
             cache[clip.label] = img_data
             [cache.update({x:None}) for x in range(timeline_frame, clip.timeline_out + 1)]
             self.cache_end = clip.timeline_out
@@ -314,7 +323,7 @@ class FrameEngine(QObject):
         else:
             cache_duration = worker.BATCH_SIZE
 
-        cache = FrameEngine.CACHE
+        cache = FrameEngine.CACHE[clip.sequence]
         [cache.update({x:None}) for x in range(timeline_frame, cache_to + 1)]
         self.cache_end = cache_to
         worker.iterations = partial(range, cache_duration + 1)

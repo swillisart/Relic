@@ -116,7 +116,7 @@ class BaseClip(object):
         ins = self.timeline_in
         out = self.timeline_out
         if frame >= ins and frame <= out:
-            return int(self.first + (frame - ins))
+            return self.first + (frame - ins)
         else:
             return False
 
@@ -504,18 +504,10 @@ class timelineGLView(InteractiveGLView):
             if local_frame:
                 return clip, local_frame
 
-        return False, False
-
+        return False, False 
 
     def updatedFrame(self, frame):
         self.current_frame = frame
-        #local_frame = False
-        #if len(self.graph.sequences) < 2 and self.current_clip:
-        #    local_frame = self.current_clip.mapToLocalFrame(frame)
-
-        #if local_frame:
-        #    return self.current_clip, local_frame
-        #else:
         self.current_clip, local_frame = self.getClipOnFrame(frame)
         super(timelineGLView, self).paintGL()
         frame_translation = glm.translate(glm.mat4(1.0), glm.vec3(frame, 0, 0))

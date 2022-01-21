@@ -1,5 +1,6 @@
 import glob
 import re
+import copy
 from ctypes import c_void_p
 from collections import defaultdict
 from functools import partial
@@ -31,7 +32,7 @@ from viewer.gl.shading import BaseProgram
 from viewer import io
 
 # -- Globals --
-TIMECODE = 0 
+TIMECODE = 0
 FRAMES = 1
 
 # edit constants
@@ -63,9 +64,10 @@ class BaseClip(object):
         'channels',
         'aspect',
         'pixel_format',
+        'start_timecode',
     ]
 
-    def __init__(self, file_path=None, timeline_in=1):
+    def __init__(self, file_path=None, timeline_in=1, annotations=True):
         self.first = 0
         self.last = 24
         self.head = 0
@@ -76,7 +78,8 @@ class BaseClip(object):
         if file_path:
             self.loadFile(file_path)
             self.label = file_path.name
-            self.getImageAnnotations()
+            if annotations:
+                self.getImageAnnotations()
 
         # Set and update the timeline offset (start frame)
         self.timeline_in = timeline_in + 1
@@ -89,9 +92,8 @@ class BaseClip(object):
         self.setImageGeometry(str(file_path))
 
     def setBlankImage(self):
-        self.geometry = ImagePlane(self.width, self.height, aspect=self.aspect,
-            pixels=np.zeros(shape=(self.height, self.width, self.channels), dtype=self.pixel_format)
-        )
+        pixels = np.zeros(shape=(self.height, self.width, self.channels), dtype=self.pixel_format)
+        self.geometry = ImagePlane(pixels, aspect=self.aspect)
 
     def setImageGeometry(self, frame):
         self.width, self.height, channels, self.aspect, self.pixel_format, self.framerate = \
@@ -119,7 +121,20 @@ class BaseClip(object):
             return False
 
     def frameToTimecode(self, frame):
-        return frame / self.framerate
+        hours, remainder = divmod((frame / self.framerate), 3600.0)
+        minutes, seconds = divmod(remainder, 60.0)
+        frame = frame % self.framerate
+
+        return (int(hours), int(minutes), int(seconds), int(frame))
+
+    def timecodeToFrame(self, timecode):
+        hours, minutes, seconds, frame = timecode.split(':') 
+        hours = float(hours) * 3600.0
+        minutes = float(minutes) * 60.0
+        seconds = float(seconds)
+        framediv = float(frame) * (1 / self.framerate)
+        result = sum([hours, minutes, seconds, framediv])
+        return int(result)
 
     @property
     def duration(self):
@@ -162,24 +177,37 @@ class BaseClip(object):
         result = QImage(str(annotated_path))
         return result
 
+    @staticmethod
+    def _validAnnotation(annotations, path, first, last, _file):
+        frame = int(_file.frame)
+        if frame > first and frame < last and path.name == _file.name:
+            annotations.append(frame)
+
     def getImageAnnotations(self):
         self.annotations.clear()
         folder = self.annotation_folder
-        if folder.exists:
-            for _file in folder:
-                if _file.name == self.path.name:
-                    self.annotations.append(int(_file.frame))
+        if not folder.exists:
+            return
+        add_file = partial(
+            self._validAnnotation,
+            self.annotations,
+            self.path,
+            self.first,
+            self.last
+        )
+        list(map(add_file, folder))
 
 
 class MovClip(BaseClip):
 
-    def __init__(self, file_path=None, timeline_in=1):
+    def __init__(self, file_path=None, timeline_in=1, annotations=True):
         # Omit file as it's loaded within a thread
         super(MovClip, self).__init__(timeline_in=timeline_in)
         self.path = file_path
         if file_path:
             self.label = file_path.name
-            self.getImageAnnotations()
+            if annotations:
+                self.getImageAnnotations()
 
     def loadFile(self, duration, resolution, framerate):
         calc_duration = (float(duration) * float(framerate))
@@ -190,9 +218,8 @@ class MovClip(BaseClip):
         self.first = 1
         self.last = int(round(calc_duration))
         self.framerate = float(framerate)
-        self.geometry = ImagePlane(width, height, aspect=aspect, order='bgr',
-            pixels=np.zeros(shape=(height, width, 3), dtype=np.uint8)
-        )
+        pixels = np.zeros(shape=(height, width, 3), dtype=np.uint8)
+        self.geometry = ImagePlane(pixels, aspect=aspect, order='bgr')
         self.setTimelineOut()
 
 
@@ -206,7 +233,7 @@ class ImageClip(BaseClip):
         img_data, spec = io.image.read_file(str(file_path), 0)
         self.height, self.width, self.channels = img_data.shape
         self.aspect = spec.get_int_attribute('PixelAspectRatio') or 1
-        self.geometry = ImagePlane(self.width, self.height, aspect=self.aspect, pixels=img_data)
+        self.geometry = ImagePlane(img_data, aspect=self.aspect)
 
 
 class SeqClip(BaseClip):
@@ -433,6 +460,8 @@ class timelineGLView(InteractiveGLView):
 
     mouseInteracted = Signal(bool)
 
+    onContextMenu = Signal(QPoint)
+
     def __init__(self, *args, **kwargs):
         super(timelineGLView, self).__init__(*args, **kwargs)
         self.current_frame = 0
@@ -464,8 +493,6 @@ class timelineGLView(InteractiveGLView):
             self.annotatedLoad.emit(nearest, clip)
 
     def reset(self, clip):
-        #if hasattr(self.current_clip, 'geometry'):
-        #    self.current_clip.geometry.clear() # Not sure if this is relevant
         self.current_clip = clip
         self.graph = Graph(shader=self.primitive_shader)
         self.current_frame = 0
@@ -539,8 +566,8 @@ class timelineGLView(InteractiveGLView):
                 color=glm.vec4(0.23, 0.26, 0.34, 1))
             self.graph.nodes.draw(clip_mvp, GL_QUADS,
                 color=glm.vec4(0.299, 0.33, 0.442, 1))
-            #self.graph.hover.draw(self.MVP, GL_LINE_LOOP, size=1.0,
-            #    color=glm.vec4(0.4, 0.48, 0.6, 1))
+            self.graph.hover.draw(self.MVP, GL_LINE_LOOP, size=1.0,
+                color=glm.vec4(0.4, 0.48, 0.6, 1))
 
         self.frame_glyphs.draw(self.MVP)
         self.annotation_cursors.draw(self.MVP)
@@ -649,7 +676,7 @@ class timelineGLView(InteractiveGLView):
         clip_scale = self.clip_scale
         font_scale = self.font_scale
         switch = True
-
+        zoom_scale = self.zoom2d * 7.0756
         for sequence, clip in self.graph.iterateSequences():
             # Build clip glyph text
             if self.tick_step >= 50 and switch:
@@ -658,11 +685,11 @@ class timelineGLView(InteractiveGLView):
             
             local_center = (clip.duration / 2)
             text_width = ((len(clip.label) / 2) * clip_scale)
+            y = ((sequence * zoom_scale) * 2) - clip_scale
             # Don't add if text is larger than clip bounds.
             if int(text_width) < int(local_center):
                 clip_center = clip.timeline_in + local_center
                 x = clip_center - text_width
-                y = ((sequence * (self.zoom2d * 7.0756)) * 2) - clip_scale
 
                 # Label 
                 position = glm.vec2(x, y)
@@ -690,14 +717,16 @@ class timelineGLView(InteractiveGLView):
                 handle_glyphs.addText(tail_text, glm.vec2(t_pos, position.y), font_scale)
 
                 # Handle bars
-                top = ((sequence * (self.zoom2d * 7.0756)) * 2) - (clip_scale * 2)
+                top = ((sequence * clip_scale) * 2) - (clip_scale * 2)
                 handle_cursors.append(clip.timeline_in, clip.timeline_in + clip.head, top)
                 handle_cursors.append(clip.timeline_out - clip.tail, clip.timeline_out, top)
 
             # Annotations
+            top = (((sequence + 0.5) * zoom_scale) * 2) - clip_scale
+            bot = (((sequence - 0.5) * zoom_scale) * 2) - clip_scale
             for local_frame in clip.annotations:
                 timeline_frame = clip.mapToGlobalFrame(local_frame)
-                annotation_cursors.append(timeline_frame, (font_scale * 50))
+                annotation_cursors.append(timeline_frame, top, bot)
 
 
         self.node_glyphs = node_glyphs
@@ -736,7 +765,7 @@ class timelineGLView(InteractiveGLView):
         mods = event.modifiers()
         self.w_firstpos = glm.vec2(self.w_pos.x(), self.w_pos.y())
 
-        if buttons == Qt.LeftButton:
+        if buttons in [Qt.LeftButton, Qt.RightButton]:
             self.scrubbing = self.withinScrubArea()
             if self.scrubbing:
                 self.jumpToCursor()
@@ -795,7 +824,7 @@ class timelineGLView(InteractiveGLView):
         x, y, = range(2)
         for i, clip in enumerate(self.graph.selected_clips):
             nodes.move(clip, snap_movement)
-            glyphs.move(clip.label, clip.glyph_offset, position)
+            #glyphs.move(clip.label, clip.glyph_offset, position)
 
             # Destination Highlighting here
             a_idx = i * 4
@@ -882,13 +911,13 @@ class timelineGLView(InteractiveGLView):
         return self.font_scale * 26.6
 
     def cursorOverNode(self):
-        local_scale = self.clip_scale
+        clip_scale = self.clip_scale
         for sequence, clip in self.graph.iterateSequences():
              if self.graph.nodes.vertex_count:
-                clip_rect = self.graph.nodes.rect(clip.index, local_scale)
+                clip_rect = self.graph.nodes.rect(clip.index, clip_scale)
                 if clip_rect.contains(self.w_pos):
-                    top = sequence * local_scale
-                    bot = sequence - (local_scale*2)
+                    top = (((sequence + 0.5) * (self.zoom2d * 7.0756)) * 2) - clip_scale
+                    bot = (((sequence - 0.5) * (self.zoom2d * 7.0756)) * 2) - clip_scale
                     l = clip.timeline_in
                     r = clip.timeline_out
                     self.graph.hover.resize(l, r, top, bot)
@@ -898,6 +927,7 @@ class timelineGLView(InteractiveGLView):
 
     def mouseReleaseEvent(self, event):
         super(timelineGLView, self).mouseReleaseEvent(event)
+        button = event.button()
         self.selection_rect.resize(-1,-1.1,0.1,0)
         if self.graph.sequence_callbacks:
             self.graph.reassignClips()
@@ -906,7 +936,17 @@ class timelineGLView(InteractiveGLView):
         self.mouseInteracted.emit(True)
         self.scrubbing = False
         self.edit_mode = None
+        if button == Qt.RightButton:
+            self.onContextMenu.emit(event.globalPosition().toPoint())
 
+
+    def setHandles(self, value):
+        selection = self.graph.selected_clips
+        for clip in selection:
+            clip.head = value
+            clip.tail = value
+        self.updateNodeGlyphs()
+    
     def wheelEvent(self, event):
         super(timelineGLView, self).wheelEvent(event)
         self.updateNodeGlyphs()
@@ -951,6 +991,33 @@ class timelineGLView(InteractiveGLView):
         self.updateFrameGlyphs()
         self.cursorOverNode()
 
-
     def cut(self):
-        pass
+        clip = self.current_clip
+        if not clip:
+            return
+        frame = self.current_frame
+        graph = self.graph
+
+        # Update the first clip with new trim
+        less = frame - clip.timeline_out
+        new_end = clip.mapToLocalFrame(clip.timeline_out)
+        clip.last += less
+        graph.nodes.updateDuration(clip, less)
+        clip.setTimelineOut()
+        clip.getImageAnnotations()
+
+        # Create new clip from the old one.
+        constructor = globals()[clip.__class__.__name__]
+        new_clip = constructor(clip.path, frame, annotations=False)
+        new_clip.first = (clip.mapToLocalFrame(frame) + 1)
+        new_clip.last = new_end
+        new_clip.geometry = clip.geometry
+        if isinstance(clip, MovClip):
+            new_clip.framerate = clip.framerate
+            new_clip.start_timecode = clip.start_timecode
+        new_clip.setTimelineOut()
+        new_clip.getImageAnnotations()
+
+        # Update data
+        graph.appendClip(new_clip, clip.sequence)
+        self.updateNodeGlyphs()

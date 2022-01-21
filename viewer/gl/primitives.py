@@ -189,8 +189,8 @@ class AnnotationCursors(BasePrimitive):
 	def build(self):
 		self.buildFromVertices(self.vertices)
 
-	def append(self, x, y):
-		new_vertices = np.array([[x, y/2, 0], [x, -y, 0]], dtype=np.float32)
+	def append(self, x, top, bot):
+		new_vertices = np.array([[x, bot, 0], [x, top, 0]], dtype=np.float32)
 		self.vertices = np.append(self.vertices, new_vertices, axis=0)
 
 	def offset(self, factor):

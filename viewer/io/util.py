@@ -3,6 +3,18 @@ from PySide6.QtCore import (
 )
 import ctypes
 
+EDL_CLIP = """
+
+
+
+{:03}    A012C022 V C        {:02}:{:02}:{:02}:{:02} {:02}:{:02}:{:02}:{:02} 00:00:00:00 00:00:00:00
+
+* FROM CLIP NAME: {}"""
+
+EDL_TITLE = """TITLE: cinema_raw_light_peak
+
+FCM: NON-DROP FRAME"""
+
 
 class MEMORYSTATUSEX(ctypes.Structure):
     _fields_ = [

@@ -10,13 +10,13 @@ pyenv.cfg
 dist
 *.spec
 *.exe
+*.lnk
 python-3.9.2-embed-amd64
 Include
 Lib
 Scripts
-relic_resources.py
 resources.py
-qtshare
+resources_rc.py
 library/plugins/Lib39
 library/plugins/Lib37
 library/plugins/Lib27

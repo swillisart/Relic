@@ -1,0 +1,1 @@
+﻿.\scripts\activate; pythonw.exe .\Capture.py

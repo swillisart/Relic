@@ -499,9 +499,12 @@ def applyImageModifications(img_path, temp_asset):
 
     # Set the meta attributes and write the file.
     if is_raw:
-        raw_meta = getRawInfo(raw_path)
-        for key, value in raw_meta.items():
-            img_buf.specmod().attribute(key, value)
+        try:
+            raw_meta = getRawInfo(raw_path)
+            for key, value in raw_meta.items():
+                img_buf.specmod().attribute(key, value)
+        except Exception as exerr:
+            print(exerr)
 
     img_buf.specmod().attribute('compression', 'dwaa:15')
     img_buf = oiio.ImageBufAlgo.reorient(img_buf)

@@ -132,8 +132,8 @@ class ExifWorker(QThread):
                     '-SampleRate', # MXF framerate
                     '-DisplayHeight', # MXF
                     '-DisplayWidth', # MXF
+                    '-StartTimecode#', # MXF
                 ]
-                    
                 data = self.proc.getFields(str(clip.path), fields, {})
                 self.metaLoaded.emit(clip, data)
 

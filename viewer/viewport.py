@@ -5,8 +5,8 @@ from ctypes import c_void_p
 from collections import deque
 import string
 from sequencePath import sequencePath as Path
-# -- Third-party -- 
 
+# -- Third-party -- 
 import glm
 import numpy as np
 import ocio.PyOpenColorIO as ocio
@@ -22,12 +22,12 @@ from shiboken6 import VoidPtr
 
 # -- Module --
 from viewer.gl.widgets import InteractiveGLView
-from viewer.gl.shading import BaseProgram
 from viewer.gl.primitives import Circle, ColorWheel, Line, LineRect, Ellipse
 from viewer.gl.text import glyphContainer, TextShader, createFontAtlas
+from viewer.gl.texture import TextureFactory
 from viewer.ui.widgets import colorSampler, AnnotationDock
+
 # -- Globals --
-NOPE = 0
 OVERSCAN = 1
 
 SHADER_DESCRIPTION = {
@@ -35,46 +35,6 @@ SHADER_DESCRIPTION = {
     "functionName": "OCIODisplay",
     "lut3DEdgeLen": 32,
 }
-NP_TEXTURE_FORMAT = {
-    'uint8': GL_UNSIGNED_BYTE,
-    'float16': GL_HALF_FLOAT,
-    'float32': GL_FLOAT,
-}
-RGB_CHANNELS = {
-    GL_UNSIGNED_BYTE: GL_RGB8,
-    GL_HALF_FLOAT: GL_RGB16F,
-    GL_FLOAT: GL_RGB32F
-}
-RGBA_CHANNELS = {
-    GL_UNSIGNED_BYTE: GL_RGBA8,
-    GL_HALF_FLOAT: GL_RGBA16F,
-    GL_FLOAT: GL_RGBA32F
-}
-R_CHANNEL = {
-    GL_UNSIGNED_BYTE: GL_R8,
-    GL_HALF_FLOAT: GL_R16F,
-    GL_FLOAT: GL_R32F
-}
-
-class BaseWrapper(object):
-
-    def __enter__(self):
-        self.bind()
-        return self
-
-    def __exit__(self, *args):
-        self.release()
-
-
-class Buffer(QOpenGLBuffer, BaseWrapper):
-    def __init__(self, *args, **kwargs):
-        super(Buffer, self).__init__(*args, **kwargs)
-        self.create()
-
-    def allocate(self, allocation):
-        if isinstance(allocation, np.ndarray):
-            return super(Buffer, self).allocate(allocation, allocation.nbytes)
-        return super(Buffer, self).allocate(allocation)
 
 
 class BrushStroke(QObject):
@@ -207,6 +167,7 @@ class ShapeFactory(object):
         bot = min(a.y, b.y)
         top = max(a.y, b.y)
         return left, right, bot, top
+
 
 class PaintEngine(QObject):
     
@@ -566,82 +527,25 @@ class colorFramebuffer(object):
         glBindTexture(GL_TEXTURE_3D, 0)
 
 
-class ImageShader(BaseProgram):
-
-    vertex = """
-    #version 400
-    in layout(location = 0) vec3 vertexPosition;
-    in layout(location = 1) vec2 vertexUV;
-
-    uniform mat4 MVP;
-
-    out vertex {
-        vec2 UV;
-        vec3 Position;
-    } verts;
-
-    void main()
-    {
-        gl_Position = MVP * vec4(vertexPosition, 1);
-        verts.UV = vertexUV;
-        verts.Position = vertexPosition;
-    }
-    """
-
-    fragment = """
-    #version 400
-    in vertex {
-        vec2 UV;
-        vec3 Position;
-    } verts;
-
-    uniform sampler2D tex2D;
-
-    out vec4 rgba;
-
-    void main()
-    {
-        rgba = texture2D(tex2D, verts.UV);
-    }
-    """
-
-    @classmethod
-    def create(cls):
-        obj = super(ImageShader, cls).fromGlsl(
-            ImageShader.vertex, ImageShader.fragment
-        )
-        obj.setUniforms('MVP', 'tex2D')
-        return obj
-
 
 class ImagePlane(object):
 
-    def __init__(self, width, height, z=0, aspect=1, pixels=None, shader=None, order='rgb'):
-        if shader:
-            self.shader = shader
-        else:
-            self.shader = ImageShader.create()
+    TEXTURES = None
 
-        self.f = QOpenGLFunctions(QOpenGLContext.currentContext())
-
-        self.shape = glm.vec3(width, height, z)
+    def __init__(self, pixels, z=0, aspect=1, order='rgb'):
+        h, w, _ = pixels.shape
+        self.shape = glm.vec3(w, h, z)
         self.aspect = aspect
         self.tile = 1
-        if order == 'rgb':
-            if pixels.shape[2] == 4:
-                self.order = GL_RGBA
-            else:    
-                self.order = GL_RGB
-        else:
-            if pixels.shape[2] == 4:
-                self.order = GL_BGRA
-            else:    
-                self.order = GL_BGR
-        self.build(pixels)
+        self.rebuild()
         self.no_annotation = True
+        if not self.TEXTURES:
+            ImagePlane.TEXTURES = TextureFactory()
+        self.texture = ImagePlane.TEXTURES.addNewFormat(pixels, order)
+        self.paint_canvas = None
+        self.num_bytes = pixels.nbytes
 
-    def build(self, pixels):
-        self.pixels = pixels
+    def rebuild(self):
         x, y, z = self.shape
         self.elements = np.array(
             [
@@ -657,45 +561,31 @@ class ImagePlane(object):
             target=GL_ELEMENT_ARRAY_BUFFER,
         )
         self.vbo = vbo.VBO(self.elements)
-
-        self.texture_id = glGenTextures(1)
-
-        self.pbo = Buffer(QOpenGLBuffer.PixelUnpackBuffer)
-
-        with self.pbo as pbo:
-            pbo.setUsagePattern(QOpenGLBuffer.StreamDraw)
-            pbo.allocate(pixels.nbytes)
-
-        glBindTexture(GL_TEXTURE_2D, self.texture_id)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
-        self.gl_format = NP_TEXTURE_FORMAT.get(str(pixels.dtype))
-        if pixels.shape[2] == 4:    
-            self.gl_internal_format = RGBA_CHANNELS.get(self.gl_format)
-        elif pixels.shape[2] == 3:
-            self.gl_internal_format = RGB_CHANNELS.get(self.gl_format)
-        elif pixels.shape[2] == 1:
-            self.gl_internal_format = R_CHANNEL.get(self.gl_format)
-        # need to use QOpenGLFunctions for GL_HALF_FLOAT type missing in python ctypes.
-
-        self.f.glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            self.gl_internal_format,
-            int(self.shape.x),
-            int(self.shape.y),
-            0,
-            self.order,
-            self.gl_format,
-            pixels,
-        )
-        glBindTexture(GL_TEXTURE_2D, 0)
-    
         self.annotation_id = glGenTextures(1)
-        #glActiveTexture(GL_TEXTURE1)
+
+    def resetAnnotation(self):
+        w = int(self.shape.x  * OVERSCAN)
+        h = int(self.shape.y * OVERSCAN)
+        self.paint_canvas = QImage(w, h, QImage.Format_ARGB32)
+        self.paint_canvas.fill(QColor(0, 0, 0, 0))
+        pixels = np.ndarray(shape=(h, w, 3), buffer=self.paint_canvas.constBits(), dtype=np.uint8)
+        self.updateAnnotation(pixels)
+        self.no_annotation = True
+
+    def setAnnotation(self, img=None):
+        if not img:
+            w = int(self.shape.x  * OVERSCAN)
+            h = int(self.shape.y * OVERSCAN)
+            img = QImage(w, h, QImage.Format_ARGB32)
+            img.fill(QColor(0, 0, 0, 0))
+
+        pixels = np.ndarray(
+            shape = (img.height(), img.width(), 3),
+            buffer = img.bits(),
+            dtype = np.uint8
+        )
+        h, w, c = pixels.shape
+        self.paint_canvas = img
         glBindTexture(GL_TEXTURE_2D, self.annotation_id)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
@@ -710,46 +600,10 @@ class ImagePlane(object):
             0,
             GL_BGRA,
             GL_UNSIGNED_BYTE,
-            None,
+            pixels,
         )
         glBindTexture(GL_TEXTURE_2D, 0)
-        self.resetAnnotation()
 
-    def clear(self):
-        glDeleteTextures(2, [self.texture_id, self.annotation_id])
-
-    def resetAnnotation(self):
-        w = int(self.shape.x  * OVERSCAN)
-        h = int(self.shape.y * OVERSCAN)
-        self.paint_canvas = QImage(w, h, QImage.Format_ARGB32)
-        self.paint_canvas.fill(QColor(0, 0, 0, 0))
-        pixels = np.ndarray(shape=(h, w, 3), buffer=self.paint_canvas.constBits(), dtype=np.uint8)
-        self.updateAnnotation(pixels)
-        self.no_annotation = True
-
-    def setAnnotation(self, img):
-        pixels = np.ndarray(
-            shape = (img.height(), img.width(), 3),
-            buffer = img.bits(),
-            dtype = np.uint8
-        )
-        h, w, c = pixels.shape
-        self.paint_canvas = img
-        self.updateAnnotation(pixels)
-
-    def updateTexture(self, pixels):
-        #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        #glFlush()
-        null = VoidPtr(0)
-        shape = self.shape
-        with self.pbo as pbo:
-            glBindTexture(GL_TEXTURE_2D, self.texture_id)
-            self.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, shape.x, shape.y, self.order, self.gl_format, null)
-            #glBufferData(GL_PIXEL_UNPACK_BUFFER, pixels.nbytes, c_void_p(0), GL_STREAM_DRAW)
-            pbo.write(0, pixels, pixels.nbytes)
-            glBindTexture(GL_TEXTURE_2D, 0)
-
-        self.pixels = pixels
 
     def updateAnnotation(self, pixels):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -784,18 +638,16 @@ class ImagePlane(object):
         )
         glBindTexture(GL_TEXTURE_2D, 0)
 
-    def draw(self, transpose_mvp):
-        # Handle Texturing
-        glUniform1i(self.shader.tex2D, 1)
-
+    def draw(self, transpose_mvp, shader):
         with self.ibo, self.vbo:
-            glUniformMatrix4fv(self.shader.MVP, 1, GL_FALSE, glm.value_ptr(transpose_mvp))
+            # Cam MVP
+            glUniformMatrix4fv(shader.MVP, 1, GL_FALSE, glm.value_ptr(transpose_mvp))
 
-            # Positions
+            # Geo Positions
             glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, False, 5 * 4, c_void_p(0))
 
-            # UV
+            # Geo UV
             glEnableVertexAttribArray(1)
             glVertexAttribPointer(1, 2, GL_FLOAT, False, 5 * 4, c_void_p(3 * 4))
 
@@ -825,7 +677,6 @@ class Viewport(InteractiveGLView):
         w, h = img.width(), img.height()
         _w, _h = self.width(), self.height()
         self.resize(w, h)
-
         self.camera.left = -(w/2)
         self.camera.right = w/2
         self.camera.bottom = -(h/2)
@@ -833,14 +684,11 @@ class Viewport(InteractiveGLView):
         self.camera.updatePerspective()
         self.glmview = self.camera.getMVP()
         self.paintGL(scene=scene)
-
-        glViewport(0, 0, w, h)
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
-
-        sampled = glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE)
-        annotated_shapes = QImage(sampled, w, h, QImage.Format_ARGB32).rgbSwapped().mirrored()
+        sampled = glReadPixels(0, 0, _w, _h, GL_RGBA, GL_UNSIGNED_BYTE)
+        annotated_shapes = QImage(sampled, _w, _h, QImage.Format_ARGB32).rgbSwapped().mirrored().scaled(w, h)
         self.resize(_w, _h)
-        self.drawViewport()
+        self.drawViewport(orbit=True)
         return annotated_shapes
 
     def initializeGL(self):
@@ -865,33 +713,31 @@ class Viewport(InteractiveGLView):
         super(Viewport, self).paintGL()
         image_plane = self.image_plane
         paint_engine = self.paint_engine
+
         if scene:
             # Draw our scene
             if image_plane:
-                null = VoidPtr(0)
-                glBindTexture(GL_TEXTURE_2D, image_plane.texture_id)
-                with image_plane.pbo as pbo:
-                    x = image_plane.shape.x
-                    y = image_plane.shape.y
-                    image_plane.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, x, y, image_plane.order, image_plane.gl_format, null)
-                    
-
+                texture_shader = ImagePlane.TEXTURES.shader
+                image_plane.texture.pull()
                 with self.framebuffer:
-                    with image_plane.shader:
-                        image_plane.draw(self.MVP)
+                    with texture_shader:
+                        glUniform1i(texture_shader.tex2D, 1)
+                        image_plane.draw(self.MVP, texture_shader)
+
             # Draw the actual screen-space framebuffer quad
             with self.framebuffer.shader:
                 self.framebuffer.draw()
 
-        # Annotation overlay
-        if image_plane:
-            if not image_plane.no_annotation or paint_engine.enabled:
-                glBindTexture(GL_TEXTURE_2D, image_plane.annotation_id)
-                with image_plane.shader:
-                    annotation_transform = glm.translate(glm.mat4(1.0), glm.vec3(0, 0.0, -1.0))
-                    scale = glm.scale(annotation_transform, glm.vec3(OVERSCAN))
-                    annotation_mvp = self.camera.perspective * self.glmview * scale
-                    image_plane.draw(annotation_mvp)
+            # Annotation overlay
+            if image_plane:
+                if not image_plane.no_annotation or paint_engine.enabled:
+                    glBindTexture(GL_TEXTURE_2D, image_plane.annotation_id)
+                    with texture_shader:
+                        glUniform1i(texture_shader.tex2D, 1)
+                        annotation_transform = glm.translate(glm.mat4(1.0), glm.vec3(0, 0.0, -1.0))
+                        scale = glm.scale(annotation_transform, glm.vec3(OVERSCAN))
+                        annotation_mvp = self.camera.perspective * self.glmview * scale
+                        image_plane.draw(annotation_mvp, texture_shader)
 
         # GL primitives and visual Gizmos
         mv = self.camera.perspective * self.glmview
@@ -1130,7 +976,7 @@ class Viewport(InteractiveGLView):
         if not self.image_plane:
             return 
         try:
-            pixel = self.image_plane.pixels[
+            pixel = self.image_plane.texture.pixels[
                 int(pos.y()),
                 int(pos.x())
                 ]
@@ -1145,6 +991,8 @@ class Viewport(InteractiveGLView):
         if self.paint_engine.enabled:
             if self.paint_engine.brush.radius >= 20:
                 self.setCursor(Qt.CrossCursor)
+            if not self.image_plane.paint_canvas:
+                self.image_plane.setAnnotation()
         else:
             self.setCursor(Qt.ArrowCursor)
             if self.image_plane:

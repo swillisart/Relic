@@ -168,7 +168,7 @@ class FrameEngine(QObject):
         selection = self.timeline.graph.selected_clips
         if selection and self.mode != FrameEngine.REGION:
             clip = selection[-1]
-            clip_size = (clip.geometry.pixels.nbytes * clip.duration)
+            clip_size = (clip.geometry.num_bytes * clip.duration)
             if io.util.fitsInMemory(clip_size):
                 self.mode = FrameEngine.REGION
                 self.regionCaching(clip)
@@ -203,19 +203,11 @@ class FrameEngine(QObject):
 
     @Slot(int)
     def onFrameChange(self, timeline_frame):
-        if timeline_frame > 200:
-            print('\n\n')
-            print(self.query)
-            print(self.mid)
-        start = timeit.default_timer()
         viewport = self.viewport
         timeline = self.timeline
         clip, clip_frame = timeline.updatedFrame(timeline_frame)
-        self.query += timeit.default_timer() - start
-        start = timeit.default_timer() 
-
         if isinstance(clip, ImageClip):
-            img_data = clip.geometry.pixels
+            img_data = FrameEngine.CACHE.get(clip.label)
         else:
             img_data = FrameEngine.CACHE.get(timeline_frame)
 
@@ -251,7 +243,7 @@ class FrameEngine(QObject):
 
             geo = clip.geometry
             viewport.image_plane = geo
-            geo.updateTexture(img_data)
+            geo.texture.push(img_data)
 
             if not geo.no_annotation:
                 if clip_frame not in clip.annotations:
@@ -265,7 +257,6 @@ class FrameEngine(QObject):
                 self.parent.playbackToggle()
 
         self.timeline.drawViewport()
-        self.mid += timeit.default_timer() - start
 
     def regionCaching(self, clip):
         self.clearFrameCache(clip.timeline_in, update=False)
@@ -299,13 +290,22 @@ class FrameEngine(QObject):
                 self.mov_thread.setClip(clip, clip_frame, timeline_frame)
             else:
                 self.mov_thread.setFrame(clip_frame, timeline_frame) # Debug impact
-        else:
+        elif isinstance(clip, SeqClip):
             worker = io.workers.FrameThread
             # Update the cache methods frame mappings
             worker.fastRead = partial(worker.fastRead,
                 frame=timeline_frame,
                 clip_frame=clip_frame,
                 path=clip.path)
+        else:
+            img_data = io.image.simpleRead(str(clip.path))
+            cache = FrameEngine.CACHE
+            cache[clip.label] = img_data
+            [cache.update({x:None}) for x in range(timeline_frame, clip.timeline_out + 1)]
+            self.cache_end = clip.timeline_out
+            self.is_caching = False
+            self.updateCache(clip.timeline_out)
+            return
 
         cache_to = timeline_frame + worker.BATCH_SIZE
         if cache_to > clip.timeline_out:
@@ -375,11 +375,16 @@ class ViewerTitleBar(CompactTitleBar):
         self.zoom_ratios.setStatusTip('Zoom level (Percentage)')
         for item in config.ZOOM_RATIOS:
             self.zoom_ratios.addItem(f'{item} %', item)
-        #self.zoom_ratios.setSizePolicy(
-        #    QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
         self.zoom_ratios.setFixedWidth(18)
 
+        self.view_modes = QComboBox(self)
+        self.view_modes.setStatusTip('Viewport Composite Modes')
+        for item in config.VIEW_MODES:
+            self.view_modes.addItem(item)
+        self.view_modes.setFixedWidth(85)
+
         self.left_layout.addWidget(self.icon_button)
+        self.center_layout.addWidget(self.view_modes)
         self.center_layout.addWidget(self.exposure_toggle)
         self.center_layout.addWidget(self.exposure_control)
         self.center_layout.addWidget(self.gamma_toggle)
@@ -444,6 +449,7 @@ class PlayerAppWindow(QMainWindow):
         self.setCentralWidget(viewport_container)
         self.title_bar = ViewerTitleBar(self)
         self.timeline = timelineGLView()
+        self.timeline.onContextMenu.connect(self.showTimelineContextMenu)
         self.timelineFrame = QFrame(self)
         timeline_layout = QHBoxLayout()
         timeline_container = QWidget.createWindowContainer(self.timeline)
@@ -474,6 +480,7 @@ class PlayerAppWindow(QMainWindow):
         self.title_bar.color_views.currentIndexChanged.connect(self.viewport.setColorspace)
         self.title_bar.exitAction.triggered.connect(self.close)
         self.title_bar.newAction.triggered.connect(self.newSession)
+        self.title_bar.exportAction.triggered.connect(self.exportSession)
 
         self.viewport.colorConfigChanged.connect(self.title_bar.color_views.addItems)
         self.viewport.finishAnnotation.connect(self.saveAnnotation)
@@ -482,7 +489,9 @@ class PlayerAppWindow(QMainWindow):
         self.timeline.frameJump.connect(self.playbackToggle)
         self.timeline.annotatedLoad.connect(self.viewAnnotated)
         self.timeline.mouseInteracted.connect(self.refreshViewport)
-    
+        self.actionSetHandles = QAction('Set Handles', self)
+        self.actionSetHandles.triggered.connect(self.getHandlesFromInput)
+
         # -- Shortcuts --
         channel_call = self.viewport.setColorChannel
         shuffle_red = partial(channel_call, 'r')
@@ -509,6 +518,20 @@ class PlayerAppWindow(QMainWindow):
 
         self.viewport.setColorConfig()
 
+    def showTimelineContextMenu(self, position):
+        context_menu = QMenu(self)
+        selection = self.timeline.graph.selected_clips
+        if selection:
+            context_menu.addAction(self.actionSetHandles)
+
+        context_menu.exec(position)
+
+    def getHandlesFromInput(self):
+        value, ok = QInputDialog.getInt(self, 'Set Handles', 'Frames:')
+        if not ok:
+            return
+        self.timeline.setHandles(value)
+
     @Slot()
     def cacheModeToggle(self):
         mode = self.frame_engine.setRegionCache()
@@ -527,6 +550,7 @@ class PlayerAppWindow(QMainWindow):
             data.get('ImageSize'),
             data.get('VideoFrameRate') or data.get('SampleRate')
         )
+        clip.start_timecode = float(data.get('StartTimecode', '0.0'))
         self.viewport.update()
         timeline.graph.appendClip(clip, 0)
         if timeline.current_frame in (clip.timeline_in, clip.timeline_in - 1):
@@ -544,6 +568,24 @@ class PlayerAppWindow(QMainWindow):
         zoom_widget.setItemData(0, f'{percent} %', Qt.DisplayRole)
         zoom_widget.setItemData(0, percent)
         config.ZOOM_RATIOS[0] = percent
+
+    @Slot()
+    def exportSession(self):
+        file_name, ok = QFileDialog.getSaveFileName(
+            self, "Export", QDir.homePath(), "Image Files (*.edl *.piq *.mp4)")
+        if not ok:
+            return
+        out_file = open(file_name, 'a')
+        out_file.write(io.util.EDL_TITLE)
+        index = 0
+        for _, clip in self.timeline.graph.iterateSequences():
+            index += 1
+            tc_frame = clip.start_timecode * clip.framerate#clip.timecodeToFrame(clip.start_timecode)
+            a = clip.frameToTimecode(clip.first + tc_frame)
+            b = clip.frameToTimecode(clip.last + tc_frame)
+            clip_name = clip.label.replace('_01P', '')
+            out_str = io.util.EDL_CLIP.format(index, *a, *b, clip_name)
+            out_file.write(out_str)
 
     @Slot()
     def newSession(self):
@@ -589,6 +631,7 @@ class PlayerAppWindow(QMainWindow):
         if remove_path.exists:
             os.remove(str(remove_path))
         self.timeline.updateNodeGlyphs()
+        self.viewport.update()
 
     @Slot()
     def saveAnnotation(self, image):

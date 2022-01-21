@@ -22,7 +22,7 @@ class InteractiveGLView(QOpenGLWindow):
 
     def __init__(self, *args, **kwargs):
         super(InteractiveGLView, self).__init__(*args, **kwargs)
-        self.setScreenDimensions()
+        self._screen_dimensions = self.setScreenDimensions(self.width(), self.height())
         self.m_pos = self.m_lastpos = self.origin_pos = self.pan2d = glm.vec2(0, 0)
         self.zoom2d = 1.0
         self.lastzoom2d = 1.0
@@ -54,16 +54,17 @@ class InteractiveGLView(QOpenGLWindow):
         self.glmview = self.camera.getMVP()
         self.cmodeltransformation = glm.mat4(1.0)
 
-    def setScreenDimensions(self):
+    @staticmethod
+    def setScreenDimensions(width, height):
         dpi_scale = getPrimaryScreenPixelRatio()
         x = y = 0
-        w = int(self.width() * dpi_scale)
-        h = int(self.height() * dpi_scale)
-        self._screen_dimensions = (x, y, w, h)
+        w = int(width * dpi_scale)
+        h = int(height * dpi_scale)
+        return (x, y, w, h)
 
     def resizeGL(self, width, height):
         self.makeCurrent()
-        self.setScreenDimensions()
+        self._screen_dimensions = self.setScreenDimensions(width, height)
         self.drawViewport(orbit=True)
         self.camera.setAspect(width / height)
 

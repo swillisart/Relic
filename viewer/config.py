@@ -12,5 +12,6 @@ class PeakPreferences(Preferences):
     }
 
 PEAK_PREFS = PeakPreferences('Peak')
-FILE_ACTIONS = ['New', 'Exit'] # TODO: 'Open', 'Save',
+FILE_ACTIONS = ['New', 'Export', 'Exit'] # TODO: 'Open', 'Save',
 ZOOM_RATIOS = ['', 25, 50, 100, 150, 200] # percent
+VIEW_MODES = ['Over', 'Stack', 'Split/Wipe']

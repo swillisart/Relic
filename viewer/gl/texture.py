@@ -110,23 +110,14 @@ class TextureFactory(object):
         self.glf = QOpenGLFunctions(QOpenGLContext.currentContext())
 
     @staticmethod
-    def _keyFromPixels(pixels):
-        return '{}{}{}{}'.format(*pixels.shape, pixels.itemsize)
+    def _keyFromPixels(pixels, sequence=0):
+        return '{}{}{}{}{}'.format(sequence, *pixels.shape, pixels.itemsize)
 
-    def getTexture(self):
-        key = self._keyFromPixels(pixels)
-        return self.textures[key]
-
-    def addNewFormat(self, pixels, order):
-        key = self._keyFromPixels(pixels)
+    def addNewFormat(self, pixels, order, sequence=0):
+        key = self._keyFromPixels(pixels, sequence)
         if not key in self.textures.keys():
             self.textures[key] = BufferedTexture(pixels, order, self.glf)
         return self.textures[key]
-    
-    def drawTextureIndex(self, transpose_mvp, index):
-        # Handle Texturing
-        #glUniform1i(self.shader.tex2D, 1)
-        glUniform1i(self.shader.tex2D, index)
 
     def clear(self):
         values = self.textures.values()
@@ -194,7 +185,7 @@ class BufferedTexture(object):
             self.glf.glTexSubImage2D(
                 GL_TEXTURE_2D, 0, 0, 0, self.width, self.height, self.order, self.texture_format, VoidPtr(0))
             pbo.write(0, pixels, pixels.nbytes)
-            glBindTexture(GL_TEXTURE_2D, 0)
+            #glBindTexture(GL_TEXTURE_2D, 0)
         self.pixels = pixels
 
     def pull(self):
@@ -202,3 +193,4 @@ class BufferedTexture(object):
             glBindTexture(GL_TEXTURE_2D, self.id)
             self.glf.glTexSubImage2D(
                 GL_TEXTURE_2D, 0, 0, 0, self.width, self.height, self.order, self.texture_format, VoidPtr(0))
+            #glBindTexture(GL_TEXTURE_2D, 0)

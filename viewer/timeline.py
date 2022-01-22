@@ -4,6 +4,7 @@ import copy
 from ctypes import c_void_p
 from collections import defaultdict
 from functools import partial
+from operator import itemgetter
 # -- Third-party --
 from OpenGL.GL import *
 from OpenGL.arrays import vbo
@@ -462,6 +463,8 @@ class timelineGLView(InteractiveGLView):
 
     onContextMenu = Signal(QPoint)
 
+    clearCache = Signal(int)
+
     def __init__(self, *args, **kwargs):
         super(timelineGLView, self).__init__(*args, **kwargs)
         self.current_frame = 0
@@ -506,6 +509,24 @@ class timelineGLView(InteractiveGLView):
 
         return False, False 
 
+    def getClipsOnFrame(self, frame):
+        for sequence, clip in self.graph.iterateSequences():
+            local_frame = clip.mapToLocalFrame(frame)
+            yield clip, local_frame
+
+    def newMultiFrame(self, frame):
+        self.current_frame = frame
+        data = [x for x in self.getClipsOnFrame(frame)]
+        filtered_data = list(filter(itemgetter(1), data))
+
+        super(timelineGLView, self).paintGL()
+        frame_translation = glm.translate(glm.mat4(1.0), glm.vec3(frame, 0, 0))
+        time_mvp = self.camera.perspective * self.glmview * frame_translation
+        self.frame_glyphs.draw(self.MVP)
+        self.time_cursor.draw(time_mvp)
+        self.update()
+        return filtered_data
+
     def updatedFrame(self, frame):
         self.current_frame = frame
         self.current_clip, local_frame = self.getClipOnFrame(frame)
@@ -517,7 +538,6 @@ class timelineGLView(InteractiveGLView):
         self.time_cursor.draw(time_mvp)
         self.update()
         return self.current_clip, local_frame
-
 
 
     def initializeGL(self):
@@ -924,10 +944,16 @@ class timelineGLView(InteractiveGLView):
         if self.graph.sequence_callbacks:
             self.graph.reassignClips()
             self.graph.snapToSelected()
+            self.clearCache.emit(self.current_frame)
         self.updateNodeGlyphs()
         self.mouseInteracted.emit(True)
         self.scrubbing = False
         self.edit_mode = None
+        
+        for clip in self.graph.selected_clips:
+            texture = clip.geometry.texture 
+            clip.geometry.texture = ImagePlane.TEXTURES.addNewFormat(
+                texture.pixels, clip.geometry.order, clip.sequence)
         if button == Qt.RightButton:
             self.onContextMenu.emit(event.globalPosition().toPoint())
 

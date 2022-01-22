@@ -541,6 +541,7 @@ class ImagePlane(object):
         self.no_annotation = True
         if not self.TEXTURES:
             ImagePlane.TEXTURES = TextureFactory()
+        self.order = order
         self.texture = ImagePlane.TEXTURES.addNewFormat(pixels, order)
         self.paint_canvas = None
         self.num_bytes = pixels.nbytes
@@ -671,6 +672,7 @@ class Viewport(InteractiveGLView):
         self.key_callback = None
         self.active_tool = AnnotationDock.Brush
         self.is_painting = False
+        self.clips = []
 
     def renderShapes(self, scene=False):
         img = self.image_plane.paint_canvas
@@ -713,6 +715,7 @@ class Viewport(InteractiveGLView):
         super(Viewport, self).paintGL()
         image_plane = self.image_plane
         paint_engine = self.paint_engine
+        clips = self.clips
 
         if scene:
             # Draw our scene
@@ -723,6 +726,17 @@ class Viewport(InteractiveGLView):
                     with texture_shader:
                         glUniform1i(texture_shader.tex2D, 1)
                         image_plane.draw(self.MVP, texture_shader)
+            elif clips:
+                texture_shader = ImagePlane.TEXTURES.shader
+                with self.framebuffer:
+                    for clip in clips:
+                        clip.geometry.texture.pull()
+                        with texture_shader:
+                            glUniform1i(texture_shader.tex2D, 1)
+                            y = clip.sequence*(clip.geometry.shape.y)
+                            clip_transform = glm.translate(glm.mat4(1.0), glm.vec3(0, y, 0))
+                            clip_mvp = self.camera.perspective * self.glmview * clip_transform
+                            clip.geometry.draw(clip_mvp, texture_shader)
 
             # Draw the actual screen-space framebuffer quad
             with self.framebuffer.shader:
@@ -758,7 +772,6 @@ class Viewport(InteractiveGLView):
         paint_engine.shapes.active.draw(mv)
         for primitive in paint_engine.shapes.primitives:
             primitive.draw(mv)
-        glBindTexture(GL_TEXTURE_2D, 0)
 
     def resizeGL(self, width, height):
         super(Viewport, self).resizeGL(width, height)
@@ -846,11 +859,22 @@ class Viewport(InteractiveGLView):
         self.update()
 
     def frameGeometry(self):
-        if self.camera.ortho and self.image_plane:
-            self.pan2d = glm.vec2(0, 0)
-            self.origin_pos = glm.vec2(0, 0)
-            tw = self.image_plane.shape.x / self.width()
-            th = self.image_plane.shape.y / self.height()
+        if self.camera.ortho:
+            if self.image_plane:
+                tw = self.image_plane.shape.x / self.width()
+                th = self.image_plane.shape.y / self.height()
+                self.pan2d = glm.vec2(0, 0)
+                self.origin_pos = glm.vec2(0, 0)
+            elif self.clips:
+                h = self.clips[0].geometry.shape.y * len(self.clips)
+                w = self.clips[0].geometry.shape.x
+                th = h / self.height()
+                tw = w / self.width()
+                self.pan2d = glm.vec2(0, -(h/4))
+                self.origin_pos = glm.vec2(0, 0)
+            else:
+                return
+
             if th < tw:
                 self.zoom2d = tw
             else:

@@ -948,7 +948,7 @@ def main(args):
     app.processEvents() # draw the initial ui before loading stuff
     if args:
         if args.path:
-            #for x in range(100):
+            #for x in range(25):
             for file_path in args.path.split(','):
                 window.loadFile(file_path, reset=False)
         if args.annotate:

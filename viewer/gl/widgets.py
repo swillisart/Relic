@@ -154,14 +154,14 @@ class InteractiveGLView(QOpenGLWindow):
             return
         self.zoom2d = self.zoom2d * delta
 
-    def drawViewport(self, orbit=False, scale=False, pan2d=False):
+    def drawViewport(self, orbit=False, scale=False, pan=False):
         x, y, w, h = self._screen_dimensions
         glViewport(x, y, w, h)
         center = glm.vec2((w / 2), (h / 2)) * self.zoom2d
 
         if self.camera.ortho:  # Place ortho camera
 
-            if pan2d:
+            if pan:
                 self.pan2d.x = (
                     (self.m_pos.x - self.m_lastpos.x) * self.lastzoom2d
                 ) + self.pan2d.x
@@ -204,7 +204,7 @@ class InteractiveGLView(QOpenGLWindow):
                     horizontalAngle * dst_mult, verticalAngle * dst_mult
                 )
 
-            elif pan2d:
+            elif pan:
                 self.camera.pan(horizontalAngle * dst_mult, verticalAngle * dst_mult)
 
             elif orbit:

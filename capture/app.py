@@ -447,9 +447,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 #'-shortest',
                 out_file,
             ]
-            subprocess.call(self.post_cmd, creationflags=NO_WINDOW)
-            os.remove(str(self.out_audio))
-            os.remove(str(self.out_video))
+            if not self.audio_recorder.input_device.isNull():
+                subprocess.call(self.post_cmd, creationflags=NO_WINDOW)
+                os.remove(str(self.out_audio))
+                os.remove(str(self.out_video))
+            else:
+                os.rename(str(self.out_video), out_file)
+                os.remove(str(self.out_audio))
             self.appendToModel(out_file, self.video_model, sort=True)
 
     def startRecording(self, rect, pixmap):

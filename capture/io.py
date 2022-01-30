@@ -10,7 +10,7 @@ CREATE_NO_WINDOW = 0x08000000
 class AudioRecord(QObject):
     def __init__(self, audio_path):
         super(AudioRecord, self).__init__()
-        input_device = QMediaDevices.defaultAudioInput()
+        self.input_device = QMediaDevices.defaultAudioInput()
         audio_format = QAudioFormat()
         audio_format.setSampleRate(44100)
         audio_format.setChannelCount(1) # 1 mono, 2 stereo
@@ -34,13 +34,15 @@ class AudioRecord(QObject):
             creationflags=CREATE_NO_WINDOW,
         )
 
-        self._audio_input = QAudioSource(input_device, audio_format, self)
-        self._io_device = self._audio_input.start()
-        self._io_device.readyRead.connect(self._readyRead)
+        if not self.input_device.isNull():
+            self._audio_input = QAudioSource(self.input_device, audio_format, self)
+            self._io_device = self._audio_input.start()
+            self._io_device.readyRead.connect(self._readyRead)
 
     def stop(self):
         self.ffproc.stdin.close()
-        self._audio_input.stop()
+        if not self.input_device.isNull():
+            self._audio_input.stop()
 
     def _readyRead(self):
         data = self._io_device.readAll()

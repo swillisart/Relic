@@ -138,7 +138,6 @@ def processUnresolvedAssets(asset):
             a = nuke.selectedNode()
             b = node
             nukescripts.clear_selection_recursive()
-            print('a')
             temp_path = os.getenv('userprofile') + '/temp.nk'
             a.begin()
             for subnode in a.nodes():
@@ -146,15 +145,12 @@ def processUnresolvedAssets(asset):
             nuke.nodeCopy(temp_path)
             a.end()
 
-            print('b')
             b.begin()
             for subnode in b.nodes():
                 nuke.delete(subnode)
             nuke.scriptSource(temp_path)
             b.end()
-            print('c')
             nuke.delete(a)
-            print('d')
 
     return already_exists
 
@@ -244,14 +240,18 @@ def getSelectionDependencies(selected):
     return files, assets
 
 def collectFilePath(node):
-    if not node.knob('file') or node.Class() in IGNORE_NODES:
+    file_knob = node.knob('file')
+    if not file_knob or node.Class() in IGNORE_NODES:
         return None
-    file_path = Path(node['file'].value())
+    node_file = file_knob.getValue()
+    if not node_file:
+        return None
+    file_path = Path(node_file)
     if not file_path.parents(0).exists:
         return None
-    filename = os.path.basename(str(file_path))
+
     subfolder = config.getAssetSourceLocation(str(file_path))
-    changed_path = subfolder + '/' + filename
+    changed_path = subfolder + '/' + file_path.stem
     node['file'].setValue(changed_path)
     return str(file_path)
 
@@ -331,15 +331,17 @@ def alembicPatch(node):
 
 def applyRepath(node, asset_path):
     file_path = node['file'].value()
-
     if not file_path.startswith('source_'):
         return
+
     repath = asset_path.parents(0) / file_path
 
     if repath.parents(0).exists:
         node['file'].setValue(str(repath))
         if str(repath).endswith('.abc'):
-            alembicPatch(node)
+            try:
+                alembicPatch(node)
+            except: pass
 
 
 def captureViewport(save_path):

@@ -1,4 +1,3 @@
-import ctypes
 import glob
 import os
 import subprocess

@@ -1,6 +1,5 @@
 import os
 import logging
-import subprocess
 
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
@@ -52,6 +51,12 @@ def getAssetSourceLocation(filepath):
 
     return 'source_misc'
 
+def peakLoad(path):
+    PEAK.sendPayload(str(path))
+    if PEAK.errored:
+        cmd = f'start peak://{path}'
+        os.system(cmd)
+
 def peakPreview(path):
     path.checkSequence()
     if path.sequence_path or path.ext in MOVIE_EXT:
@@ -61,11 +66,7 @@ def peakPreview(path):
 
     if not path.exists:
         return False
-    
-    PEAK.sendPayload(str(path))
-    if PEAK.errored:
-        cmd = f'start peak://{path}'
-        os.system(cmd)
+    peakLoad(path)
     return True
 
 

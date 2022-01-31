@@ -866,6 +866,7 @@ class PlayerAppWindow(QMainWindow):
         self.raise_()
         stripped = str(path).replace('peak://', '')
         file_path = Path(stripped, checksequence=True)
+        #print('fp', file_path)
         # Resolve the sequence and set the timeline offset
         offset = 0
         if not reset:
@@ -946,11 +947,10 @@ def main(args):
     server = StrandServer('peak')
     server.incomingFile.connect(window.loadFile)
     app.processEvents() # draw the initial ui before loading stuff
-    if args:
-        if args.path:
-            #for x in range(25):
-            for file_path in args.path.split(','):
-                window.loadFile(file_path, reset=False)
+    if args and args.path:
+        #for x in range(25):
+        for file_path in args.path.split(','):
+            window.loadFile(file_path, reset=False)
         if args.annotate:
             window.paint_dock.setFloating(False)
             window.paintContext()

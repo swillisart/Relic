@@ -219,13 +219,16 @@ class assetListView(QListView):
         elif mods == Qt.ControlModifier and key == Qt.Key_G:
             self.groupSelectedItems()
 
-    def clipboardCopy(self):
+    def clipboardCopy(self, description=None):
         clipboard = QApplication.clipboard()
         if asset := self.getSelectedAsset():
             id = asset.id
             category = asset.category
             name = asset.path
-            clipboard.setText(f'relic://{category}/{id}/{name}')
+            if description:
+                clipboard.setText(f'relic://{category}/{id}/{name}#{description}')
+            else:
+                clipboard.setText(f'relic://{category}/{id}/{name}')
         else:
             clipboard.clear()
 

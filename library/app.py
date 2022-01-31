@@ -3,11 +3,10 @@ import math
 import os
 import sys
 from functools import partial
-import webbrowser
 
 # -- Third-party --
 from PySide6.QtCore import Slot, QPoint, QModelIndex, QThreadPool, QItemSelectionModel
-from PySide6.QtGui import QPixmap, QImage, QFontDatabase, QFont, QIcon, QColor, Qt, QTextDocument, QTextCursor
+from PySide6.QtGui import QPixmap, QImage, QFont, QIcon, QColor, Qt
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon,
     QMenu, QWidget, QSizePolicy,QFrame, QGraphicsDropShadowEffect, QLabel, QTextBrowser)
 
@@ -28,26 +27,6 @@ from library.widgets.util import DialogOverlay
 from library.widgets.ingest import IngestForm
 from library.io.database import LocalThumbnail
 
-
-description_style = """
-<style type="text/css">
-table {
-    border-width: 12px;
-    border-style: solid;
-    border-color: rgb(64,64,64);
-    border-collapse: collapse;
-    border-top: 2px solid #00cccc;
-}
-td, th {
-  padding: 6;
-  text-align: left;
-}
-body {
-  padding:50px;
-  margin:auto auto;
-}
-</style>
-"""
 
 CATEGORIES = []
 PAGE_LIMIT = int(RELIC_PREFS.assets_per_page)
@@ -84,6 +63,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.attributeDock.setTitleBarWidget(self.attributeDockTitle)
         self.linksDock.setTitleBarWidget(self.linkDockTitle)
         self.linksDock.hide()
+        self.descriptionDock.hide()
 
         # Shadow graphics
         shadow = QGraphicsDropShadowEffect(self, blurRadius=6.0,
@@ -115,7 +95,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.metatdata_view = metadataFormView(self)
         self.metatdata_view.openDescription.connect(self.showMarkdown)
         self.attributesLayout.addWidget(self.metatdata_view)
-        #self.attributeDock.setWidget(self.metatdata_view)
         self.linksDock.setWidget(self.links_view)
 
         # Signals / Slots
@@ -125,16 +104,19 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.actionRecurseSubcategory.setChecked(int(RELIC_PREFS.recurse_subcategories))
         self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
         self.actionIngest.triggered.connect(self.beginIngest)
-        self.descriptionCloseButton.clicked.connect(self.closeOverlay)
         self.actionDocumentation.triggered.connect(self.browseDocumentation)
 
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
+        self.descriptionCloseButton.toggled.connect(self.descriptionDock.setVisible)
+
         self.assets_view.selmod.selectionChanged.connect(self.loadAssetData)
         self.assets_view.onLinkLoad.connect(self.loadLinkData)
         self.backButton.clicked.connect(self.assetViewing)
-        self.documentationFilterBox.textChanged.connect(self.searchPage)
-        self.documentationFilterBox.returnPressed.connect(self.findNextInPage)
+        self.descriptionTextBrowser.setMinimumSize(795, 942) 
+        self.descriptionTextBrowser.linkToDescription.connect(self.assets_view.clipboardCopy) 
+        self.descriptionFilterBox.textChanged.connect(self.descriptionTextBrowser.searchPage)
+        self.descriptionFilterBox.returnPressed.connect(self.descriptionTextBrowser.findNextInPage)
         self.viewScaleSlider.valueChanged.connect(self.scaleView)
         db.accessor.imageStreamData.connect(self.updateIcons)
         self.viewScaleSlider.setValue(int(RELIC_PREFS.view_scale))
@@ -143,9 +125,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.clearSearchButton.clicked.connect(self.clearSearch)
         self.clearSubcategoryButton.clicked.connect(self.clearSubcategorySelection)
 
-        self.documentationDock.setTitleBarWidget(self.documentationDockTitle)
-        self.documentationDock.hide()
-        self.documentationDock.setAutoFillBackground(True)
+
         user = alusers(name=os.getenv('username'))
         user_exists = RELIC_PREFS.user_id
         if not user_exists: # user not cached local OR does not exist
@@ -189,33 +169,21 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         RELIC_PREFS.view_scale = value
 
-    @Slot(str)
-    def showMarkdown(self, md_path):
-        if not os.path.exists(md_path):
+    @Slot(Path)
+    def showMarkdown(self, path):
+        if not path.exists:
             return
-        self.assets_view.hide()
-        with open(md_path, 'r') as md_text:
-            self.documentationTextBrowser.setMarkdown(md_text.read())
-        html_from_markdown = self.documentationTextBrowser.toHtml()
-        self.documentationTextBrowser.setHtml(description_style + html_from_markdown)
-        self.overlay = DialogOverlay(self, self.documentationDock)
+        self.descriptionTextBrowser.setMarkdown(path)
+        self.descriptionCloseButton.setChecked(True)
+        self.descriptionDock.show()
+        self.descriptionDock.activateWindow()
+
 
     def closeOverlay(self):
         if self.overlay:
             self.assets_view.show()
             self.removeEventFilter(self.overlay)
             self.overlay.close()
-
-    @Slot()
-    def searchPage(self, text):
-        textCursor = self.documentationTextBrowser.textCursor()
-        textCursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor, 1)
-        self.documentationTextBrowser.setTextCursor(textCursor)
-        self.documentationTextBrowser.find(text)
-
-    @Slot()
-    def findNextInPage(self):
-        self.documentationTextBrowser.find(self.documentationFilterBox.text())
 
     @Slot()
     def beginIngest(self):
@@ -269,6 +237,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         asset.fetchIcon()
         asset.related(noassets=True)
         self.metatdata_view.loadAssets([asset])
+        if '#' in name:
+            name, description = name.split('#')
+            description_path = asset.network_path.suffixed('_description', '.md')
+            self.showMarkdown(description_path)
 
     @Slot()
     def onIngestClosed(self, dock):
@@ -454,7 +426,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def browseDocumentation(self):
         site = RELIC_PREFS.host
         url = f'{site}documentation/index.html'
-        webbrowser.open(url)
+        os.startfile(url)
 
 def copyRelatedIcon(asset):
     asset.related()
@@ -480,8 +452,7 @@ def main(args):
     ingest_server.incomingFile.connect(window.browseTo)
     window.resize(1600, 925)
     window.show()
-    if args:
-        if args.path:
-            window.browseTo(args.path)
+    if args and args.path:
+        window.browseTo(args.path)
     app.applicationStateChanged.connect(onStateChange)
     sys.exit(app.exec_())

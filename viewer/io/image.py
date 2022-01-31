@@ -1,8 +1,7 @@
-import subprocess, sys
+import sys
 import oiio.OpenImageIO as oiio
 import numpy as np
 
-DEVNULL = subprocess.DEVNULL
 CREATE_NO_WINDOW = 0x08000000
 
 oiio.attribute('threads', 1) # Glorious optimization

@@ -678,7 +678,7 @@ class Viewport(InteractiveGLView):
         img = self.image_plane.paint_canvas
         w, h = img.width(), img.height()
         _w, _h = self.width(), self.height()
-        self.resize(w, h)
+        #self.resize(w, h)
         self.camera.left = -(w/2)
         self.camera.right = w/2
         self.camera.bottom = -(h/2)

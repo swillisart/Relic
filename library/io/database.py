@@ -1,10 +1,7 @@
 import json
 import os
-import sys
 import re
-import math
 import requests
-from subprocess import PIPE, Popen
 from functools import partial
 
 # -- Third-Party --
@@ -22,7 +19,6 @@ from PySide6.QtNetwork import (
 from sequencePath import sequencePath as Path
 
 # -- Globals --
-DEVNULL = open(os.devnull, "w")
 session = requests.session()
 URL_REGEX = re.compile(r'(\w+):\/\/(\w+):(\d{4})')
 

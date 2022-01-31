@@ -16,6 +16,8 @@ from library.objectmodels import (allCategories, alusers, polymorphicItem,
                                   relationships, subcategory, tags)
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
 
+from sequencePath import sequencePath as Path
+
 TYPE_LABELS = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
     'Reference']
 TYPE_ICONS = [QIcon(':/resources/asset_types/{}.svg'.format(x.lower())) for x in TYPE_LABELS]
@@ -53,7 +55,7 @@ class MetaLabel(QLabel):
 
 class metadataFormView(QFrame):
 
-    openDescription = Signal(str)
+    openDescription = Signal(Path)
 
     def __init__(self, *args, **kwargs):
         super(metadataFormView, self).__init__(*args, **kwargs)
@@ -514,7 +516,7 @@ class descriptionWidget(QLabel, UpdatableField):
     def onActivated(self, link_url):
         parent = self.parent()
         path = parent.selected_assets[-1].network_path.suffixed('_description', '.md')
-        parent.openDescription.emit(str(path))
+        parent.openDescription.emit(path)
 
     def setValue(self, value):
         url = self.base_url.format(value) 

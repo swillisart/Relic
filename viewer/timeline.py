@@ -181,7 +181,7 @@ class BaseClip(object):
     @staticmethod
     def _validAnnotation(annotations, path, first, last, _file):
         frame = int(_file.frame)
-        if frame > first and frame < last and path.name == _file.name:
+        if path.name == _file.name and frame > first and frame < last:
             annotations.append(frame)
 
     def getImageAnnotations(self):
@@ -207,8 +207,6 @@ class MovClip(BaseClip):
         self.path = file_path
         if file_path:
             self.label = file_path.name
-            if annotations:
-                self.getImageAnnotations()
 
     def loadFile(self, duration, resolution, framerate):
         calc_duration = (float(duration) * float(framerate))
@@ -222,7 +220,7 @@ class MovClip(BaseClip):
         pixels = np.zeros(shape=(height, width, 3), dtype=np.uint8)
         self.geometry = ImagePlane(pixels, aspect=aspect, order='bgr')
         self.setTimelineOut()
-
+        self.getImageAnnotations()
 
 class ImageClip(BaseClip):
 
@@ -479,13 +477,14 @@ class timelineGLView(InteractiveGLView):
     @Slot()
     def _toAnnotatedFrame(self, direction):
         filtered = []
-        frame = self.current_frame + 0.5 # need to bias for direction opertors
+        frame = self.current_frame # need to bias for direction opertors
         clip = self.current_clip
         local_frame = clip.mapToLocalFrame(frame)
 
         for frame_number in clip.annotations:
             if direction(frame_number, local_frame):
-                filtered.append(frame_number)
+                if frame != frame_number:
+                    filtered.append(frame_number)
     
         if filtered:
             nearest = min(filtered, key=lambda x: abs(x - local_frame))

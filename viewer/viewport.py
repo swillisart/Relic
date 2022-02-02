@@ -408,6 +408,7 @@ class colorFramebuffer(object):
     def __exit__(self, *exc):
         # Important to unbind for overpainting
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         #glDisable(GL_DEPTH_TEST)
         glClearColor(self.bgc, self.bgc, self.bgc, 0.01)
         glClear(GL_COLOR_BUFFER_BIT)
@@ -662,6 +663,8 @@ class Viewport(InteractiveGLView):
     colorConfigChanged = Signal(list)
     zoomChanged = Signal(int)
     finishAnnotation = Signal(QImage)
+    fileDropped = Signal(QMimeData, int) 
+    APPEND, STACK, REPLACE = range(3)
 
     def __init__(self, *args, **kwargs):
         super(Viewport, self).__init__(*args, **kwargs)
@@ -673,6 +676,85 @@ class Viewport(InteractiveGLView):
         self.active_tool = AnnotationDock.Brush
         self.is_painting = False
         self.clips = []
+        self.user_drag = None
+        self.drop_mode = Viewport.APPEND
+    
+    def event(self, event):
+        ev_type = event.type()
+        if ev_type == QEvent.Type.DragEnter:
+            self.user_drag = event.position()
+            self.paintEvent = self._dragPaintEvent
+            self.update()
+        elif ev_type == QEvent.Type.DragMove:
+            self.user_drag = event.position()
+            self.update()
+        elif ev_type == QEvent.Type.Drop:
+            data = event.mimeData()
+            if data.hasUrls:
+                self.fileDropped.emit(data, self.drop_mode)
+            self.paintEvent = self._defaultPaintEvent
+            self.update()
+
+        elif ev_type == QEvent.Type.DragLeave:
+            self.paintEvent = self._defaultPaintEvent
+            self.update()
+        
+        return super(Viewport, self).event(event)
+
+    def paintEvent(self, event):
+        super(Viewport, self).paintEvent(event)
+
+    def _defaultPaintEvent(self, event):
+        super(Viewport, self).paintEvent(event)
+
+    def _dragPaintEvent(self, event):
+        super(Viewport, self).paintEvent(event)
+        drag_position = QPoint(self.user_drag.x(), self.user_drag.y())
+        overlay_font = QFont("Segoi UI", 21)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setFont(overlay_font)
+        base_rect = event.rect()
+        center = base_rect.center()
+
+        # Create view-split rectangles.
+        append_rect = QRect(0, 0, 0, 0)
+        append_rect.setLeft(center.x())
+        append_rect.setBottomRight(base_rect.bottomRight())
+        stack_rect = base_rect
+        stack_rect.setBottomRight(center)
+        replace_rect = copy.copy(stack_rect)
+        replace_rect.moveTo(QPoint(0, center.y()))
+        
+        append_color = QColor(62, 100, 133, 175)
+        stack_color = QColor(90, 120, 100, 175)
+        replace_color = QColor(120, 90, 100, 175)
+        if append_rect.contains(drag_position):
+            append_color = QColor(82, 133, 166)
+            self.drop_mode = Viewport.APPEND
+        elif stack_rect.contains(drag_position):
+            stack_color = QColor(82, 166, 100)
+            self.drop_mode = Viewport.STACK
+        elif replace_rect.contains(drag_position):
+            replace_color = QColor(166, 82, 100)
+            self.drop_mode = Viewport.REPLACE
+
+        rects = (append_rect, stack_rect, replace_rect)
+        colors = (append_color, stack_color, replace_color)
+        texts = ('APPEND', 'STACK', 'REPLACE')
+        text_color = QColor(200, 200, 200)
+        # Draw the regions.
+        for index in range(len(rects)):
+            color = colors[index]
+            rect = rects[index] - QMargins(9, 9, 9, 9)
+            text = texts[index]
+            painter.setPen(color)
+            painter.fillRect(rect, color)
+            pen = QPen(color, 6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            painter.setPen(pen)
+            painter.drawRect(rect)
+            painter.setPen(text_color)
+            painter.drawText(rect.center() - QPoint(20*3, -10), text)
 
     def renderShapes(self, scene=False):
         img = self.image_plane.paint_canvas

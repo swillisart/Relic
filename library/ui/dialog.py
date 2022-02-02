@@ -30,7 +30,7 @@ class Ui_RelicMainWindow(object):
     def setupUi(self, RelicMainWindow):
         if not RelicMainWindow.objectName():
             RelicMainWindow.setObjectName(u"RelicMainWindow")
-        RelicMainWindow.resize(1130, 709)
+        RelicMainWindow.resize(904, 1452)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -760,14 +760,20 @@ class Ui_RelicMainWindow(object):
 
         self.verticalLayout_6.addWidget(self.noResults)
 
-        self.descriptionDock = QDockWidget(self.noSearchResultsPage)
-        self.descriptionDock.setObjectName(u"descriptionDock")
+        self.verticalSpacer_2 = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_6.addItem(self.verticalSpacer_2)
+
+
+        self.verticalLayout.addWidget(self.noSearchResultsPage)
+
+        self.linksDock = QDockWidget(self.centralwidget)
+        self.linksDock.setObjectName(u"linksDock")
         sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(50)
-        sizePolicy2.setHeightForWidth(self.descriptionDock.sizePolicy().hasHeightForWidth())
-        self.descriptionDock.setSizePolicy(sizePolicy2)
-        self.descriptionDock.setMinimumSize(QSize(795, 942))
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.linksDock.sizePolicy().hasHeightForWidth())
+        self.linksDock.setSizePolicy(sizePolicy2)
         palette = QPalette()
         brush = QBrush(QColor(200, 200, 200, 255))
         brush.setStyle(Qt.SolidPattern)
@@ -814,218 +820,8 @@ class Ui_RelicMainWindow(object):
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
 #endif
-        self.descriptionDock.setPalette(palette)
-        self.descriptionDock.setFloating(True)
-        self.descriptionDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
-        self.attrDockWidgetContents_3 = QWidget()
-        self.attrDockWidgetContents_3.setObjectName(u"attrDockWidgetContents_3")
-        self.attrDockWidgetContents_3.setMaximumSize(QSize(1024, 16777215))
-        self.verticalLayout_7 = QVBoxLayout(self.attrDockWidgetContents_3)
-        self.verticalLayout_7.setSpacing(6)
-        self.verticalLayout_7.setContentsMargins(9, 9, 9, 9)
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_7.setContentsMargins(6, 3, 6, 6)
-        self.descriptionDockTitle = QFrame(self.attrDockWidgetContents_3)
-        self.descriptionDockTitle.setObjectName(u"descriptionDockTitle")
-        self.descriptionDockTitle.setStyleSheet(u"QFrame#descriptionDockTitle {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    border: 2px solid rgb(57,57,57);\n"
-"	padding: margin 0px;\n"
-"}")
-        self.descriptionDockTitle.setFrameShape(QFrame.StyledPanel)
-        self.descriptionDockTitle.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_17 = QHBoxLayout(self.descriptionDockTitle)
-        self.horizontalLayout_17.setSpacing(9)
-        self.horizontalLayout_17.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
-        self.horizontalLayout_17.setContentsMargins(3, 0, 3, 0)
-        self.toolButton_3 = QToolButton(self.descriptionDockTitle)
-        self.toolButton_3.setObjectName(u"toolButton_3")
-        self.toolButton_3.setEnabled(False)
-        self.toolButton_3.setStyleSheet(u"padding: -2px;\n"
-"margin-left: 4px;\n"
-"border: none;")
-
-        self.horizontalLayout_17.addWidget(self.toolButton_3)
-
-        self.descriptionTitle = QLabel(self.descriptionDockTitle)
-        self.descriptionTitle.setObjectName(u"descriptionTitle")
-        font2 = QFont()
-        font2.setPointSize(12)
-        self.descriptionTitle.setFont(font2)
-        self.descriptionTitle.setStyleSheet(u"border:none; background-color: transparent;")
-        self.descriptionTitle.setFrameShape(QFrame.NoFrame)
-        self.descriptionTitle.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_17.addWidget(self.descriptionTitle)
-
-        self.horizontalSpacer_9 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_17.addItem(self.horizontalSpacer_9)
-
-        self.filterFrame_2 = QFrame(self.descriptionDockTitle)
-        self.filterFrame_2.setObjectName(u"filterFrame_2")
-        sizePolicy1.setHeightForWidth(self.filterFrame_2.sizePolicy().hasHeightForWidth())
-        self.filterFrame_2.setSizePolicy(sizePolicy1)
-        self.filterFrame_2.setStyleSheet(u"QFrame#filterFrame_2 {\n"
-"	margin: 2px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame#filterFrame_2:hover {\n"
-"    border: 1px solid rgb(150, 146, 137);\n"
-"}")
-        self.filterFrame_2.setFrameShape(QFrame.StyledPanel)
-        self.filterFrame_2.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout_11 = QHBoxLayout(self.filterFrame_2)
-        self.horizontalLayout_11.setSpacing(0)
-        self.horizontalLayout_11.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.horizontalLayout_11.setContentsMargins(1, 0, 0, 0)
-        self.filterButton_2 = QPushButton(self.filterFrame_2)
-        self.filterButton_2.setObjectName(u"filterButton_2")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.filterButton_2.sizePolicy().hasHeightForWidth())
-        self.filterButton_2.setSizePolicy(sizePolicy3)
-        self.filterButton_2.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    padding: 0px;\n"
-"	border: none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(108, 108, 108);\n"
-"}\n"
-"QPushButton:checked {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}")
-        self.filterButton_2.setIcon(icon3)
-        self.filterButton_2.setIconSize(QSize(18, 18))
-        self.filterButton_2.setCheckable(True)
-        self.filterButton_2.setChecked(True)
-        self.filterButton_2.setFlat(False)
-
-        self.horizontalLayout_11.addWidget(self.filterButton_2)
-
-        self.descriptionFilterBox = QLineEdit(self.filterFrame_2)
-        self.descriptionFilterBox.setObjectName(u"descriptionFilterBox")
-        sizePolicy4 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.descriptionFilterBox.sizePolicy().hasHeightForWidth())
-        self.descriptionFilterBox.setSizePolicy(sizePolicy4)
-        self.descriptionFilterBox.setMinimumSize(QSize(128, 0))
-        font3 = QFont()
-        font3.setPointSize(8)
-        self.descriptionFilterBox.setFont(font3)
-        self.descriptionFilterBox.setFrame(False)
-        self.descriptionFilterBox.setClearButtonEnabled(True)
-
-        self.horizontalLayout_11.addWidget(self.descriptionFilterBox)
-
-
-        self.horizontalLayout_17.addWidget(self.filterFrame_2)
-
-        self.foundResultsLabel = QLabel(self.descriptionDockTitle)
-        self.foundResultsLabel.setObjectName(u"foundResultsLabel")
-        self.foundResultsLabel.setStyleSheet(u"background-color: transparent;")
-
-        self.horizontalLayout_17.addWidget(self.foundResultsLabel)
-
-        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_17.addItem(self.horizontalSpacer_6)
-
-        self.descriptionCloseButton = QPushButton(self.descriptionDockTitle)
-        self.descriptionCloseButton.setObjectName(u"descriptionCloseButton")
-        self.descriptionCloseButton.setStyleSheet(u"QPushButton {\n"
-"    padding: 3px;\n"
-"    background-color: rgb(97, 57, 57);\n"
-"	border :none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(192, 64, 64);\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"")
-        self.descriptionCloseButton.setIcon(icon1)
-        self.descriptionCloseButton.setIconSize(QSize(14, 16))
-        self.descriptionCloseButton.setCheckable(True)
-        self.descriptionCloseButton.setChecked(True)
-
-        self.horizontalLayout_17.addWidget(self.descriptionCloseButton)
-
-
-        self.verticalLayout_7.addWidget(self.descriptionDockTitle)
-
-        self.descriptionTextBrowser = descriptionTextBrowser(self.attrDockWidgetContents_3)
-        self.descriptionTextBrowser.setObjectName(u"descriptionTextBrowser")
-        font4 = QFont()
-        font4.setPointSize(11)
-        self.descriptionTextBrowser.setFont(font4)
-        self.descriptionTextBrowser.setStyleSheet(u"QTextBrowser {padding: 6px;}")
-        self.descriptionTextBrowser.setFrameShape(QFrame.NoFrame)
-        self.descriptionTextBrowser.setOpenLinks(False)
-
-        self.verticalLayout_7.addWidget(self.descriptionTextBrowser)
-
-        self.descriptionDock.setWidget(self.attrDockWidgetContents_3)
-
-        self.verticalLayout_6.addWidget(self.descriptionDock)
-
-        self.verticalSpacer_2 = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout_6.addItem(self.verticalSpacer_2)
-
-
-        self.verticalLayout.addWidget(self.noSearchResultsPage)
-
-        self.linksDock = QDockWidget(self.centralwidget)
-        self.linksDock.setObjectName(u"linksDock")
-        sizePolicy5 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.linksDock.sizePolicy().hasHeightForWidth())
-        self.linksDock.setSizePolicy(sizePolicy5)
-        palette1 = QPalette()
-        palette1.setBrush(QPalette.Active, QPalette.WindowText, brush)
-        palette1.setBrush(QPalette.Active, QPalette.Button, brush1)
-        palette1.setBrush(QPalette.Active, QPalette.Text, brush)
-        palette1.setBrush(QPalette.Active, QPalette.ButtonText, brush)
-        palette1.setBrush(QPalette.Active, QPalette.Base, brush1)
-        palette1.setBrush(QPalette.Active, QPalette.Window, brush1)
-        palette1.setBrush(QPalette.Active, QPalette.Highlight, brush2)
-        palette1.setBrush(QPalette.Active, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette1.setBrush(QPalette.Active, QPalette.PlaceholderText, brush)
-#endif
-        palette1.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
-        palette1.setBrush(QPalette.Inactive, QPalette.Button, brush1)
-        palette1.setBrush(QPalette.Inactive, QPalette.Text, brush)
-        palette1.setBrush(QPalette.Inactive, QPalette.ButtonText, brush)
-        palette1.setBrush(QPalette.Inactive, QPalette.Base, brush1)
-        palette1.setBrush(QPalette.Inactive, QPalette.Window, brush1)
-        palette1.setBrush(QPalette.Inactive, QPalette.Highlight, brush2)
-        palette1.setBrush(QPalette.Inactive, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette1.setBrush(QPalette.Inactive, QPalette.PlaceholderText, brush)
-#endif
-        palette1.setBrush(QPalette.Disabled, QPalette.WindowText, brush4)
-        palette1.setBrush(QPalette.Disabled, QPalette.Button, brush5)
-        palette1.setBrush(QPalette.Disabled, QPalette.Text, brush4)
-        palette1.setBrush(QPalette.Disabled, QPalette.ButtonText, brush4)
-        palette1.setBrush(QPalette.Disabled, QPalette.Base, brush5)
-        palette1.setBrush(QPalette.Disabled, QPalette.Window, brush5)
-        palette1.setBrush(QPalette.Disabled, QPalette.Highlight, brush2)
-        palette1.setBrush(QPalette.Disabled, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette1.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
-#endif
-        self.linksDock.setPalette(palette1)
-        self.linksDock.setStyleSheet(u"padding: -2px;\n"
-"margin-left: 4px;")
+        self.linksDock.setPalette(palette)
+        self.linksDock.setStyleSheet(u"")
         self.linksDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.attrDockWidgetContents_2 = QWidget()
         self.attrDockWidgetContents_2.setObjectName(u"attrDockWidgetContents_2")
@@ -1066,7 +862,9 @@ class Ui_RelicMainWindow(object):
 
         self.label_2 = QLabel(self.dockTitleWidgets)
         self.label_2.setObjectName(u"label_2")
-        self.label_2.setFont(font4)
+        font2 = QFont()
+        font2.setPointSize(11)
+        self.label_2.setFont(font2)
         self.label_2.setStyleSheet(u"border:none;")
         self.label_2.setFrameShape(QFrame.NoFrame)
         self.label_2.setFrameShadow(QFrame.Sunken)
@@ -1095,6 +893,9 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.filterButton = QPushButton(self.filterFrame)
         self.filterButton.setObjectName(u"filterButton")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.filterButton.sizePolicy().hasHeightForWidth())
         self.filterButton.setSizePolicy(sizePolicy3)
         self.filterButton.setStyleSheet(u"QPushButton {\n"
@@ -1118,9 +919,14 @@ class Ui_RelicMainWindow(object):
 
         self.filterBox = QLineEdit(self.filterFrame)
         self.filterBox.setObjectName(u"filterBox")
+        sizePolicy4 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.filterBox.sizePolicy().hasHeightForWidth())
         self.filterBox.setSizePolicy(sizePolicy4)
         self.filterBox.setMinimumSize(QSize(0, 0))
+        font3 = QFont()
+        font3.setPointSize(8)
         self.filterBox.setFont(font3)
         self.filterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
@@ -1213,7 +1019,7 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.label_3 = QLabel(self.attributeDockTitleWidget)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font4)
+        self.label_3.setFont(font2)
         self.label_3.setStyleSheet(u"border:none;")
         self.label_3.setFrameShape(QFrame.NoFrame)
         self.label_3.setFrameShadow(QFrame.Sunken)
@@ -1347,7 +1153,7 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_15.setContentsMargins(0, 0, 0, 0)
         self.label_5 = QLabel(self.linkDockTitleWidget)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font4)
+        self.label_5.setFont(font2)
         self.label_5.setStyleSheet(u"border:none;")
         self.label_5.setFrameShape(QFrame.NoFrame)
         self.label_5.setFrameShadow(QFrame.Sunken)
@@ -1547,7 +1353,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1130, 22))
+        self.menubar.setGeometry(QRect(0, 0, 904, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -1577,7 +1383,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 54, 565))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 54, 279))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1620,9 +1426,70 @@ class Ui_RelicMainWindow(object):
 
         self.gridLayout.addWidget(self.line_2, 1, 5, 1, 1)
 
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.gridLayout.addItem(self.horizontalSpacer, 0, 0, 1, 1)
+
+        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4.setSpacing(3)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_4.setContentsMargins(6, 0, 6, 0)
+        self.collectionRadioButton = QRadioButton(self.searchDockWidgetContents)
+        self.buttonGroup = QButtonGroup(RelicMainWindow)
+        self.buttonGroup.setObjectName(u"buttonGroup")
+        self.buttonGroup.addButton(self.collectionRadioButton)
+        self.collectionRadioButton.setObjectName(u"collectionRadioButton")
+        self.collectionRadioButton.setMaximumSize(QSize(16777215, 16))
+        icon10 = QIcon()
+        icon10.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.collectionRadioButton.setIcon(icon10)
+        self.collectionRadioButton.setChecked(True)
+
+        self.verticalLayout_4.addWidget(self.collectionRadioButton)
+
+        self.variationRadioButton = QRadioButton(self.searchDockWidgetContents)
+        self.buttonGroup.addButton(self.variationRadioButton)
+        self.variationRadioButton.setObjectName(u"variationRadioButton")
+        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.variationRadioButton.sizePolicy().hasHeightForWidth())
+        self.variationRadioButton.setSizePolicy(sizePolicy5)
+        self.variationRadioButton.setMaximumSize(QSize(16777215, 16))
+        self.variationRadioButton.setBaseSize(QSize(0, 0))
+        icon11 = QIcon()
+        icon11.addFile(u":/resources/asset_types/variant.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.variationRadioButton.setIcon(icon11)
+
+        self.verticalLayout_4.addWidget(self.variationRadioButton)
+
+
+        self.gridLayout.addLayout(self.verticalLayout_4, 0, 4, 1, 1)
+
+        self.line_3 = QFrame(self.searchDockWidgetContents)
+        self.line_3.setObjectName(u"line_3")
+        self.line_3.setFrameShape(QFrame.HLine)
+        self.line_3.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.line_3, 1, 0, 1, 1)
+
+        self.line_7 = QFrame(self.searchDockWidgetContents)
+        self.line_7.setObjectName(u"line_7")
+        self.line_7.setFrameShape(QFrame.HLine)
+        self.line_7.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.line_7, 1, 4, 1, 1)
+
         self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         self.gridLayout.addItem(self.horizontalSpacer_2, 0, 5, 1, 1)
+
+        self.line = QFrame(self.searchDockWidgetContents)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.line, 1, 2, 1, 1)
 
         self.searchFrame = QFrame(self.searchDockWidgetContents)
         self.searchFrame.setObjectName(u"searchFrame")
@@ -1664,9 +1531,9 @@ class Ui_RelicMainWindow(object):
         sizePolicy6.setHeightForWidth(self.searchBox.sizePolicy().hasHeightForWidth())
         self.searchBox.setSizePolicy(sizePolicy6)
         self.searchBox.setMinimumSize(QSize(256, 26))
-        font5 = QFont()
-        font5.setBold(True)
-        self.searchBox.setFont(font5)
+        font4 = QFont()
+        font4.setBold(True)
+        self.searchBox.setFont(font4)
         self.searchBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
 "")
         self.searchBox.setFrame(False)
@@ -1677,106 +1544,45 @@ class Ui_RelicMainWindow(object):
 
         self.gridLayout.addWidget(self.searchFrame, 0, 2, 1, 1)
 
-        self.line = QFrame(self.searchDockWidgetContents)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line, 1, 2, 1, 1)
-
-        self.line_3 = QFrame(self.searchDockWidgetContents)
-        self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.HLine)
-        self.line_3.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line_3, 1, 0, 1, 1)
-
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.gridLayout.addItem(self.horizontalSpacer, 0, 0, 1, 1)
-
-        self.verticalLayout_4 = QVBoxLayout()
-        self.verticalLayout_4.setSpacing(3)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.verticalLayout_4.setContentsMargins(6, 0, 6, 0)
-        self.collectionRadioButton = QRadioButton(self.searchDockWidgetContents)
-        self.buttonGroup = QButtonGroup(RelicMainWindow)
-        self.buttonGroup.setObjectName(u"buttonGroup")
-        self.buttonGroup.addButton(self.collectionRadioButton)
-        self.collectionRadioButton.setObjectName(u"collectionRadioButton")
-        self.collectionRadioButton.setMaximumSize(QSize(16777215, 16))
-        icon10 = QIcon()
-        icon10.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.collectionRadioButton.setIcon(icon10)
-        self.collectionRadioButton.setChecked(True)
-
-        self.verticalLayout_4.addWidget(self.collectionRadioButton)
-
-        self.variationRadioButton = QRadioButton(self.searchDockWidgetContents)
-        self.buttonGroup.addButton(self.variationRadioButton)
-        self.variationRadioButton.setObjectName(u"variationRadioButton")
-        sizePolicy7 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        sizePolicy7.setHorizontalStretch(0)
-        sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.variationRadioButton.sizePolicy().hasHeightForWidth())
-        self.variationRadioButton.setSizePolicy(sizePolicy7)
-        self.variationRadioButton.setMaximumSize(QSize(16777215, 16))
-        self.variationRadioButton.setBaseSize(QSize(0, 0))
-        icon11 = QIcon()
-        icon11.addFile(u":/resources/asset_types/variant.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.variationRadioButton.setIcon(icon11)
-
-        self.verticalLayout_4.addWidget(self.variationRadioButton)
-
-
-        self.gridLayout.addLayout(self.verticalLayout_4, 0, 4, 1, 1)
-
-        self.line_7 = QFrame(self.searchDockWidgetContents)
-        self.line_7.setObjectName(u"line_7")
-        self.line_7.setFrameShape(QFrame.HLine)
-        self.line_7.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line_7, 1, 4, 1, 1)
-
         self.searchDock.setWidget(self.searchDockWidgetContents)
         RelicMainWindow.addDockWidget(Qt.TopDockWidgetArea, self.searchDock)
         self.attributeDock = QDockWidget(RelicMainWindow)
         self.attributeDock.setObjectName(u"attributeDock")
-        palette2 = QPalette()
-        palette2.setBrush(QPalette.Active, QPalette.WindowText, brush)
-        palette2.setBrush(QPalette.Active, QPalette.Button, brush1)
-        palette2.setBrush(QPalette.Active, QPalette.Text, brush)
-        palette2.setBrush(QPalette.Active, QPalette.ButtonText, brush)
-        palette2.setBrush(QPalette.Active, QPalette.Base, brush1)
-        palette2.setBrush(QPalette.Active, QPalette.Window, brush1)
-        palette2.setBrush(QPalette.Active, QPalette.Highlight, brush2)
-        palette2.setBrush(QPalette.Active, QPalette.HighlightedText, brush3)
+        palette1 = QPalette()
+        palette1.setBrush(QPalette.Active, QPalette.WindowText, brush)
+        palette1.setBrush(QPalette.Active, QPalette.Button, brush1)
+        palette1.setBrush(QPalette.Active, QPalette.Text, brush)
+        palette1.setBrush(QPalette.Active, QPalette.ButtonText, brush)
+        palette1.setBrush(QPalette.Active, QPalette.Base, brush1)
+        palette1.setBrush(QPalette.Active, QPalette.Window, brush1)
+        palette1.setBrush(QPalette.Active, QPalette.Highlight, brush2)
+        palette1.setBrush(QPalette.Active, QPalette.HighlightedText, brush3)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette.Active, QPalette.PlaceholderText, brush)
+        palette1.setBrush(QPalette.Active, QPalette.PlaceholderText, brush)
 #endif
-        palette2.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
-        palette2.setBrush(QPalette.Inactive, QPalette.Button, brush1)
-        palette2.setBrush(QPalette.Inactive, QPalette.Text, brush)
-        palette2.setBrush(QPalette.Inactive, QPalette.ButtonText, brush)
-        palette2.setBrush(QPalette.Inactive, QPalette.Base, brush1)
-        palette2.setBrush(QPalette.Inactive, QPalette.Window, brush1)
-        palette2.setBrush(QPalette.Inactive, QPalette.Highlight, brush2)
-        palette2.setBrush(QPalette.Inactive, QPalette.HighlightedText, brush3)
+        palette1.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
+        palette1.setBrush(QPalette.Inactive, QPalette.Button, brush1)
+        palette1.setBrush(QPalette.Inactive, QPalette.Text, brush)
+        palette1.setBrush(QPalette.Inactive, QPalette.ButtonText, brush)
+        palette1.setBrush(QPalette.Inactive, QPalette.Base, brush1)
+        palette1.setBrush(QPalette.Inactive, QPalette.Window, brush1)
+        palette1.setBrush(QPalette.Inactive, QPalette.Highlight, brush2)
+        palette1.setBrush(QPalette.Inactive, QPalette.HighlightedText, brush3)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette.Inactive, QPalette.PlaceholderText, brush)
+        palette1.setBrush(QPalette.Inactive, QPalette.PlaceholderText, brush)
 #endif
-        palette2.setBrush(QPalette.Disabled, QPalette.WindowText, brush4)
-        palette2.setBrush(QPalette.Disabled, QPalette.Button, brush5)
-        palette2.setBrush(QPalette.Disabled, QPalette.Text, brush4)
-        palette2.setBrush(QPalette.Disabled, QPalette.ButtonText, brush4)
-        palette2.setBrush(QPalette.Disabled, QPalette.Base, brush5)
-        palette2.setBrush(QPalette.Disabled, QPalette.Window, brush5)
-        palette2.setBrush(QPalette.Disabled, QPalette.Highlight, brush2)
-        palette2.setBrush(QPalette.Disabled, QPalette.HighlightedText, brush3)
+        palette1.setBrush(QPalette.Disabled, QPalette.WindowText, brush4)
+        palette1.setBrush(QPalette.Disabled, QPalette.Button, brush5)
+        palette1.setBrush(QPalette.Disabled, QPalette.Text, brush4)
+        palette1.setBrush(QPalette.Disabled, QPalette.ButtonText, brush4)
+        palette1.setBrush(QPalette.Disabled, QPalette.Base, brush5)
+        palette1.setBrush(QPalette.Disabled, QPalette.Window, brush5)
+        palette1.setBrush(QPalette.Disabled, QPalette.Highlight, brush2)
+        palette1.setBrush(QPalette.Disabled, QPalette.HighlightedText, brush3)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
+        palette1.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
 #endif
-        self.attributeDock.setPalette(palette2)
+        self.attributeDock.setPalette(palette1)
         self.attributeDock.setStyleSheet(u"")
         self.attributeDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.attrDockWidgetContents = QWidget()
@@ -1792,7 +1598,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 565))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 279))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)
@@ -1804,6 +1610,160 @@ class Ui_RelicMainWindow(object):
 
         self.attributeDock.setWidget(self.attrDockWidgetContents)
         RelicMainWindow.addDockWidget(Qt.RightDockWidgetArea, self.attributeDock)
+        self.descriptionDock = QDockWidget(RelicMainWindow)
+        self.descriptionDock.setObjectName(u"descriptionDock")
+        sizePolicy2.setHeightForWidth(self.descriptionDock.sizePolicy().hasHeightForWidth())
+        self.descriptionDock.setSizePolicy(sizePolicy2)
+        self.descriptionDock.setFloating(True)
+        self.descriptionDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
+        self.dockWidgetContents_5 = QWidget()
+        self.dockWidgetContents_5.setObjectName(u"dockWidgetContents_5")
+        self.verticalLayout_7 = QVBoxLayout(self.dockWidgetContents_5)
+        self.verticalLayout_7.setSpacing(0)
+        self.verticalLayout_7.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.verticalLayout_7.setContentsMargins(6, 3, 6, 3)
+        self.descriptionDockTitle = QFrame(self.dockWidgetContents_5)
+        self.descriptionDockTitle.setObjectName(u"descriptionDockTitle")
+        self.descriptionDockTitle.setStyleSheet(u"QFrame#descriptionDockTitle {\n"
+"    background-color: rgb(57, 57, 57);\n"
+"    border: 2px solid rgb(57,57,57);\n"
+"	padding: margin 0px;\n"
+"}")
+        self.descriptionDockTitle.setFrameShape(QFrame.StyledPanel)
+        self.descriptionDockTitle.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_17 = QHBoxLayout(self.descriptionDockTitle)
+        self.horizontalLayout_17.setSpacing(9)
+        self.horizontalLayout_17.setContentsMargins(9, 9, 9, 9)
+        self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
+        self.horizontalLayout_17.setContentsMargins(3, 0, 3, 0)
+        self.toolButton_3 = QToolButton(self.descriptionDockTitle)
+        self.toolButton_3.setObjectName(u"toolButton_3")
+        self.toolButton_3.setEnabled(False)
+        self.toolButton_3.setStyleSheet(u"padding: -2px;\n"
+"margin-left: 4px;\n"
+"border: none;")
+
+        self.horizontalLayout_17.addWidget(self.toolButton_3)
+
+        self.descriptionTitle = QLabel(self.descriptionDockTitle)
+        self.descriptionTitle.setObjectName(u"descriptionTitle")
+        font5 = QFont()
+        font5.setPointSize(12)
+        self.descriptionTitle.setFont(font5)
+        self.descriptionTitle.setStyleSheet(u"border:none; background-color: transparent;")
+        self.descriptionTitle.setFrameShape(QFrame.NoFrame)
+        self.descriptionTitle.setFrameShadow(QFrame.Sunken)
+
+        self.horizontalLayout_17.addWidget(self.descriptionTitle)
+
+        self.horizontalSpacer_9 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_17.addItem(self.horizontalSpacer_9)
+
+        self.filterFrame_2 = QFrame(self.descriptionDockTitle)
+        self.filterFrame_2.setObjectName(u"filterFrame_2")
+        sizePolicy1.setHeightForWidth(self.filterFrame_2.sizePolicy().hasHeightForWidth())
+        self.filterFrame_2.setSizePolicy(sizePolicy1)
+        self.filterFrame_2.setStyleSheet(u"QFrame#filterFrame_2 {\n"
+"	margin: 2px;\n"
+"    border: 1px solid rgb(43, 43, 43);\n"
+"    background-color: rgb(43, 43, 43);\n"
+"    border-radius: 3px;\n"
+"}\n"
+"QFrame#filterFrame_2:hover {\n"
+"    border: 1px solid rgb(150, 146, 137);\n"
+"}")
+        self.filterFrame_2.setFrameShape(QFrame.StyledPanel)
+        self.filterFrame_2.setFrameShadow(QFrame.Plain)
+        self.horizontalLayout_11 = QHBoxLayout(self.filterFrame_2)
+        self.horizontalLayout_11.setSpacing(0)
+        self.horizontalLayout_11.setContentsMargins(9, 9, 9, 9)
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.horizontalLayout_11.setContentsMargins(1, 0, 0, 0)
+        self.filterButton_2 = QPushButton(self.filterFrame_2)
+        self.filterButton_2.setObjectName(u"filterButton_2")
+        sizePolicy3.setHeightForWidth(self.filterButton_2.sizePolicy().hasHeightForWidth())
+        self.filterButton_2.setSizePolicy(sizePolicy3)
+        self.filterButton_2.setStyleSheet(u"QPushButton {\n"
+"    background-color: rgb(57, 57, 57);\n"
+"    padding: 0px;\n"
+"	border: none;\n"
+"}\n"
+"QPushButton:hover {\n"
+"    background-color: rgb(108, 108, 108);\n"
+"}\n"
+"QPushButton:checked {\n"
+"    background-color: rgb(43, 43, 43);\n"
+"}")
+        self.filterButton_2.setIcon(icon3)
+        self.filterButton_2.setIconSize(QSize(18, 18))
+        self.filterButton_2.setCheckable(True)
+        self.filterButton_2.setChecked(True)
+        self.filterButton_2.setFlat(False)
+
+        self.horizontalLayout_11.addWidget(self.filterButton_2)
+
+        self.descriptionFilterBox = QLineEdit(self.filterFrame_2)
+        self.descriptionFilterBox.setObjectName(u"descriptionFilterBox")
+        sizePolicy4.setHeightForWidth(self.descriptionFilterBox.sizePolicy().hasHeightForWidth())
+        self.descriptionFilterBox.setSizePolicy(sizePolicy4)
+        self.descriptionFilterBox.setMinimumSize(QSize(128, 0))
+        self.descriptionFilterBox.setFont(font3)
+        self.descriptionFilterBox.setFrame(False)
+        self.descriptionFilterBox.setClearButtonEnabled(True)
+
+        self.horizontalLayout_11.addWidget(self.descriptionFilterBox)
+
+
+        self.horizontalLayout_17.addWidget(self.filterFrame_2)
+
+        self.foundResultsLabel = QLabel(self.descriptionDockTitle)
+        self.foundResultsLabel.setObjectName(u"foundResultsLabel")
+        self.foundResultsLabel.setStyleSheet(u"background-color: transparent;")
+
+        self.horizontalLayout_17.addWidget(self.foundResultsLabel)
+
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_17.addItem(self.horizontalSpacer_6)
+
+        self.descriptionCloseButton = QPushButton(self.descriptionDockTitle)
+        self.descriptionCloseButton.setObjectName(u"descriptionCloseButton")
+        self.descriptionCloseButton.setStyleSheet(u"QPushButton {\n"
+"    padding: 3px;\n"
+"    background-color: rgb(97, 57, 57);\n"
+"	border :none;\n"
+"}\n"
+"QPushButton:hover {\n"
+"    background-color: rgb(192, 64, 64);\n"
+"    color: rgb(250, 250, 250);\n"
+"}\n"
+"")
+        self.descriptionCloseButton.setIcon(icon1)
+        self.descriptionCloseButton.setIconSize(QSize(14, 16))
+        self.descriptionCloseButton.setCheckable(True)
+        self.descriptionCloseButton.setChecked(True)
+
+        self.horizontalLayout_17.addWidget(self.descriptionCloseButton)
+
+
+        self.verticalLayout_7.addWidget(self.descriptionDockTitle)
+
+        self.descriptionTextBrowser = descriptionTextBrowser(self.dockWidgetContents_5)
+        self.descriptionTextBrowser.setObjectName(u"descriptionTextBrowser")
+        sizePolicy2.setHeightForWidth(self.descriptionTextBrowser.sizePolicy().hasHeightForWidth())
+        self.descriptionTextBrowser.setSizePolicy(sizePolicy2)
+        self.descriptionTextBrowser.setMinimumSize(QSize(795, 942))
+        self.descriptionTextBrowser.setFont(font2)
+        self.descriptionTextBrowser.setStyleSheet(u"QTextBrowser {padding: 6px;}")
+        self.descriptionTextBrowser.setFrameShape(QFrame.NoFrame)
+        self.descriptionTextBrowser.setOpenLinks(False)
+
+        self.verticalLayout_7.addWidget(self.descriptionTextBrowser)
+
+        self.descriptionDock.setWidget(self.dockWidgetContents_5)
+        RelicMainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.descriptionDock)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -1858,13 +1818,6 @@ class Ui_RelicMainWindow(object):
         self.clearSubcategoryButton.setText(QCoreApplication.translate("RelicMainWindow", u"Clear Subcategory Selection", None))
         self.label_4.setText(QCoreApplication.translate("RelicMainWindow", u"OR", None))
         self.clearSearchButton.setText(QCoreApplication.translate("RelicMainWindow", u"Clear Search Keywords", None))
-        self.descriptionDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Description", None))
-        self.toolButton_3.setText("")
-        self.descriptionTitle.setText(QCoreApplication.translate("RelicMainWindow", u"DESCRIPTIONS", None))
-        self.filterButton_2.setText("")
-        self.descriptionFilterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Find...", None))
-        self.foundResultsLabel.setText(QCoreApplication.translate("RelicMainWindow", u"1 / 2", None))
-        self.descriptionCloseButton.setText("")
         self.linksDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Links", None))
         self.toolButton.setText("")
         self.label_2.setText(QCoreApplication.translate("RelicMainWindow", u"CATEGORIES", None))
@@ -1896,10 +1849,17 @@ class Ui_RelicMainWindow(object):
 #endif // QT_CONFIG(statustip)
         self.categoryDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Categories", None))
         self.searchDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Search", None))
-        self.searchButton.setText("")
-        self.searchBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Search...", None))
         self.collectionRadioButton.setText(QCoreApplication.translate("RelicMainWindow", u"Collections", None))
         self.variationRadioButton.setText(QCoreApplication.translate("RelicMainWindow", u"Variations", None))
+        self.searchButton.setText("")
+        self.searchBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Search...", None))
         self.attributeDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Attributes", None))
+        self.descriptionDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Description", None))
+        self.toolButton_3.setText("")
+        self.descriptionTitle.setText(QCoreApplication.translate("RelicMainWindow", u"DESCRIPTIONS", None))
+        self.filterButton_2.setText("")
+        self.descriptionFilterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Find...", None))
+        self.foundResultsLabel.setText(QCoreApplication.translate("RelicMainWindow", u"1 / 2", None))
+        self.descriptionCloseButton.setText("")
     # retranslateUi
 

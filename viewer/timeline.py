@@ -1,6 +1,8 @@
 import glob
 import re
 import copy
+import timeit
+
 from ctypes import c_void_p
 from collections import defaultdict
 from functools import partial
@@ -20,7 +22,7 @@ import glm
 
 # -- Module --
 import sys
-from viewer.viewport import ImagePlane
+from viewer.viewport import ImagePlane, Viewport
 from viewer.gl.text import (
     glyphContainer, tickGlyphs, FrameGlyphs, createFontAtlas, TextShader, HandleGlyphs
 )
@@ -463,6 +465,8 @@ class timelineGLView(InteractiveGLView):
 
     clearCache = Signal(int)
 
+    movieAdded = Signal(BaseClip)
+
     def __init__(self, *args, **kwargs):
         super(timelineGLView, self).__init__(*args, **kwargs)
         self.current_frame = 0
@@ -473,6 +477,59 @@ class timelineGLView(InteractiveGLView):
         self.snap_cursor = CursorSnapper()
         self.scrubbing = None
         self.edit_mode = None
+
+    def addFileAsClip(self, path, offset, sequence_index):
+        # Validate path
+        if isinstance(path, str):
+            path = Path(path, checksequence=True)
+        else:
+            path.checkSequence()
+
+        kwargs = {'file_path': path, 'timeline_in': offset}
+
+        if path.ext in io.MOVIE:
+            clip = MovClip(**kwargs)
+            self.movieAdded.emit(clip)
+        else:
+            clip = SeqClip(**kwargs) if path.sequence_path else ImageClip(**kwargs)
+            self.graph.appendClip(clip, sequence_index)
+            self.updateNodeGlyphs()
+
+        return clip
+
+    def defineClipPosition(self, add_mode):
+        # Resolve the sequence and define the clips start / in frame (timeline offset)
+        current_clip = self.current_clip
+        graph_sequences = self.graph.sequences
+
+        if current_clip and graph_sequences:
+            sequence_index = current_clip.sequence
+            if add_mode == Viewport.APPEND:
+                offset = self._getLastTimelineFrame(sequence_index)
+            elif add_mode == Viewport.STACK:
+                offset = current_clip.timeline_in - 1
+                sequence_index += 1
+            elif add_mode == Viewport.REPLACE:
+                offset = current_clip.timeline_in - 1
+                self.graph.deleteClip(current_clip)
+        else:
+            sequence_index = 0
+            if graph_sequences:
+                offset = self._getLastTimelineFrame()
+            else:
+                offset = 0 
+
+        result = glm.vec2(offset, sequence_index)
+        return result
+
+    def _getLastTimelineFrame(self, sequence_index=0):
+        seq_offsets = [0]
+        clips = self.graph.clips
+        for clip_index in self.graph.sequences[sequence_index]:
+            timeline_out = clips[clip_index].timeline_out
+            seq_offsets.append(timeline_out)
+        result = max(seq_offsets)
+        return result
 
     @Slot()
     def _toAnnotatedFrame(self, direction):
@@ -513,11 +570,13 @@ class timelineGLView(InteractiveGLView):
             local_frame = clip.mapToLocalFrame(frame)
             yield clip, local_frame
 
+    def selectClipsOnFrame(self, frame):
+        selector = self.selectNode
+        [selector(clip) for clip, lf in self.getClipsOnFrame(frame) if lf]
+
     def newMultiFrame(self, frame):
         self.current_frame = frame
-        data = [x for x in self.getClipsOnFrame(frame)]
-        filtered_data = list(filter(itemgetter(1), data))
-
+        filtered_data = [clip for clip, lf in self.getClipsOnFrame(frame) if lf]
         super(timelineGLView, self).paintGL()
         frame_translation = glm.translate(glm.mat4(1.0), glm.vec3(frame, 0, 0))
         time_mvp = self.camera.perspective * self.glmview * frame_translation
@@ -538,6 +597,15 @@ class timelineGLView(InteractiveGLView):
         self.update()
         return self.current_clip, local_frame
 
+    def setRegionCacheColor(self):
+        try:
+            self.cache_cursor.color = glm.vec4(0.0, 0.7, 0.4, 1)
+        except:pass
+
+    def setLookAheadCacheColor(self):
+        try:
+            self.cache_cursor.color = glm.vec4(0.0, 0.45, 0.7, 1)
+        except:pass
 
     def initializeGL(self):
         super(timelineGLView, self).initializeGL()
@@ -939,6 +1007,7 @@ class timelineGLView(InteractiveGLView):
     def mouseReleaseEvent(self, event):
         super(timelineGLView, self).mouseReleaseEvent(event)
         button = event.button()
+        mods = event.modifiers()
         self.selection_rect.resize(-1,-1.1,0.1,0)
         if self.graph.sequence_callbacks:
             self.graph.reassignClips()
@@ -949,13 +1018,14 @@ class timelineGLView(InteractiveGLView):
         self.scrubbing = False
         self.edit_mode = None
         
-        for clip in self.graph.selected_clips:
+        if not mods == Qt.AltModifier and button == Qt.RightButton:
+            self.onContextMenu.emit(event.globalPosition().toPoint())
+
+    def updateClipTextures(self):
+        for clip in self.graph.clips:
             texture = clip.geometry.texture 
             clip.geometry.texture = ImagePlane.TEXTURES.addNewFormat(
                 texture.pixels, clip.geometry.order, clip.sequence)
-        if button == Qt.RightButton:
-            self.onContextMenu.emit(event.globalPosition().toPoint())
-
 
     def setHandles(self, value):
         selection = self.graph.selected_clips
@@ -979,7 +1049,6 @@ class timelineGLView(InteractiveGLView):
             if selection:
                 list(map(self.graph.deleteClip, selection))
                 self.updateNodeGlyphs()
-    
 
     def frameGeometry(self):
         clip = self.current_clip
@@ -998,7 +1067,6 @@ class timelineGLView(InteractiveGLView):
         else:
             clip_center = clip.timeline_in + (clip.duration / 2)
             clip_duration = clip.duration
-
         self.zoom2d = (clip_duration + 20) / self.width()
         self.pan2d = glm.vec2(-clip_center, 0)
         self.origin_pos = self.pan2d

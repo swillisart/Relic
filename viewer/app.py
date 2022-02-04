@@ -929,11 +929,13 @@ class PlayerAppWindow(QMainWindow):
 
         # Finally update the viewport again
         self.frame_engine.timeline_control.setFrame(clip.timeline_in)
-        if isinstance(clip, MovClip):
-            callback = partial(self.frame_engine.onFrameChange, clip.timeline_in)
-        else:
+        if isinstance(clip, ImageClip):
+            callback = partial(self.frame_engine.onFrameJump, clip.timeline_in + 1)
+        elif isinstance(clip, SeqClip):
             callback = partial(self.frame_engine.onFrameJump, clip.timeline_in)
-        deferred_frame = QTimer.singleShot(600, callback)
+        else:
+            callback = partial(self.frame_engine.onFrameChange, clip.timeline_in)
+        deferred_frame = QTimer.singleShot(900, callback)
         self.viewport.frameGeometry()
         self.timeline.frameGeometry()
 

@@ -18,8 +18,6 @@ class QuicktimeSignals(QObject):
 
 
 class QuicktimeThread(QThread):
-    
-    BATCH_SIZE = 120
 
     def __init__(self, cache, parent=None):
         QThread.__init__(self, parent)
@@ -144,8 +142,6 @@ class FrameSignals(QObject):
 
 
 class FrameThread(QThread):
-
-    BATCH_SIZE = 24
 
     def __init__(self, cache, parent=None):
         QThread.__init__(self, parent)

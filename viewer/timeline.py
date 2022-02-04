@@ -182,9 +182,10 @@ class BaseClip(object):
 
     @staticmethod
     def _validAnnotation(annotations, path, first, last, _file):
-        frame = int(_file.frame)
-        if path.name == _file.name and frame > first and frame < last:
-            annotations.append(frame)
+        if path.name == _file.name:
+            frame = int(_file.frame)
+            if frame > first and frame < last:
+                annotations.append(frame)
 
     def getImageAnnotations(self):
         self.annotations.clear()

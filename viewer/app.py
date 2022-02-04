@@ -88,7 +88,7 @@ class timelineControl(QTimeLine):
             self.stop()
 
     def jumpFirst(self):
-        self.setFrame(0)
+        self.setFrame(1)
 
     def jumpLast(self):
         self.setCurrentTime(self.endTime)
@@ -140,15 +140,19 @@ class FrameEngine(QObject):
         self.timeline = timeline
         self.timeline.frameJump.connect(self.onFrameJump)
         self.viewport = viewport
+        # Cache variables
         self.minc = 10000
         self.maxc = 0
-        self.cache_number = 0
+        self.cache_length = 0
         self.is_caching = False
         self.cache_end = 0
+
+        # Callbacks 
         self.deferred_frame_jump = None
         self.cache_finished_callback = None
         self.cache_mode = FrameEngine.LOOK_AHEAD
         self.comp_mode = FrameEngine.SINGLE
+        self.deferred_frame_load = None
 
     @property
     def cache_mode(self):
@@ -165,22 +169,24 @@ class FrameEngine(QObject):
 
     @Slot(int)
     def onFrameJump(self, frame):
-        if self.is_caching:
-            cache = FrameEngine.CACHE
-            all_frames = [item for items in [cache[i].keys() for i in cache] for item in items]
-            if not frame in all_frames and not self.deferred_frame_jump:
-                deferred_load = partial(self.onFrameJump, frame)
-                self.deferred_frame_jump = QTimer.singleShot(600, deferred_load)
-                return
-        else:
-            self.deferred_frame_jump = None
+        cache = FrameEngine.CACHE
+        all_frames = [item for items in [cache[i].keys() for i in cache] for item in items]
+
+        #if self.is_caching:
+        #    if frame not in all_frames:
+        #        return
+        #else:
+        if frame not in all_frames and not self.deferred_frame_jump:
+            self.clearFrameCache(frame, update=True)
+            deferred_load = partial(self.onFrameChange, frame)
+            self.deferred_frame_jump = QTimer.singleShot(300, deferred_load)
 
         if self.cache_mode == FrameEngine.LOOK_AHEAD:
             clip, clip_frame = self.timeline.getClipOnFrame(frame)
             self.timeline.current_clip = clip
-            if isinstance(clip, MovClip):
+            if isinstance(clip, MovClip): 
                 self.mov_thread.setClip(clip, clip_frame, frame)
-        
+
         self.timeline_control.setFrame(frame)
 
     def setRegionCache(self):
@@ -216,17 +222,16 @@ class FrameEngine(QObject):
             self.minc = frame
         elif frame > self.maxc:
             self.maxc = frame
-        self.cache_number += 1
-
+        self.cache_length += 1
         self.timeline.updateCacheSize(self.minc, self.maxc)
 
         # clear tail frames past threshold seconds 
         if isinstance(sender, io.workers.QuicktimeSignals):
-            if self.cache_number > 288:
-                self.removeTailFrames(self.cache_number - 288)
+            if self.cache_length > 480:
+                self.removeTailFrames(120)
         elif isinstance(sender, io.workers.FrameSignals):
-            if self.cache_number > 120:
-                self.removeTailFrames(self.cache_number - 144)
+            if self.cache_length > 180:
+                self.removeTailFrames(60)
 
     def multiFrameChange(self, timeline_frame):
         viewport = self.viewport
@@ -266,29 +271,16 @@ class FrameEngine(QObject):
 
         if not isinstance(img_data, np.ndarray):
             if not clip:
-                self.timeline.drawViewport()
+                timeline.drawViewport()
                 return
-            if (timeline_frame - 2) < self.minc or timeline_frame > (self.maxc + 2):
-                if self.cache_mode == FrameEngine.LOOK_AHEAD:
-                    self.clearFrameCache(timeline_frame, update=True)
+            if self.cache_mode == FrameEngine.LOOK_AHEAD:
+                if timeline_frame < self.minc or timeline_frame > (self.maxc + 4):
+                    self.clearFrameCache(timeline_frame)
+
             self.startCaching(clip, clip_frame, timeline_frame, new_clip=True)
-        
             update_framerate = True
         else:
-            if not self.is_caching: # Don't attempt frame queries while caching.
-                look_ahead = timeline_frame + 24
-                uncached_begin = self.cache_end + 1
-                cache_end_ahead = look_ahead >= uncached_begin
-                clip_end_ahead = clip.timeline_out <= look_ahead
-
-                if cache_end_ahead and self.cache_end < clip.timeline_out:
-                    clip_frame = clip.mapToLocalFrame(uncached_begin) # <- Optimize this as calculated instead
-                    if clip_frame:
-                        self.startCaching(clip, clip_frame, uncached_begin)
-                elif clip_end_ahead:
-                    next_clip, next_clip_frame = self.timeline.getClipOnFrame(look_ahead + 1)
-                    if next_clip_frame and self.cache_end < next_clip.timeline_out:
-                        self.startCaching(next_clip, next_clip.first, next_clip.timeline_in, new_clip=True)
+            self.startCaching(clip, clip_frame, timeline_frame)
 
             geo = clip.geometry
             viewport.image_plane = geo
@@ -307,6 +299,11 @@ class FrameEngine(QObject):
                 self.parent.playbackToggle()
 
         self.timeline.drawViewport()
+
+    def performLookAheadCaching(self, clip, clip_frame, timeline_frame):
+        """
+        Pre-cache a new batch of frames ahead of time.
+        """
 
 
     def regionCaching(self, clips):
@@ -350,21 +347,66 @@ class FrameEngine(QObject):
         if self.is_caching or self.cache_mode == FrameEngine.REGION:
             return
 
+        duration = int(clip.framerate) or 24
+        look_ahead = timeline_frame + duration
+        cache_end = self.cache_end
+        cache_end_ahead = look_ahead > cache_end
+        if not cache_end_ahead:
+            return
+
         self.is_caching = True
+        
+        ahead_clip, ahead_clip_frame = self.timeline.getClipOnFrame(look_ahead)
+
+        clip_start_frame = clip.mapToLocalFrame(cache_end)
+        clip_end_ahead = look_ahead > clip.timeline_out
+
+        if ahead_clip and ahead_clip is not clip:
+            # struck new clip in look-ahead
+            is_atop = ahead_clip.timeline_in < clip.timeline_out 
+
+            current_clip_done = cache_end == clip.timeline_out
+            if is_atop:
+                next_clip_ready = cache_end == ahead_clip.timeline_in
+
+                head = ahead_clip.timeline_in - cache_end
+                tail = clip.timeline_out - cache_end
+
+                if head > 0:
+                    duration = head
+                elif next_clip_ready or current_clip_done:
+                    clip_start_frame = ahead_clip.mapToLocalFrame(cache_end)
+                    clip = ahead_clip
+                    new_clip = True
+                elif tail > 0:
+                    duration = tail
+            elif current_clip_done: # Start caching the next clip
+                clip_start_frame = ahead_clip.mapToLocalFrame(cache_end)
+                clip = ahead_clip
+                new_clip = True
+        else:
+            if clip_end_ahead:
+                duration = (clip.timeline_out - cache_end) + 1
+            else:
+                duration = look_ahead - cache_end
+
+        if duration <= 0:
+            self.is_caching = False
+            return
 
         if isinstance(clip, MovClip):
             worker = io.workers.QuicktimeThread
             if new_clip:
-                self.mov_thread.setClip(clip, clip_frame, timeline_frame)
+                self.mov_thread.setClip(clip, clip_start_frame, cache_end)
             else:
-                self.mov_thread.setFrame(clip_frame, timeline_frame) # Debug impact
+                self.mov_thread.setFrame(clip_start_frame, cache_end) # Debug impact
         elif isinstance(clip, SeqClip):
             worker = io.workers.FrameThread
             # Update the cache methods frame mappings
             worker.fastRead = partial(worker.fastRead,
                 sequence=clip.sequence,
-                frame=timeline_frame,
-                clip_frame=clip_frame,
+                frame=cache_end,
+                clip_frame=clip_start_frame,
                 path=clip.path)
         else:
             img_data = io.image.simpleRead(str(clip.path))
@@ -376,22 +418,16 @@ class FrameEngine(QObject):
             self.updateCache(clip.timeline_out)
             return
 
-        cache_to = timeline_frame + worker.BATCH_SIZE
-        if cache_to > clip.timeline_out:
-            cache_to = clip.timeline_out
-            cache_duration = (cache_to - timeline_frame)
-        else:
-            cache_duration = worker.BATCH_SIZE
-
         cache = FrameEngine.CACHE[clip.sequence]
-        [cache.update({x:None}) for x in range(timeline_frame, cache_to + 1)]
-        self.cache_end = cache_to
-        worker.iterations = partial(range, cache_duration + 1)
+        new_cache_end = (cache_end + duration)
+        self.cache_end = new_cache_end
+        [cache.update({x:None}) for x in range(cache_end, new_cache_end)]
+        worker.iterations = partial(range, duration + 1)
 
     def removeTailFrames(self, amount):
         if self.cache_mode == FrameEngine.REGION:
             return
-        self.cache_number = self.cache_number - amount
+        self.cache_length = self.cache_length - amount
         new_min = self.minc + amount
         func = partial(io.workers.FrameCacheIOThread.deleteCacheRange, self.minc, new_min)
         self.frame_io_thread.addToQueue(func)
@@ -401,12 +437,13 @@ class FrameEngine(QObject):
         if self.is_caching:
             return
         FrameEngine.CACHE.clear()
-        if update:
+        if update and not self.deferred_frame_load:
             deferred_load = partial(self.onFrameChange, timeline_frame)
-            self.deferred_frame_load = QTimer.singleShot(600, deferred_load)
+            self.deferred_frame_load = QTimer.singleShot(200, deferred_load)
         self.minc = timeline_frame
         self.maxc = timeline_frame
-        self.cache_number = 0
+        self.cache_end = timeline_frame
+        self.cache_length = 0
         self.timeline.updateCacheSize(self.minc, self.maxc)
 
 
@@ -891,10 +928,12 @@ class PlayerAppWindow(QMainWindow):
             file_path, int(clip_position.x), int(clip_position.y))
 
         # Finally update the viewport again
-        self.frame_engine.onFrameChange(clip.timeline_in)
-        callback = partial(self.frame_engine.timeline_control.setFrame, clip.timeline_in)
+        self.frame_engine.timeline_control.setFrame(clip.timeline_in)
+        if isinstance(clip, MovClip):
+            callback = partial(self.frame_engine.onFrameChange, clip.timeline_in)
+        else:
+            callback = partial(self.frame_engine.onFrameJump, clip.timeline_in)
         deferred_frame = QTimer.singleShot(600, callback)
-
         self.viewport.frameGeometry()
         self.timeline.frameGeometry()
 

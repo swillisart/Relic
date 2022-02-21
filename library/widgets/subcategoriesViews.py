@@ -1,7 +1,7 @@
-import functools
+from functools import partial 
 import json
 import os
-
+from collections import defaultdict
 # -- Module --
 from library import objectmodels
 from library.config import RELIC_PREFS
@@ -95,7 +95,7 @@ class subcategoryTreeView(QTreeView):
         self.setDropIndicatorShown(True)
         self.setDragDropOverwriteMode(False)
         self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDefaultDropAction(Qt.MoveAction)
+        self.setDefaultDropAction(Qt.CopyAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._createContextMenus)
@@ -120,6 +120,7 @@ class subcategoryTreeView(QTreeView):
         self.selection_model.selectionChanged.connect(self.resizeToSel)
 
         self.drag_item = None
+        self.new_item_parent = None
         self.counts = {}
         # Actions
         self.actionCreate = QAction('Create New', self)
@@ -131,7 +132,6 @@ class subcategoryTreeView(QTreeView):
         self.actionRecount = QAction('Re-synchronize Count', self)
         self.actionRecount.triggered.connect(self.resyncSubcategoryCount)
         self.folder_icon = QIcon(':resources/general/folder.svg')
-
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
@@ -174,13 +174,13 @@ class subcategoryTreeView(QTreeView):
 
             # If the subcategory does not have a link-to-parent relationship
             # consider it a root subcategory at the top of the tree.
-            if not tree_item.link or tree_item.link <= 0:
+            if not tree_item.upstream or tree_item.upstream <= 0:
                 model_root_item.appendRow(tree_item)
             else:
-                parent = data.get(tree_item.link)
+                parent = data.get(tree_item.upstream)
                 parent.appendRow(tree_item)
             
-            if not tree_item.link:
+            if not tree_item.upstream:
                 count += tree_item.count if tree_item.count else 0
         self.proxyModel.sort(0, Qt.DescendingOrder)
         return count
@@ -265,24 +265,27 @@ class subcategoryTreeView(QTreeView):
         """Inserts a named subcategory into the category tree.
         """
         selection = self.selectedIndexes()
-        new_item = subcategory(name=name, category=self.category.id)
-
+        new_item = subcategory(
+            name=name,
+            category=self.category.id,
+            count=0,
+        )
         if selection:
-            item = self.indexToItem(selection[0])
+            item = self.indexToItem(selection[-1])
             new_item.link = (self.category.id, item.id)
-            new_item.create()
-            new_item.count = 0
-            tree_item = polymorphicItem(fields=new_item)
+            self.new_item_parent = item
+        new_item.createNew()
 
-            if item.hasChildren():
-                item.appendRow(tree_item)
-            else:
-                item.setChild(item.index().row(), tree_item)
+    def onNewSubcategory(self, new_asset):
+        new_item = polymorphicItem(fields=new_asset)
+        parent_item = self.new_item_parent
+        if not parent_item:
+            self.model.invisibleRootItem().appendRow(new_item)
+        elif parent_item.hasChildren():
+            parent_item.appendRow(new_item)
         else:
-            new_item.create()
-            new_item.count = 0
-            tree_item = polymorphicItem(fields=new_item)
-            self.model.invisibleRootItem().appendRow(tree_item)
+            parent_item.setChild(parent_item.index().row(), new_item)
+        self.new_item_parent = None
 
     @Slot()
     def renameSubcategory(self, name):
@@ -312,18 +315,6 @@ class subcategoryTreeView(QTreeView):
             asset = index.data(polymorphicItem.Object)
             asset.count = new_count
             asset.update(fields=['count'])
-            """
-            # Use the recursive nature of getCounts to fetch tree descendent ids.
-            self.counts = {}
-            self.recursiveCountCursor(item, collect=True, up=False, down=True)
-            [ids.append(x) for x in self.counts]
-            if item:
-                self.category.count += -(item.count)
-                item_removal = item.parent()
-                if item_removal is None:
-                    item_removal = self.model.invisibleRootItem()
-                item_removal.takeRow(item.index().row() - i)
-            """
             self.updateSubcategoryCounts(item)
         self.modifications.emit(True)
 
@@ -343,23 +334,19 @@ class subcategoryTreeView(QTreeView):
             return
 
         ids = []
-
         for i, item in enumerate(selection):
             item = self.indexToItem(item)
             # Use the recursive nature of getCounts to fetch tree descendent ids.
-            self.counts = {}
-            self.recursiveCountCursor(item, collect=True, up=False, down=True)
-
-            [ids.append(x) for x in self.counts]
-            if item:
-                self.category.count += -(item.count) 
-                item_removal = item.parent()
-                if item_removal is None:
-                    item_removal = self.model.invisibleRootItem()
-                item_removal.takeRow(item.index().row() - i)
-
-        subcategory(id=tuple(ids)).remove()
-        self.modifications.emit(True)
+            for tree_item in CategoryManager.iterateTreeItems(item):
+                if tree_item.count > 0:
+                    continue
+                ids.append(tree_item.id)
+                item_parent = tree_item.parent()
+                if not item_parent:
+                    item_parent = self.model.invisibleRootItem()
+                item_parent.takeRow(tree_item.index().row() - i)
+        if ids:
+            subcategory(id=tuple(ids)).remove()
 
     def getSelectionIds(self):
         # get all selected subcategory ids
@@ -379,6 +366,8 @@ class subcategoryTreeView(QTreeView):
         return ids
 
     def dragEnterEvent(self, event):
+        super(subcategoryTreeView, self).dragEnterEvent(event)
+
         if event.mimeData().hasUrls():
             # ensure the payload category matches the current tree's category
             category = self.category.name.lower()
@@ -395,121 +384,112 @@ class subcategoryTreeView(QTreeView):
             if not item:
                 return
             self.drag_item = item
-            parent_item = item.parent()
-            if parent_item:
-                self.getCounts(parent_item)
-                self.counts = {k: -item.count for k, v in self.counts.items()}
-            return super(subcategoryTreeView, self).dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            self.setFocus()
         super(subcategoryTreeView, self).dragMoveEvent(event)
-        event.acceptProposedAction()
+        index = self.indexAt(event.pos())
+        if not index.isValid() or index in self.selectedIndexes():
+            event.ignore()
+            return
+        elif event.mimeData().hasUrls():
+            self.setFocus()
+            event.acceptProposedAction()
+
+    def getDropDestinationItem(self, event):
+        drop_position = event.pos()
+        index = self.indexAt(drop_position)
+
+        if index.isValid():
+            destination = self.indexToItem(index)
+
+            #drop_indicator_position = self.getItemRelativePosition(
+            #    drop_position, self.visualRect(index))
+            # Drop indications for mouse areas which aren't fully over the Item.
+            #if drop_indicator_position in (self.AboveItem, self.BelowItem):
+            #   destination = destination.parent()
+        else:
+            destination = None
+
+        return destination
 
     def dropEvent(self, event):
         if not int(RELIC_PREFS.edit_mode):
             return
         mime = event.mimeData()
-        index = self.indexAt(event.pos())
+        destination_item = self.getDropDestinationItem(event)
 
         # Drag and drop re-categorization (from the asset list view)
-        if mime.hasUrls() and index.isValid():
-            subcategory_item = self.indexToItem(index)
-            if not subcategory_item:
-                return event.reject()
-
-            dst = subcategory_item.name
+        if mime.hasUrls() and destination_item:
             accepted_item, ok = QInputDialog.getItem(self,
                 'Re-parent Asset',
-                'Move the assets subcategory into "{}"?'.format(dst),
+                'Move the assets subcategory into "{}"?'.format(destination_item.name),
                 ['Move Assets'], True)
             if not ok:
                 return
 
             event.setDropAction(Qt.MoveAction)
             event.accept()
-            payload = json.loads(mime.text())
-            for key, values in payload.items():
-                constructor = getattr(objectmodels, str(key))
-                for fields in values:
-                    asset = constructor(**fields)
-                    asset.moveToSubcategory(subcategory_item)
+            self.onAssetDrop.emit(destination_item)
+            return
+        
+        drag_item = self.drag_item
+        item_parent = drag_item.parent()
+        current = drag_item.data(polymorphicItem.Object)
+
+        # Re-parenting a subcategory check if user wants to move.
+        dst = destination_item.name if destination_item else 'Root'
+        accepted_item, ok = QInputDialog.getItem(self,
+            'Re-parent Subcategory',
+            'Move the item from "{}" to "{}"?'.format(drag_item.name, dst),
+            [drag_item.name], True)
+        if not ok:
+            return
+
+        if destination_item:
+            new_parent = destination_item.data(polymorphicItem.Object)
+
+            # Check if current drag item had a parent relation (link) created.
+            if item_parent:
+                current.unlink()
+                old_parent = item_parent.data(polymorphicItem.Object)
+                # Unlink from old parent subcategory.
+                subcategory.LINK_CALLBACK = partial(subcategory._onRelink,
+                    current, old_parent=old_parent, new_parent=new_parent)
+            else:
+                subcategory.LINK_CALLBACK = partial(subcategory._onRelink,
+                    current, new_parent=new_parent)
+
+            # generate relationship with new upstream link
+            current.upstream = new_parent.id
+            current.relink()
         else:
-            # Re-parenting a subcategory check if user wants to move.
-            src = self.drag_item.name
-            if index.isValid():
-                dst = self.indexToItem(index).name
-            else:
-                dst = 'Root'
-            accepted_item, ok = QInputDialog.getItem(self,
-                'Re-parent Subcategory',
-                'Move the item from "{}" to "{}"?'.format(src, dst),
-                [self.drag_item.name], True)
+            if item_parent: # Item has parent and not already in root. 
+                old_parent = item_parent.data(polymorphicItem.Object)
+                # Unlink from old parent subcategory.
+                current.unlink()
+                # Relocate the subcategory from old to root.
+                current.relocate(old_parent)
+                #self.reparentSubcategoryToRoot(current, old_parent)             
 
-            if not ok:
-                return
+        self.drag_item.setData('', role=Qt.DisplayRole)
+        super(subcategoryTreeView, self).dropEvent(event)
 
-            # Apply subtractions regardless of destination.
-            self.updateCounts()
+    @staticmethod
+    def _subcategoryRelinkDefault(data, subcategories=None):
+        return
 
-            if index.isValid():
-                item = self.indexToItem(index)
-                if not item:
-                    return event.reject()
+    @staticmethod
+    def _subcategoryRelink(data, subcategories=None):
+        if not subcategories:
+            return
+        for index, sub in enumerate(subcategories):
+            sub.relocate(data[i])
 
-                dropIndicatorPosition = self.getItemRelativePosition(
-                    event.pos(), self.visualRect(index)
-                )
-                if dropIndicatorPosition in (self.AboveItem, self.BelowItem):
-                    item = item.parent()
-                if item: # Apply additions.
-                    if item.id != self.drag_item.id:
-                        self.getCounts(item)
-                        self.counts = {k: self.drag_item.count for k, v in self.counts.items()}
-                        self.updateCounts()
-                        current_link = self.drag_item.link
-                        current_id = self.drag_item.id
-                        new_parent = item.id
+    @Slot(list)
+    def onSubcategoryRelink(self, data):
+        self._onSubcategoryRelink(data)
+        self._onSubcategoryRelink = self._onSubcategoryRelinkDefault
 
-                        # Check if current item has relations (link) created.
-                        if not current_link:
-                            relation = relationships(
-                                category_id=new_parent,
-                                category_map=3
-                            )
-                            relation.create()
-                            # Update subcategory with permanent link
-                            subcategory(
-                                id=current_id,
-                                link=relation.link,
-                            ).update(fields=['link'])
-                        else:
-                            # Only need to update with new category_id for link
-                            relation = relationships(
-                                category_id=current_link,
-                                category_map=3
-                            )
-                            relation.fetch()
-                            relation.category_id = new_parent
-                            relation.update(fields=['category_id'])
-                            self.drag_item.link = new_parent
-            else:
-                # Set subcategory link to zero if making top level
-                relation = relationships(
-                    category_id=self.drag_item.link,
-                    category_map=3
-                )
-                relation.fetch()
-                relation.remove()
-                subcategory(
-                    id=self.drag_item.id,
-                    link=0,
-                ).update(fields=['link'])
-                self.drag_item.link = None
-                self.counts = {}
-            super(subcategoryTreeView, self).dropEvent(event)
-            del self.drag_item
 
     def updateSubcategoryCounts(self, item, offset=None):
         """Updates related subcategory tree using the base items
@@ -526,7 +506,6 @@ class subcategoryTreeView(QTreeView):
         if item_parent: # Apply additions or subtractions to related subcategories.
             self.getCounts(item_parent)
             offset = offset or item.count
-
             self.counts = {k: offset for k, v in self.counts.items()}
             self.updateCounts()
 
@@ -607,17 +586,51 @@ class subcategoryTreeView(QTreeView):
 class CategoryManager(QObject):
 
     onSelection = Signal(dict)
+    onAssetDrop = Signal(dict)
 
     def __init__(self, *args, **kwargs):
         super(CategoryManager, self).__init__(*args, **kwargs)
         self.selected_subcategories = {}
         self.all_categories = []
 
+
+    @staticmethod
+    def iterateTreeItems(tree_item):
+        if not tree_item:
+            return
+        yield tree_item
+        if tree_item.hasChildren():
+            for index in range(tree_item.rowCount()):
+                child_item = tree_item.child(index, 0)
+                yield from CategoryManager.iterateTreeItems(child_item)
+
+    @Slot(dict)
+    def receiveNewCounts(self, count_data):
+        for cat in self.all_categories:
+            tree_view = cat.tree
+            item_model = tree_view.model
+            for row in range(item_model.rowCount()):
+                index = item_model.index(row, 0)
+                root_item = item_model.itemFromIndex(index)
+                self.setCountData(root_item, tree_view, cat, count_data)
+                for tree_item in self.iterateTreeItems(root_item):
+                    self.setCountData(tree_item, tree_view, cat, count_data)
+            cat.tab.countSpinBox.setValue(cat.count)
+
+    @staticmethod
+    def setCountData(tree_item, tree_view, cat, count_data):
+        new_count = count_data.get(str(tree_item.id))
+        if new_count is not None:
+            cat.count += (new_count - tree_item.count)
+            tree_item.count = new_count
+            tree_view.update(tree_item.index())
+
     def assembleCategories(self, categories):
         self.clearAllModels()
         for category in categories:
 
             tree = subcategoryTreeView(category=category)
+            tree.onAssetDrop = self.onAssetDrop
             # This is the source of a nasty bug that duplicates items instead of moving in the treeview.
             # make sure to only organize in administration mode.
             tree.selection_model.selectionChanged.connect(self.getAllSelectedItems)
@@ -637,8 +650,7 @@ class CategoryManager(QObject):
     def updateCollapsedItems(self, state):
         sender = self.sender()
         if state:
-            self.selected_subcategories[sender.category.id] = []
-            self.onSelection.emit(self.selected_subcategories)
+            self.getAllSelectedItems(None)
         else:
             try:
                 selected = self.selected_subcategories.pop(sender.category.id)
@@ -648,15 +660,13 @@ class CategoryManager(QObject):
 
     @Slot()
     def getAllSelectedItems(self, selection):
-        self.selected_subcategories = {}
+        self.selected_subcategories = defaultdict(list)
         for category in self.all_categories:
             if category.tab.state:
                 ids = category.tree.getSelectionIds()
                 c = category.id
-                if self.selected_subcategories.get(c):
-                    self.selected_subcategories[c].extend(ids)
-                else:
-                    self.selected_subcategories[c] = ids
+                self.selected_subcategories[c].extend(ids)
+
         self.onSelection.emit(self.selected_subcategories)
 
     def endResetAllModels(self):
@@ -678,17 +688,7 @@ class CategoryManager(QObject):
         tree.proxyModel.setFilterRegularExpression(regex)
         tree.expandAll()
 
-"""
-class ResizeFilter(QObject):
 
-    def eventFilter(self, widget, event):
-        parent = self.parent()
-        if widget is parent and event.type() == QEvent.Resize:
-                self.setGeometry(parent.rect())
-                return True
-        else:
-            return False
-"""
 
 class ExpandableTab(Ui_ExpandableTabs, QWidget):
 
@@ -723,7 +723,7 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
 
     @expand_height.setter
     def expand_height(self, h):
-        self.height_store = h if h > 120 else 76
+        self.height_store = h if h > 120 else 320
 
     def mousePressEvent(self, event):
         super(ExpandableTab, self).mousePressEvent(event)
@@ -748,22 +748,20 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         self.pressing = False
 
     def expandState(self):
-        self.state = True
-        self.checkButton.setChecked(True)
-        self.ContentFrame.setVisible(True)
+        self.state = False
+        self.toggleState()
 
     def collapseState(self):
-        self.state = False
-        self.checkButton.setChecked(False)
-        self.ContentFrame.setVisible(False)
+        self.state = True
+        self.toggleState()
 
     def toggleState(self):
         self.state = not self.state
         if self.state:
-            self.setFixedHeight(self.expand_height)
+            self.setFixedHeight(self.expand_height )
         else:
-            self.expand_height = self.size().height()
+            self.expand_height = self.size().height() 
             self.setFixedHeight(29)
-        self.checkButton.nextCheckState()
+        self.checkButton.setChecked(self.state)
         self.ContentFrame.setVisible(self.state)
         self.collapseExpand.emit(self.state)

@@ -1,6 +1,7 @@
 import json
+import os
 from functools import partial
-
+from collections import defaultdict
 from imagine.colorchecker_detection import detectColorChecker
 from sequencePath import sequencePath as Path
 
@@ -20,13 +21,11 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
 
 from library.config import (DCC_EXT, FILM_EXT, GEO_EXT, HDR_EXT, LDR_EXT,
                             LIGHT_EXT, MOVIE_EXT, RAW_EXT, RELIC_PREFS,
-                            SHADER_EXT, TOOLS_EXT)
-from library.io.ingest import (INGEST_PATH, TaskRunner, ConversionRouter, IngestionThread,
+                            SHADER_EXT, TOOLS_EXT, INGEST_PATH)
+from library.io.ingest import (TaskRunner, ConversionRouter, IngestionThread,
                                applyImageModifications, blendRawExposures)
-from library.objectmodels import (alusers, db, elements, lighting, mayatools,
-                                  modeling, nuketools, polymorphicItem,
-                                  references, relationships, shading, software,
-                                  tags, temp_asset)
+from library.objectmodels import (alusers, RelicTypes, polymorphicItem, relationships,
+                                    tags, temp_asset, getCategoryConstructor, session)
 from library.ui.ingestion import Ui_IngestForm
 from library.widgets.assets import assetItemModel
 from library.widgets.util import ListViewFiltered, SimpleAsset
@@ -37,33 +36,6 @@ The remaining unprocessed files will be lost.
 
 Are you sure you want to cancel and close?
 """
-
-def uniqueNameIncrement(asset):
-    """Increments name value until it reaches a unique name.
-
-    Parameters
-    ----------
-    asset : BaseFields 
-        asset object
-
-    Returns
-    -------
-    BaseFields
-        asset object result with incremented unique name.
-    """
-    exists = asset.nameExists()
-    if exists:
-        if '_' in asset.name:
-            base, num = asset.name.split('_')
-            upnumber = int(num) + 1
-            asset.name =  f'{base}_{upnumber}'
-        else:
-            base = asset.name
-            asset.name = f'{base}_1'
-
-        return uniqueNameIncrement(asset)
-    else:
-        return asset
 
 class IngestForm(Ui_IngestForm, QDialog):
 
@@ -76,6 +48,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.next_enabled = partial(self.nextButton.setEnabled, True)
         self.next_disabled = partial(self.nextButton.setEnabled, False)
         self.collectedListView.compactMode()
+        self.collectedListView.onDeleted.connect(self.removeIngestFiles)
         self.actionGetMatrix = QAction('Get Color Matrix', self)
         self.actionBlendExposures = QAction('Align And Blend Exposures', self)
         self.actionReprocessImage = QAction('Re-Process Image', self)
@@ -94,9 +67,9 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.new_asset_item_model.rowsInserted.connect(self.updateLabelCounts)
         self.categoryComboBox.currentIndexChanged.connect(self.onCategoryChange)
         self.collectPathTextEdit.textChanged.connect(self.next_enabled)
-        self.collectedListView.onDeleted.connect(self.updateLabelCounts)
-        self.existingNamesList.newItem.connect(self.setIngestQueue)
-        self.existingNamesList.linkItem.connect(self.setIngestQueue)
+        self.collectedListView.assetsDeleted.connect(self.updateLabelCounts)
+        self.existingNamesList.newItem.connect(self.onNewItem)
+        self.existingNamesList.linkItem.connect(self.onLinkItem)
         self.todo = 0
         self.done = 0
         self.ingest_thread = IngestionThread(self)
@@ -111,7 +84,27 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.processLoadingLabel.setMovie(self.loading_movie)
         self.processLoadingLabel.hide()
         self.processCompleteLabel.hide()
-        self.keep_original_name = False 
+        self.kept_original_name = False 
+
+        self.categoryComboBox.currentIndexChanged.connect(session.retrieveassetnames.execute)
+
+        session.retrieveassetnames.callback.connect(self.onAssetNameRetrieval)
+        session.initializeprimaryasset.callback.connect(self.createVariations)
+        session.createassets.callback.connect(self.ingestAssets)
+
+    @Slot()
+    def removeIngestFiles(self, index):
+        temp_path, temp_asset = self.getCollectedPath(index)
+        preview_flavors = [
+            temp_path.suffixed('_icon', ext='.jpg'),
+            temp_path.suffixed('_proxy', ext='.jpg'),
+            temp_path.suffixed('_icon', ext='.mp4'),
+            temp_path.suffixed('_proxy', ext='.mp4'),
+        ]
+        for preview_file in preview_flavors:
+            if preview_file.exists():
+                os.remove(str(preview_file))
+
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -137,10 +130,10 @@ class IngestForm(Ui_IngestForm, QDialog):
             # Still processing
             self.processLoadingLabel.show()
 
-    def collectAssets(self, assets):
+    def collectAssetsFromPlugin(self, assets):
         self.categorizeTab.setEnabled(True)
         self.tabWidget.setCurrentIndex(1)
-        self.keep_original_name = True
+        self.kept_original_name = True
         
         for fields in assets:
             asset = temp_asset(**fields)
@@ -150,139 +143,158 @@ class IngestForm(Ui_IngestForm, QDialog):
             self.collectedListView.addAsset(asset)
         self.updateLabelCounts(len(assets)-1)
 
-    @Slot()
-    def setIngestQueue(self, item):
-        subcategory_index = self.selectedSubcategory
-        collected_indices = self.collectedListView.selectedIndexes()
-        if not subcategory_index or not collected_indices:
-            msg = 'Selection of a Subcategory & collected Asset is requried.'
+    def getSelection(self):
+        selection = self.collectedListView.selectedIndexes()
+        if not self.selectedSubcategory or not selection:
+            msg = 'Selection of a Subcategory & Collected Asset is requried.'
             QMessageBox.information(self, 'Empty Selection', msg)
+            return False
+        else:
+            return selection
+
+    @Slot(str)
+    def onNewItem(self, name):
+        selection = self.getSelection()
+        if not selection:
             return
-        subcategory = subcategory_index.data(polymorphicItem.Object)
-        self.collectedListView.clearSelection()
-
-        category_name = self.categoryComboBox.currentText().lower()
+        subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
         category_id = self.categoryComboBox.currentIndex()
-        asset_constructor = globals()[category_name]
-        total = len(collected_indices)
-        if isinstance(item, SimpleAsset): # Linking to an existing item
-            primary_asset = asset_constructor(name=item.name) 
-            primary_asset_id = item.id
-            if not primary_asset_id:
-                primary_asset_id = primary_asset.nameExists()
-            primary_asset.fetch(id=primary_asset_id)
-            link_primary = True
-        for num, index in enumerate(collected_indices):
-            temp_asset = index.data(polymorphicItem.Object)
-            asset = asset_constructor(*temp_asset.values)
-            for attr in temp_asset.attrs:
-                if hasattr(asset, attr):
-                    setattr(asset, attr, getattr(temp_asset, attr))
+        asset_constructor = getCategoryConstructor(category_id)
+        # If a selection contains multiple switch the creation mode
+        # to make a collection and link all created Assets as Variants.
+        total = len(selection)
+        self.increment = 0
+        if total > 1:
+            primary_asset = asset_constructor(
+                name=name,
+                dependencies=total,
+                path=f'{subcategory.name}/{name}',
+                links=(subcategory.relationMap, subcategory.id),
+                type=RelicTypes.COLLECTION,)
+            primary_data = {primary_asset.categoryName: primary_asset.export}
+            session.initializeprimaryasset.execute(primary_data)
+        else:
+            asset = asset_constructor(
+                name=name,
+                links=(subcategory.relationMap, subcategory.id),
+                type=RelicTypes.ASSET,)
+            asset_data = {asset.categoryName: [asset.export]}
+            session.createassets.execute(asset_data)
 
+    @Slot(SimpleAsset)
+    def onLinkItem(self, item):
+        """Handles linking of a new asset (as a Variant) to a primary asset or collection.
+
+        Parameters
+        ----------
+        item : SimpleAsset
+            The existing asset name, id handling object.
+        """
+        if not self.getSelection():
+            return
+            
+        name = item.name
+        # Split the increment and add 1 to give unique, associative subasset name.
+        if ' ' in name:
+            base, num = name.split(' ')
+            self.increment = int(num) + 1
+        else: # Starting the at 1 to for uniqeness.
+            base = name
+            self.increment = 0
+        new_name = f'{base}_{self.increment}'
+
+        category_id = self.categoryComboBox.currentIndex()
+        asset_constructor = getCategoryConstructor(category_id)
+
+        primary_asset = asset_constructor(name=base, id=item.id)
+
+        primary_data = {primary_asset.categoryName: primary_asset.export}
+        session.initializeprimaryasset.execute(primary_data)
+
+    @Slot(dict)
+    def createVariations(self, primary_data):
+        for category_name, fields in primary_data.items():
+            asset_constructor = getCategoryConstructor(category_name)
+            primary_asset = asset_constructor(*fields)
+        
+        selection = self.collectedListView.selectedIndexes()
+        subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
+
+        assets = []
+        for num, index in enumerate(selection):
+            increment = self.increment + num + 1
+            asset = asset_constructor() # 
             asset.links = (subcategory.relationMap, subcategory.id)
-
-            if num == 0 and isinstance(item, str):
-                asset.name = item
-                exists = asset.nameExists()
-                if exists:
-                    asset.name = item
-                    asset = uniqueNameIncrement(asset)
-                    self.existingNamesList.addItem(asset.name, exists)
-                    asset.type = 5 # Variant
-                    primary_asset = asset_constructor(name=item, id=exists)
-                    primary_asset.fetch(id=exists)
-                    link_primary = True
-                    reverse_link = False
-                elif total > 1:
-                    asset.name = item
-                    asset = uniqueNameIncrement(asset)
-                    primary_asset = asset_constructor(
-                        name=item,
-                        category=category_id,
-                        subcategory=subcategory,
-                        type=3,
-                        path='{}/{}'.format(subcategory.name, item),
-                        links=(subcategory.relationMap, subcategory.id),
-                    )
-                    primary_asset.create()
-                    primary_asset.fetch(id=primary_asset.id)
-                    asset.type = 5 # Variant
-                    link_primary = True
-                    reverse_link = False
-                else:
-                    primary_asset = None
-                    asset.type = 2 # Asset
-                    link_primary = False
-                    reverse_link = False
-            else:
-                if not asset.type == 5:
-                    asset.name = '{}_{}'.format(primary_asset.name, num + 1)
-                    asset.type = 5 # Variant
-                    link_primary = True
-                    reverse_link = False
-                else:
-                    reverse_link = True
-
-            # store the associated temp on-disk location for copying.
-            if not self.keep_original_name:
-                temp_filename = 'unsorted' + str(asset.id)
-            else:
-                temp_filename = asset.name
-
-            asset = uniqueNameIncrement(asset)
-
+            asset.name = f'{primary_asset.name}_{increment}'
+            asset.type = RelicTypes.VARIANT
             asset.dependencies = 0
-            asset.id = None # IMPORTANT clears the id for clean asset creation
-            asset.create()
-            asset.fetch(id=asset.id)
+            assets.append(asset.export)
+        asset_data = {
+            category_name: assets,
+            'id_map': [[primary_asset.relationMap, primary_asset.links]],
+            }
+        session.createassets.execute(asset_data)
+
+    @Slot(dict)
+    def ingestAssets(self, new_assets_data):
+        new_asset_fields = new_assets_data.popitem()[-1]
+
+        selection = self.collectedListView.selectedIndexes()
+        category_id = self.categoryComboBox.currentIndex()
+        subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
+        asset_constructor = getCategoryConstructor(category_id)
+        for num, index in enumerate(selection):
+            temp_asset = index.data(polymorphicItem.Object)
+
+            # temp on-disk local asset location for copying to the network.
+            if self.kept_original_name:
+                temp_filename = temp_asset.name
+            else:
+                temp_filename = 'unsorted' + str(temp_asset.id)
+
+            # Construct asset from database-created fields
+            asset = asset_constructor(**new_asset_fields[num])
 
             # Re-apply the GUI attributes for our item's QPainter. 
             asset.icon = temp_asset.icon
             asset.path = temp_asset.path
+            asset.resolution = temp_asset.resolution
             asset.category = category_id
             asset.subcategory = subcategory
-
-            if link_primary:
-                asset.linkTo(primary_asset)
-            if reverse_link:
-                primary_asset.linkTo(asset)
-
-            if temp_asset.links:
-                for link in temp_asset.links:
-                    link_relation = relationships(
-                        category_map=int(link['category'])+4,
-                        category_id=int(link['id']),
-                        link=int(asset.links),
-                    )
-                    link_relation.create()
-                asset.dependencies = len(temp_asset.links)
-            if temp_asset.tags:
-                for tag_data in temp_asset.tags:
-                    tag = tags(**tag_data)
-                    tag.id = tag.nameExists()
-                    if not tag.id:
-                        tag.create()
-                    tag.linkTo(asset)
-
-            user = alusers(id=int(RELIC_PREFS.user_id))
-            user.linkTo(asset)
+            self.linkIngesAssetDependencies(asset, temp_asset)
 
             self.collectedListView.setRowHidden(index.row(), True)
             self.newAssetListView.addAsset(asset)
             self.processLoadingLabel.show()
             extra_files = temp_asset.dependencies
+
             self.ingest_thread.load([temp_filename, asset, extra_files])
 
         # Update counts on assets and subcategories
-        subcategory.count += total
-        self.updateSubcategoryCounts(subcategory_index)
-        subcategory.update(fields=['count'])
-        if primary_asset:
-            if primary_asset.dependencies or reverse_link:
-                primary_asset.dependencies += total
-            else:
-                primary_asset.dependencies = total or 1
-            primary_asset.update()
+        count_data = {subcategory.id: len(selection)}
+        session.updatesubcategorycounts.execute(count_data)
+        self.collectedListView.clearSelection()
+
+    def linkIngesAssetDependencies(self, asset, temp_asset):
+        # Create asset relationships.
+        relations = []
+        if temp_asset.links:
+            asset.dependencies += len(temp_asset.links)
+            for link in temp_asset.links:
+                link_constructor = getCategoryConstructor(link['category'])
+                polymorphic = link_constructor()
+                relations.append([
+                    polymorphic.relationMap,
+                    int(link['id']),
+                    asset.links,
+                ])
+        if temp_asset.tags:
+            for tag_data in temp_asset.tags:
+                tag = tags(**tag_data)
+                tag.createNew( [[tag.relationMap, asset.links]])
+        user = alusers(name=os.getenv('username'), id=int(RELIC_PREFS.user_id))
+        user.createNew([[user.relationMap, asset.links]])
+        session.createrelationships.execute(relations)
 
     @property
     def selectedSubcategory(self):
@@ -307,9 +319,8 @@ class IngestForm(Ui_IngestForm, QDialog):
         else:
             self.close()
 
-    
     def collect(self):
-        self.keep_original_name = False 
+        self.kept_original_name = False 
 
         paths = self.collectPathTextEdit.toPlainText().split('\n')
         function_map = self.getConversionMap()
@@ -317,7 +328,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collect_thread = QThread(self)
         self.router = ConversionRouter(function_map)
         self.router.moveToThread(self.collect_thread)
-        self.router.finished.connect(self.collect_thread.quit)
         self.router.finished.connect(self.collectionComplete)
         self.router.progress.connect(self.receiveAsset)
         self.router.started.connect(self.updateLabelCounts)
@@ -329,12 +339,14 @@ class IngestForm(Ui_IngestForm, QDialog):
     def collectionComplete(self):
         self.loadingLabel.hide()
         self.completedLabel.show()
+        self.collect_thread.quit()
 
     @Slot()
     def receiveAsset(self, asset):
-        if asset:
-            asset.id = self.collect_item_model.rowCount()
-            self.collectedListView.addAsset(asset)
+        if not asset:
+            return
+        asset.id = self.collect_item_model.rowCount()
+        self.collectedListView.addAsset(asset)
 
     def setCategoryView(self, dock, layout):
         self.categorizeFrame.layout().insertWidget(0, dock)
@@ -342,7 +354,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.category_widgets = []
         for index in range(self.categoryComboBox.count()):
             self.category_widgets.append(layout.itemAt(index).widget()) 
-        #self.onCategoryChange(0)
 
     @Slot()
     def updateLabelCounts(self, value):
@@ -425,11 +436,31 @@ class IngestForm(Ui_IngestForm, QDialog):
             else:
                 category.collapseState()
                 category.hide()
-        assets = db.accessor.doRequest('retrieveData/{}'.format(category_name))
-        self.existingNamesList.itemModel.clear()
-        if assets:
-            for asset in assets:
-                self.existingNamesList.addItem(*asset)
+
+    @Slot(list)
+    def onAssetNameRetrieval(self, asset_data):
+        item_model = self.existingNamesList.itemModel
+        item_model.clear()
+        adder = self.existingNamesList.addItem
+        groups = defaultdict(int)
+        separator = '_'
+        splitter = partial(str.rsplit, sep=separator, maxsplit=1)
+        for asset in asset_data:
+            name, _id = asset
+            if separator in name:
+                name = splitter(name)[0]
+                groups[name] += 1
+            else:
+                adder(name, _id)
+
+        for key, value in groups.items():
+            items = item_model.match(
+                item_model.index(0, 0), Qt.DisplayRole, key, -1, Qt.MatchRecursive)
+            if items:
+                index = items[0]
+                item = index.model().itemFromIndex(index)
+                item.setData(f'{key} {value}', Qt.DisplayRole)
+
 
     def getCollectedPath(self, index):
         temp_asset = index.data(polymorphicItem.Object)
@@ -458,7 +489,7 @@ class IngestForm(Ui_IngestForm, QDialog):
     def getColorMatrix(self):
         index = self.collectedListView.selectedIndexes()[-1]
         temp_path, temp_asset = self.getCollectedPath(index)
-        if temp_asset.path.ext != '.exr' or not temp_asset.path.exists:
+        if temp_asset.path.ext != '.exr' or not temp_asset.path.exists():
             msg = 'Wrong image format "{}" needs to be exr.'.format(temp_asset.path.stem)
             QMessageBox.information(self, 'Detection Failed', msg)
             return

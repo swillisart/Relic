@@ -9,9 +9,9 @@ from sequencePath import sequencePath as Path
 from collections import defaultdict
 # -- Module --
 import library.config as config
-from library.io.ingest import ConversionRouter
-from library.io.database import LocalThumbnail
-from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor, Library
+from library.io.ingest import ConversionRouter, remakePreview
+from library.io.util import LocalThumbnail
+from library.objectmodels import allCategories, polymorphicItem, subcategory, temp_asset, getCategoryConstructor, Library, RelicTypes
 from library.ui.asset_delegate import Ui_AssetDelegate
 from library.qt_objects import AbstractDoubleClick
 from library.ui.compact_delegate import Ui_CompactDelegate
@@ -54,30 +54,6 @@ class assetItemModel(QStandardItemModel):
         try: parent.setModel(self)
         except: pass
 
-    def unpackAssetsDependencies(self, asset, unique_ids):
-        """Pre-processes with relative paths for upstream dependencies.
-
-        Parameters
-        ----------
-        asset : QModelIndex
-
-        Returns
-        -------
-        relic_asset
-        """
-        
-        # Get the assets upstream dependencies.
-        asset.related()
-        if asset.upstream:
-            # Yield the upstream dependencies.
-            for i, item in enumerate(asset.upstream):
-                upstream_asset = item.data(polymorphicItem.Object)
-                if upstream_asset.id not in unique_ids and upstream_asset.type != 5:
-                    unique_ids.append(upstream_asset.id)
-                    yield from self.unpackAssetsDependencies(upstream_asset, unique_ids)
-            asset.upstream = None
-        yield asset
-
     def mimeData(self, indexes):
         by_category = defaultdict(list)
         unique_ids = []
@@ -88,13 +64,13 @@ class assetItemModel(QStandardItemModel):
             if isinstance(primary_asset, temp_asset):
                 by_category['uncategorized'].append(primary_asset.export)
             else:
-                unique_ids.append(primary_asset.id)
-                for asset in self.unpackAssetsDependencies(primary_asset, unique_ids):
+                for asset in primary_asset.recurseDependencies(primary_asset):
                     # Insert asset into the payload
-                    key = allCategories.__slots__[asset.category]
+                    if isinstance(asset, polymorphicItem):
+                        asset = asset.data(polymorphicItem.Object)
+                    key = allCategories.slots[asset.category]
                     by_category[key].append(asset.export)
  
-
         payload = json.dumps(by_category)
 
         mimeText = 'relic://'
@@ -127,6 +103,7 @@ class assetListView(QListView):
     onLinkLoad = Signal(QModelIndex)
     onLinkRemove = Signal(QModelIndex)
     onDeleted = Signal(QModelIndex)
+    assetsDeleted = Signal(defaultdict)
 
     def __init__(self, *args, **kwargs):
         super(assetListView, self).__init__(*args, **kwargs)
@@ -261,18 +238,20 @@ class assetListView(QListView):
         primary = selection[-1].data(polymorphicItem.Object)
         constructor = getCategoryConstructor(primary.category)
         subcategory = primary.subcategory.data(polymorphicItem.Object)
+
         collection = constructor(
             name=collection_name,
             dependencies=count,
             path='{}/{}'.format(subcategory.name, collection_name),
             links=(subcategory.relationMap, subcategory.id),
             type=3, # collection
-            )
-        collection.create()
-        collection.fetch(id=collection.id)
+        )
+        link_mapping = []
         for item in selection:
             asset = item.data(polymorphicItem.Object)
-            asset.linkTo(collection)
+            link_mapping.append([asset.relationMap, asset.id])
+
+        collection.createCollection(link_mapping)
 
     def getSelectedAsset(self):
         selection = self.selmod.selectedIndexes()
@@ -308,10 +287,9 @@ class assetListView(QListView):
                 self.editor = AssetEditor(self, index)
                 has_movie = hasattr(asset, 'duration') and asset.duration
                 if has_movie or getattr(asset, 'class') == config.MODEL:
-                    asset.stream_video_to(self.editor.updateSequence)
+                    asset.stream_video_to()
                 elif asset.type == 3: #config.COLLECTION:
-                    asset.related()
-                    for num, x in enumerate(asset.upstream):
+                    for num, x in enumerate(asset.upstream or []):
                         if num > 15:
                             break
                         linked_asset = x.data(polymorphicItem.Object)
@@ -348,15 +326,17 @@ class assetListView(QListView):
         self.model.mimeData([sender.index])
 
     def dragEnterEvent(self, event):
+        super(assetListView, self).dragEnterEvent(event)
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
-        else:
-            return super(assetListView, self).dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         super(assetListView, self).dragMoveEvent(event)
         index = self.indexAt(event.pos())
-        if event.mimeData().hasUrls() and index.isValid():
+        if not index.isValid() or index in self.selectedIndexes():
+            event.ignore()
+            return
+        elif event.mimeData().hasUrls():
             self.setFocus()
             event.acceptProposedAction()
 
@@ -418,17 +398,16 @@ class assetListView(QListView):
         and updates the items parent subcategory counts.
         """
         update_list = []
+        count_data = defaultdict(int)
+
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
             subcategory = asset.subcategory
             if isinstance(subcategory, list):
                 subcategory = subcategory[0]
-            elif subcategory:
-                subcategory.count = (subcategory.count - 1)
-                update_list.append(subcategory.data())
-                category = Library.categories.get(asset.category)
-                item = category.tree.findInTree(subcategory.id, variable='id')
-                category.tree.updateSubcategoryCounts(item, offset=-1)
+
+            if subcategory and asset.type != RelicTypes.COLLECTION:
+                count_data[subcategory.id] -= 1
 
             if not isinstance(asset, temp_asset):
                 asset.remove()
@@ -436,13 +415,28 @@ class assetListView(QListView):
             self.onDeleted.emit(index)
 
         # Update the subcategories with new counts
-        [x.update(fields=['count']) for x in update_list]
+        self.assetsDeleted.emit(count_data)
 
     def generatePreview(self, action):
+        msg = 'Regenerate previews from source file or ues existing preview?'
+        message_box = QMessageBox(QMessageBox.Question, 'Choice', msg,
+                QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel, self)
+        result = message_box.exec_()
+        if result == QMessageBox.Cancel:
+            return
+        elif result == QMessageBox.No:
+            for index in self.selectedIndexes():
+                asset = index.data(polymorphicItem.Object)
+                path = asset.network_path
+                if asset.path == '' or not path.parent.exists():
+                    continue
+                remakePreview(path)
+            return
+
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
             path = asset.network_path
-            if asset.path == '' or not path.parents(0).exists:
+            if asset.path == '' or not path.parent.exists():
                 continue
             path.checkSequence()
             if path.sequence_path:
@@ -457,7 +451,7 @@ class assetListView(QListView):
     def browseLocalAsset(self, action):
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
-            winpath = asset.network_path.parent.replace('/', '\\')
+            winpath = str(asset.network_path.parent).replace('/', '\\')
             cmd = 'explorer /select, "{}"'.format(winpath)
             subprocess.Popen(cmd)
     
@@ -802,7 +796,6 @@ class AssetEditor(BaseAssetEditor, AssetDelegateWidget):
             for i, item in enumerate(self.asset.upstream):
                 if item.icon and item.icon not in self.sequence:
                     self.sequence.append(item.icon)
-
 
         super(AssetEditor, self).mouseMoveEvent(event)
 

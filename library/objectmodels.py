@@ -3,15 +3,24 @@ import sys
 from sequencePath import sequencePath as Path
 
 from PySide6.QtGui import QStandardItem
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import Qt, QSettings, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
-from library.io.database import AssetDatabase
+from library.io.networking import RelicClientSession
+
 from library.config import RELIC_PREFS
 
-db = AssetDatabase(RELIC_PREFS.host)
+session = RelicClientSession(RelicClientSession.URI)
 
-RELATE_MAP = {
+class RelicTypes:
+    COMPONENT = 1
+    ASSET = 2
+    COLLECTION = 3
+    MOTION = 4
+    VARIANT = 5
+    REFERENCE = 6
+
+TABLE_MAP = {
     # Data Tables
     'relationships': 0,
     'alusers': 1,
@@ -27,9 +36,25 @@ RELATE_MAP = {
     'mayatools': 10,
     'nuketools': 11,
 }
- 
+
+RELATE_MAP = {
+    0: 'relationships',
+    1: 'alusers',
+    2: 'tags',
+    3: 'subcategory',
+    4: 'references',
+    5: 'modeling',
+    6: 'elements',
+    7: 'lighting',
+    8: 'shading',
+    9: 'software',
+    10: 'mayatools',
+    11: 'nuketools',
+}
+
 LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
 NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
+serializable_types = [str, int, tuple]
 
 class BaseFields(object):
     __slots__ = ()
@@ -48,6 +73,9 @@ class BaseFields(object):
                 byindex = kwargs.get(str(i))
                 attr = byindex if bykeword is None else bykeword
                 setattr(self, x, attr)
+
+    def __eq__(self, other):
+        return self.id == other
 
     def __iter__(self):
         for i, x in enumerate(self.__slots__):
@@ -70,17 +98,13 @@ class BaseFields(object):
 
         return '{}({})'.format(self.categoryName, args)
 
-    @property 
+    @property
     def categoryName(self):
-        return self.__class__.__name__
+        return self.__class__.__name__.lower()
 
     @property
     def relationMap(self):
-        return RELATE_MAP.get(self.categoryName)
-
-    def create(self):
-        data = {self.categoryName: self.export}
-        self.id = db.accessor.doRequestWithResult('createAsset', data)
+        return TABLE_MAP.get(self.categoryName)
 
     def update(self, fields=None):
         data = self.export
@@ -92,48 +116,29 @@ class BaseFields(object):
                 if not isinstance(data[x], tuple):
                     export_data[x] = (data[x],)
         update_data = {self.categoryName: export_data}
-        db.accessor.doRequest('updateAssets', update_data)
-
-    def nameExists(self):
-        rc = 'nameExists/{}/{}'.format(self.categoryName, self.name)
-        return db.accessor.doRequestWithResult(rc)
+        session.updateassets.execute(update_data)
 
     def remove(self):
         if isinstance(self.id, int):
             ids = (self.id, )
         else:
             ids = self.id
-        can_delete = True
+
         if hasattr(self, 'path'):
-            db.accessor.doRequestWithResult('deleteAsset/{}'.format(str(self.relativePath.parent)))
+            session.deleteassets.execute([str(self.relativePath.parent)])
 
-        rc = 'removeAssets/{}'.format(self.categoryName)
-        db.accessor.doRequestWithResult(rc, ids)
+        session.removeassets.execute({self.categoryName: ids})
+        
+    @staticmethod
+    def removeAll(relations):
+        session.removerelationships.execute(relations)
 
-    def fetch(self, id=False):
-        rc = 'fetchAsset/{}'.format(self.categoryName)
-        if id:
-            rc = 'getAssetById/{}'.format(self.categoryName)
-            result = db.accessor.doRequestWithResult(rc, [id])
-        else:
-            result = db.accessor.doRequestWithResult(rc, self.export)
 
-        for i, x in enumerate(self.__slots__):
-            try:
-                setattr(self, x, result[i])
-            except:
-                setattr(self, x, None)
-
-    def search(self, text):
-        rc = 'searchCategory/{}/{}'.format(self.categoryName, text)
-        results = db.accessor.doRequestWithResult(rc)
-        return results
-
-    def linkTo(self, asset):
+    def linkTo(self, downstream):
         relation = relationships(
             category_map=self.relationMap,
             category_id=self.id,
-            link=asset.links,
+            link=downstream.links,
         )
         relation.create()
 
@@ -143,84 +148,7 @@ class BaseFields(object):
             category_id=self.id,
             link=asset.links,
         )
-        relation.fetch()
-        relation.remove()
-    
-    def related(self, noassets=False):
-        rc = 'retrieveLinks/{}/{}'.format(self.links, int(noassets))
-        related = db.accessor.doRequestWithResult(rc)
-        self.upstream = []
-        if not related or isinstance(related, list):
-            return False
-        for category_name, value in related.items():
-            for index, name in enumerate(allCategories.__slots__):
-                if category_name == name:
-                    category_id = index 
-            asset_constructor = getCategoryConstructor(category_name)
-            metadata_results = []
-            for x in value:
-                asset_obj = asset_constructor(*x)
-                linked_asset = polymorphicItem(fields=asset_obj)
-                if hasattr(self, category_name):
-                    metadata_results.append(linked_asset)
-                else:
-                    linked_asset.path = Path(linked_asset.path)
-                    linked_asset.category = category_id
-                    category_obj = Library.categories.get(category_id)
-
-                    if category_obj:
-                        subcategory_link = relationships(link=linked_asset.links, category_map=3)
-                        subcategory_link.fetch()
-                        subcategory = category_obj.subcategory_by_id.get(subcategory_link.category_id)
-                        linked_asset.subcategory = subcategory
-
-                    self.upstream.append(linked_asset)
-
-            if metadata_results:
-                setattr(self, category_name, metadata_results)
-
-        return self.upstream
-
-    def moveToSubcategory(self, new_subcategory):
-        """ re-categorization of an asset
-        Moves this asset from it's current category to a new one.
-
-        Parameters
-        ----------
-        new_subcategory : subcategory
-            the destination subcategory
-        """
-
-        subcategory_link = relationships(link=self.links, category_map=3)
-        subcategory_link.fetch()
-        # Retrieve our view item from the global cache.
-        category_obj = Library.categories.get(self.category)
-        old_category = category_obj.subcategory_by_id.get(subcategory_link.category_id)
-
-        old = old_category.data(polymorphicItem.Object)
-        new = new_subcategory.data(polymorphicItem.Object)
-        if old == new:
-            return
-        stem = str(self.path).rsplit('/', 1)[-1]
-        folder = stem.split('.')[0]
-        # Tell the server to move/rename the on-disk files.
-        data = {
-            'source': self.categoryName + '/' + old.name + '/' + folder,
-            'destination': self.categoryName + '/' + new.name + '/' + folder
-        }
-        db.accessor.doRequestWithResult('moveAsset', data)
-
-        # Update the subcategory counts.
-        old.count -= 1
-        new.count += 1
-        old.update(fields=['count'])
-        new.update(fields=['count'])
-        # Update the relationship id to point to our new subcategory.
-        subcategory_link.category_id = new_subcategory.id
-        subcategory_link.update(fields=['category_id'])
-        # Update the asset path to point to the new subcategory.
-        self.path = new.name + '/' + stem
-        self.update(fields=['path'])
+        relationships.removeAll([relation.export])
 
     def getLabel(self, i):
         return self.__slots__[i]
@@ -244,11 +172,12 @@ class BaseFields(object):
         rc = 'retrieveIcon/{}'.format(icon_path)
         db.accessor.doStream(rc, self.id)
 
-    def stream_video_to(self, slot):
+    def stream_video_to(self, slot=None):
         video_path = self.relativePath.suffixed('_icon', ext='.mp4')
-        rc = 'retrieveVideo/{}/0/0'.format(video_path)
-        db.accessor.videoStreamData.connect(slot)
-        db.accessor.doStream(rc, self.id)
+        #rc = 'retrieveVideo/{}/0/0'.format(video_path)
+        #db.accessor.videoStreamData.connect(slot)
+        #db.accessor.doStream(rc, self.id)
+        session.videostream.execute(str(video_path))
 
     @property
     def export(self):
@@ -261,7 +190,6 @@ class BaseFields(object):
                 attr = str(attr)
 
             # Only allow json serializable data.
-            serializable_types = [str, int, tuple]
             is_serial = [type(attr) is t for t in serializable_types]
 
             if attr is not None and any(is_serial):
@@ -277,9 +205,29 @@ class BaseFields(object):
     def values(self):
         return [getattr(self, x) for x in self.__slots__]
 
+    @staticmethod
+    def recurseDependencies(asset):
+        """Recursively accesses an assets upstream dependencies.
+        """
+        if asset.upstream:
+            for upstream in asset.upstream:
+                if upstream.type != 5:
+                    yield from BaseFields.recurseDependencies(upstream)
+        yield asset
 
-class allCategories(object):
-    __slots__ = (
+    @staticmethod
+    def createCollection(self, link_mapping):
+        if self.type != 3: # collection type
+            return
+        data = {
+            self.categoryName: self.export,
+            'link_map': link_mapping 
+        }
+        session.createcollection.execute(data)
+
+
+class allCategories(QObject):
+    slots = (
         'references',
         'modeling',
         'elements',
@@ -289,129 +237,46 @@ class allCategories(object):
         'mayatools',
         'nuketools',
     )
-    slot_range = range(len(__slots__))
+    slot_range = range(len(slots))
 
     def __init__(self):
+        super(allCategories, self).__init__()
         for i in allCategories.slot_range:
-            setattr(self, self.__slots__[i], i)
+            setattr(self, self.slots[i], i)
 
     def __iter__(self):
         for i in allCategories.slot_range:
             yield self.get(i)
 
     def getLabel(self, i):
-        return self.__slots__[i]
+        return self.slots[i]
 
     def get(self, i):
-        return getattr(self, self.__slots__[i])
+        return getattr(self, self.slots[i])
 
     def set(self, i, data):
-        return setattr(self, self.__slots__[i], data)
-    
+        return setattr(self, self.slots[i], data)
+
     def fetch(self):
-        data = db.accessor.doRequestWithResult('getCategories')
         # fill empty categories
         for i in allCategories.slot_range:
             self.set(i, category(self.getLabel(i), i))
-    
-        # populate categories with subcategory data
-        for x in data:
-            subcat = subcategory(*x)
-            k = 0 if not subcat.category else subcat.category
-            subcat.count = 0 if subcat.count is None else subcat.count
-            assigned = self.get(k)
-            assigned.subcategory_by_id[subcat.id] = polymorphicItem(fields=subcat)
-            self.set(k, assigned)
+        session.getcategories.execute([])
 
 
-class Library(object):
+class Library(QObject):
 
     categories = allCategories()
     assets = []
+    assets_filtered = []
 
     def __init__(self):
-        self.assets_filtered = []
-        self.categories.fetch()
-
+        super(Library, self).__init__()
+        
     def validateCategories(self, categories):
         if not categories:
             categories = dict.fromkeys(self.categories.slot_range)
         return categories
-
-    def search(self, categories_to_search, filters=None, image=None):
-        if categories_to_search.get('keywords'):
-            search_results = db.accessor.doRequestWithResult('searchKeywords', categories_to_search)
-        else:
-            if not categories_to_search:
-                return False
-            search_results = db.accessor.doRequestWithResult('searchCategories', categories_to_search)
-            
-        self.assets = []
-        if not search_results:
-            return False
-        for category in search_results:
-            try:
-                category_int = int(category)
-            except:
-                continue
-
-            asset_constructor = getCategoryConstructor(category_int)
-
-            for data in search_results[category]:
-                if len(data) == 3:
-                    _id, subcategory_id, tag_ids = data
-                    asset = (category_int, _id, tag_ids, subcategory_id, asset_constructor)
-                    self.assets.append(asset)
-                else:
-                    subcategory_id, _ids = data
-                    tag_ids = []
-                    for x in _ids:
-                        asset = (category_int, x, tag_ids, subcategory_id, asset_constructor)
-                        self.assets.append(asset)
-
-        # Sort the assets by the total number of tag_ids (index 2)
-        self.assets = sorted(self.assets, key=lambda x: len(x[2]), reverse=True)
-        return True
-
-    def load(self, page, limit, categories, icons=True):
-        selected_subcategories = []
-        categories_to_search = self.validateCategories(categories).keys()
-        for x in categories:
-            if x not in ['keywords', 'exclude_type']:
-                selected_subcategories.extend(categories[x])
-
-        self.assets_filtered = []
-        search_data = []
-        for asset in self.assets: 
-            category, _id, tags, subcategory, asset_constructor = asset
-            if category in categories_to_search:
-                if selected_subcategories:
-                    if subcategory in selected_subcategories:
-                        search_data.append([category, _id])
-                        self.assets_filtered.append(asset)
-                else:
-                    search_data.append([category, _id])
-                    self.assets_filtered.append(asset)
-        offset = int(((page * limit) - limit)) if page else 0
-        search_data = search_data[offset:(offset+limit)]
-        filtered = self.assets_filtered[offset:(offset+limit)]
-        data = db.accessor.doRequest('retrieveAssets', search_data)
-
-        if data:
-            for i, x in enumerate(filtered):
-                category, _id, tags, subcategory, asset_constructor = x
-                asset_fields = data[i]
-                asset_fields.extend([tags, []])
-                asset = asset_constructor(*asset_fields)
-                asset.category = category
-                category_obj = self.categories.get(category)
-                if category_obj:
-                    subcategory = category_obj.subcategory_by_id.get(subcategory)
-                    asset.subcategory = subcategory
-
-                yield asset
-                #if icons and asset.path:
-                #    asset.fetchIcon()
 
 
 class category(object):
@@ -423,7 +288,6 @@ class category(object):
         self.subcategory_by_id = {}
         self.tree = None # QTreeView
         self.tab = None # TabWidget
-        #self.assets = []
 
 
 class subcategory(BaseFields):
@@ -437,8 +301,66 @@ class subcategory(BaseFields):
         'category',
         'link',
         'count',
+        'upstream', # This is not a modifiable database field.
     )
-    NAME, ID, CATEGORY, LINK, COUNT = range(5)
+    NAME, ID, CATEGORY, LINK, COUNT, UPSTREAM = range(6)
+
+    LINK_CALLBACK = None 
+
+    def createNew(self):
+        data = {self.categoryName: [self.export]}
+        session.createsubcategory.execute(data)
+
+    def relocate(self, old_parent=None, new_parent=None):
+        """Relocates the subcategory to a new parent or root level.
+
+        Parameters
+        ----------
+        old_parent : subcategory
+            source parent subcategory to update
+        new_parent : subcategory, optional
+            destination parent subcategory, by default None
+        """
+        data = {}
+        if old_parent:
+            data[old_parent.id] = -self.count
+
+        if new_parent:
+            data[new_parent.id] = self.count
+
+        self.update(fields=['link'])
+        session.updatesubcategorycounts.execute(data)
+    
+    def relink(self):
+        relation = relationships(
+            category_map=self.relationMap,
+            category_id=self.upstream,
+        )
+        session.linksubcategories.execute([relation.export])
+
+    def unlink(self):
+        relation = relationships(
+            category_map=self.relationMap,
+            category_id=self.upstream,
+            link=self.link,
+        )
+        relationships.removeAll([relation.export])
+        self.link = 0
+
+    #def reparentSubcategoryToRoot(self, current, old_parent):
+        # Set subcategory link to zero if making top level.
+
+    @staticmethod
+    def _onRelink(obj, link, old_parent=None, new_parent=None):
+        obj.link = link
+        obj.relocate(old_parent, new_parent)
+
+    @classmethod
+    def onRelink(cls, links):
+        if cls.LINK_CALLBACK:
+            for link in links:
+                cls.LINK_CALLBACK(link)
+        cls.LINK_CALLBACK = None
 
 
 class tags(BaseFields):
@@ -451,6 +373,12 @@ class tags(BaseFields):
         'links',
     )
 
+    def createNew(self, id_mapping):
+        data = {
+            self.categoryName: [self.export],
+            'id_map': id_mapping
+        }
+        session.createtag.execute(data)
 
 class alusers(BaseFields):
     """
@@ -465,6 +393,12 @@ class alusers(BaseFields):
         'links',
     )
 
+    def createNew(self, id_mapping):
+        data = {
+            self.categoryName: [self.export],
+            'id_map': id_mapping
+        }
+        session.createuser.execute(data)
 
 class relationships(BaseFields):
     """
@@ -479,28 +413,25 @@ class relationships(BaseFields):
     )
 
     def create(self):
-        self.link = db.accessor.doRequestWithResult(
-            'createRelationship',
-            [self.link, self.category_map, self.category_id]
-        )
+        relation = [self.relationMap, self.id, self.link]
+        session.createrelationships.execute([relation])
 
-    def remove(self):
-        if isinstance(self.id, int):
-            ids = (self.id, )
-        else:
-            ids = self.id
-        rc = 'removeRelationship/{}'.format(self.categoryName)
-        db.accessor.doRequestWithResult(rc, ids)
+    @staticmethod
+    def removeAll(relations):
+        session.removerelationships.execute(relations)
+
 
 class details:
     """
     Details / Info:
+        name (In BOLD)
         description
         type
         class
-        rating
         quality
+        rating
         resolution
+        filesize
 
     Structure:
         category + subcategory + path + name (combo of widgets)
@@ -510,14 +441,12 @@ class details:
         users
 
     System:
+        id
         datecreated
         datemodified
-        filesize
-        local
-        id
         filehash
+        local
         proxy
-
         icon
         video
     """
@@ -550,6 +479,8 @@ class relic_asset:
         'subcategory',
         'category',
         'upstream',
+        'downstream',
+        'traversed',
     ]
 
 class temp_asset(BaseFields):
@@ -682,13 +613,61 @@ class AttrDescriptor(object):
     def buildNodeAttr(cls, attr):
         setattr(cls, attr, AttrDescriptor(attr))
 
+OBJECT_MAP = {
+    0: references,
+    1: modeling,
+    2: elements,
+    3: lighting,
+    4: shading,
+    5: software,
+    6: mayatools,
+    7: nuketools,
+    'references': references,
+    'modeling': modeling,
+    'elements': elements,
+    'lighting': lighting,
+    'shading': shading,
+    'software': software,
+    'mayatools': mayatools,
+    'nuketools': nuketools,
+    'relationships': relationships,
+    'alusers': alusers,
+    'tags': tags,
+    'subcategory': subcategory,
+}
+
 def getCategoryConstructor(category):
-    if isinstance(category, int):
-        category_name = allCategories.__slots__[category]
-        constructor = globals()[category_name]
-    elif isinstance(category, str):
-        try:
-            constructor = globals()[category]
-        except:
-            constructor = temp_asset
+    constructor = OBJECT_MAP.get(category, temp_asset)
     return constructor
+
+def appendCreate(asset, name, new):
+    value = getattr(asset, name)
+
+    if isinstance(value, list):
+        value.append(new)
+        setattr(asset, name, value)
+    else:
+        setattr(asset, name, [new])
+
+def attachSubcategory(asset, category_obj):
+    for _subcategory in category_obj.subcategory_by_id.values():
+        if str(asset.path).startswith(_subcategory.name):
+            asset.subcategory = _subcategory
+
+def attachLinkToAsset(asset, link_item):
+    link_item_asset = link_item.data(polymorphicItem.Object)
+    category_name = link_item_asset.__class__.__name__
+    if isinstance(link_item_asset, subcategory):
+        asset.subcategory = link_item
+    elif hasattr(asset, category_name):
+        appendCreate(asset, category_name, link_item)
+    else:
+        try:
+            link_item_asset.path = Path(link_item_asset.path)
+        except:pass
+        category_id = allCategories.slots.index(category_name)
+        link_item_asset.category = category_id
+        category_obj = Library.categories.get(category_id)
+        attachSubcategory(link_item_asset, category_obj)
+        appendCreate(asset, 'upstream', link_item)
+        appendCreate(link_item, 'downstream', asset)

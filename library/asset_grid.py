@@ -27,7 +27,7 @@ class AssetGridView(QTableWidget):
             self.setHorizontalHeaderLabels(list(asset.__slots__))
 
             for idx, label, value in asset:
-                if label in ['datecreated', 'datemodified']:
+                if label in ['datecreated', 'datemodified'] and isinstance(value, datetime):
                     date = datetime.strptime(value,'%Y-%m-%dT%H:%M:%S.%f')
                     value = date.strftime("%m/%d/%y %H:%M")
                 else:

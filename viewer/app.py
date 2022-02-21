@@ -782,7 +782,7 @@ class PlayerAppWindow(QMainWindow):
                 clip.annotations.pop(i)
         folder = clip.annotation_folder
         remove_path = clip.annotated(frame)
-        if remove_path.exists:
+        if remove_path.exists():
             os.remove(str(remove_path))
         self.timeline.updateNodeGlyphs()
         self.viewport.update()
@@ -795,7 +795,7 @@ class PlayerAppWindow(QMainWindow):
         clip.annotations.append(frame)
         folder = clip.annotation_folder
         save_path = clip.annotated(frame)
-        if not folder.exists:
+        if not folder.exists():
             folder.path.mkdir()
         image.save(str(save_path))
         self.timeline.updateNodeGlyphs()

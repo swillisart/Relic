@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>904</width>
-    <height>1452</height>
+    <width>1106</width>
+    <height>656</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2135,7 +2135,7 @@ QPushButton:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>904</width>
+     <width>1106</width>
      <height>22</height>
     </rect>
    </property>
@@ -2219,8 +2219,8 @@ QPushButton:hover {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>54</width>
-          <height>279</height>
+          <width>256</width>
+          <height>297</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryLayout">
@@ -2837,7 +2837,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>279</height>
+          <height>297</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">
@@ -2883,24 +2883,15 @@ QFrame:hover {
     <number>8</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_5">
-    <layout class="QVBoxLayout" name="verticalLayout_7">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="leftMargin">
-      <number>6</number>
-     </property>
-     <property name="topMargin">
-      <number>3</number>
-     </property>
-     <property name="rightMargin">
-      <number>6</number>
-     </property>
-     <property name="bottomMargin">
-      <number>3</number>
-     </property>
+    <layout class="QVBoxLayout" name="verticalLayout_8">
      <item>
       <widget class="QFrame" name="descriptionDockTitle">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="styleSheet">
         <string notr="true">QFrame#descriptionDockTitle {
     background-color: rgb(57, 57, 57);
@@ -3160,33 +3151,61 @@ QPushButton:hover {
       </widget>
      </item>
      <item>
-      <widget class="descriptionTextBrowser" name="descriptionTextBrowser">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+      <widget class="QSplitter" name="splitter">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
        </property>
-       <property name="minimumSize">
-        <size>
-         <width>795</width>
-         <height>942</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QTextBrowser {padding: 6px;}</string>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="openLinks">
-        <bool>false</bool>
-       </property>
+       <widget class="QFrame" name="descriptionEditorFrame">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <widget class="QDialogButtonBox" name="descriptionButtonBox">
+           <property name="standardButtons">
+            <set>QDialogButtonBox::Help|QDialogButtonBox::Reset|QDialogButtonBox::Save</set>
+           </property>
+           <property name="centerButtons">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="DescriptionTextEdit" name="descriptionTextEdit">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="placeholderText">
+            <string>Add description text (Markdown) here...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="descriptionTextBrowser" name="descriptionTextBrowser">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QTextBrowser {padding: 6px;}</string>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <property name="openLinks">
+         <bool>false</bool>
+        </property>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -3268,6 +3287,11 @@ QPushButton:hover {
   <customwidget>
    <class>descriptionTextBrowser</class>
    <extends>QTextBrowser</extends>
+   <header>library.widgets.description.h</header>
+  </customwidget>
+  <customwidget>
+   <class>DescriptionTextEdit</class>
+   <extends>QTextEdit</extends>
    <header>library.widgets.description.h</header>
   </customwidget>
  </customwidgets>

@@ -213,7 +213,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             mtime = datetime.fromtimestamp(infile.stat().st_mtime)
             if (datetime.now() - mtime).days >= 90:
                 in_path = Path(str(infile))
-                archive = in_path.parents(0) / 'old' / in_path.stem
+                archive = in_path.parent / 'old' / in_path.stem
                 in_path.moveTo(archive)
                 continue
             if infile.suffix == PNG:
@@ -280,7 +280,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     @staticmethod
     def renameFile(path, name):
         old = str(path)
-        new = str(path.parents(0) / (name + path.ext))
+        new = str(path.parent / (name + path.ext))
         os.rename(old, new)
         return new
 
@@ -296,7 +296,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             item.setText(text)
             new_path = self.renameFile(path, text)
             item.setData(new_path, Qt.UserRole)
-            preview_path = path.parents(0) / 'previews' / (path.name + '.jpg')
+            preview_path = path.parent / 'previews' / (path.name + '.jpg')
             self.renameFile(preview_path, text)
 
     @Slot()
@@ -319,7 +319,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         message.addButton('No', QMessageBox.RejectRole)
 
         if message.exec() == QMessageBox.AcceptRole:
-            preview_path = path.parents(0) / 'previews' / (path.name + '.jpg')
+            preview_path = path.parent / 'previews' / (path.name + '.jpg')
             item.model().removeRow(item.index().row())
             if path.ext in ['.webp', '.gif']:
                 premov = MOVIES.pop(str(path))
@@ -336,7 +336,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     def appendToModel(self, in_path, model, sort=False):
         path = Path(in_path)
-        bg = QPixmap(str(path.parents(0) / 'previews' / (path.name + '.jpg')))
+        bg = QPixmap(str(path.parent / 'previews' / (path.name + '.jpg')))
         
         set_movie = False
         if in_path.endswith('.mp4'):
@@ -380,7 +380,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         for index in self.videosListView.selectedIndexes():
             path = Path(index.data(role=Qt.UserRole))
             out_path = str(path).replace('.mp4', '.gif')
-            gif_filter = path.parents(0) / '{}_palette.png'.format(path.name)
+            gif_filter = path.parent / '{}_palette.png'.format(path.name)
             cmd1 = [
                 'ffmpeg',
                 '-loglevel', 'error',
@@ -394,7 +394,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 '-i', str(path),
                 '-i', str(gif_filter),
                 '-filter_complex', 'fps=30,paletteuse',
-                '{}/{}.gif'.format(path.parents(0), path.name),
+                '{}/{}.gif'.format(path.parent, path.name),
             ]
             subprocess.call(cmd1)#, creationflags=NO_WINDOW)
             subprocess.call(cmd2)#, creationflags=NO_WINDOW)
@@ -464,8 +464,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.w = rect.width()
         self.h = rect.height()
         self.out_video = newCaptureFile(out_format='mp4')
-        self.out_audio = self.out_video.parents(0) / (self.out_video.name + '.wav')
-        out_icon = self.out_video.parents(0) / 'previews' / (self.out_video.name + '_.jpg')
+        self.out_audio = self.out_video.parent / (self.out_video.name + '.wav')
+        out_icon = self.out_video.parent / 'previews' / (self.out_video.name + '_.jpg')
         icon_pixmap = pixmap.scaled(QSize(96, 96), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         icon_pixmap.save(str(out_icon))
         self.audio_recorder = AudioRecord(self.out_audio)
@@ -513,7 +513,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         path = newCaptureFile()
         pixmap.save(str(path))
         icon_pixmap = pixmap.scaled(QSize(96, 96), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        out_icon = path.parents(0) / 'previews' / (path.name + '.jpg')
+        out_icon = path.parent / 'previews' / (path.name + '.jpg')
         icon_pixmap.save(str(out_icon))
         self.imageToClipboard(pixmap.toImage())
         item = self.appendToModel(str(path), self.snap_model, sort=True)

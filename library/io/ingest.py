@@ -7,7 +7,7 @@ import numpy as np
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
 from library.config import (DCC_EXT, MOVIE_EXT, RELIC_PREFS, TOOLS_EXT, RAW_EXT,
-                            getAssetSourceLocation, log, logFunction)
+                            getAssetSourceLocation, log, logFunction, INGEST_PATH)
 from library.objectmodels import BaseFields, relic_asset, temp_asset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QMutex, QMutexLocker, QObject, QPoint,
@@ -27,8 +27,6 @@ from imagine import hdr, libraw
 from imagine.colorchecker_detection import autoExpose
 from imagine.exif import EXIFTOOL
 
-
-INGEST_PATH = Path(os.getenv('userprofile')) / '.relic/ingest'
 
 CREATE_NO_WINDOW = 0x08000000
 
@@ -66,6 +64,31 @@ def getRawInfo(fpath):
     ]
     result = EXIFTOOL.getFields(str(fpath), fields, {})
     return result
+
+def remakePreview(path):
+    """Makes Icon preview from a path using OpenImageIO image buffers"""
+    icon_path = path.suffixed('_icon', ext='.jpg')
+    buf = oiio.ImageBuf(str(icon_path))
+    spec = buf.spec()
+
+    size = ImageDimensions(spec.width, spec.height, channels=3)
+    size.makeDivisble() # ensure divisible width for jpeg 16x16 blocks
+
+    icon_spec = oiio.ImageSpec(TSIZE.w, TSIZE.h, 3, oiio.UINT8)
+    icon_spec['compression'] = 'jpeg:50'
+    icon_buf = oiio.ImageBuf(icon_spec)
+
+    oiio.ImageBufAlgo.fit(icon_buf, buf, filtername='cubic', exact=True)
+
+    # Composite icon image over constant grey
+    bg = oiio.ImageBuf(icon_buf.spec())
+    oiio.ImageBufAlgo.fill(bg, (0.247, 0.247, 0.247, 1.0))
+    comp = oiio.ImageBufAlgo.over(icon_buf, bg)
+    
+    # Write to disk
+    icon_buf.write(str(icon_path))
+    return icon_path
+
 
 def generatePreviews(img_buf, path):
     """Makes Proxy & Icon previews from an OpenImageIO image buffer"""
@@ -463,7 +486,7 @@ def applyImageModifications(img_path, temp_asset):
         temporary asset object with custom processing fields for this function.
 
     """
-    if not img_path.exists:
+    if not img_path.exists():
         temp_asset.path.copyTo(img_path)
         temp_asset.path = img_path
 
@@ -492,8 +515,8 @@ def applyImageModifications(img_path, temp_asset):
         temp_asset.denoise = False
 
     # Crop using annotation BoundingBox
-    annotated = img_path.parents(0) / 'annotations' / (img_path.name + '_proxy.1.png')
-    if annotated.exists:
+    annotated = img_path.parent / 'annotations' / (img_path.name + '_proxy.1.png')
+    if annotated.exists():
         img_buf = hdr.annotationCrop(img_buf, str(annotated))
 
     # Set the meta attributes and write the file.
@@ -571,7 +594,7 @@ class IngestionThread(QThread):
         super(IngestionThread, self).__init__(*args, **kwargs)
         self.mutex = QMutex()
         self.condition = QWaitCondition()
-        self.ingest_path = Path(os.getenv('userprofile')) / '.relic/ingest'
+        self.ingest_path = INGEST_PATH
         self.stopped = False
         self.queue = []
 
@@ -618,7 +641,7 @@ class IngestionThread(QThread):
                 files_map = {}
 
                 temp_path = ingest_path / (temp_filename + in_path.ext)
-                if temp_path.exists:
+                if temp_path.exists():
                     files_map[temp_path] = out_path
                 else:
                     files_map[in_path] = out_path
@@ -627,7 +650,7 @@ class IngestionThread(QThread):
                     for extra in extra_files:
                         subfolder = getAssetSourceLocation(extra)
                         filename = Path(extra).stem
-                        new_path = out_path.parents(0) / subfolder / filename
+                        new_path = out_path.parent / subfolder / filename
 
                         files_map[Path(extra)] = new_path
 
@@ -640,12 +663,12 @@ class IngestionThread(QThread):
                     for pair in formats:
                         suffix, ext = pair
                         src = in_path.suffixed(suffix, ext)
-                        if src.exists:
+                        if src.exists():
                             dst = out_path.suffixed(suffix, ext)
                             files_map[src] = dst
                 elif in_path.ext in TOOLS_EXT:
                     in_icon = in_path.suffixed('_icon', ext='.jpg')
-                    if in_icon.exists:
+                    if in_icon.exists():
                         out_icon = out_path.suffixed('_icon', ext='.jpg')
                         files_map[in_icon] = out_icon
                 elif in_path.sequence_path or in_path.ext in MOVIE_EXT:
@@ -685,8 +708,8 @@ class IngestionThread(QThread):
                         src.moveTo(dst)
 
                 # Calculate the final hash and size of the asset.
-                item.filehash = out_path.parents(0).hash
-                item.filesize = out_path.parents(0).size
+                item.filehash = out_path.parent.hash
+                item.filesize = out_path.parent.size
 
                 self.queue.pop(0)
                 self.itemDone.emit(item)

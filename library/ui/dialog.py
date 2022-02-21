@@ -16,21 +16,22 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCheckBox,
-    QDockWidget, QFrame, QGridLayout, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QMenu,
-    QMenuBar, QPushButton, QRadioButton, QScrollArea,
-    QSizePolicy, QSlider, QSpacerItem, QSpinBox,
-    QStatusBar, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractButton, QAbstractSpinBox, QApplication, QButtonGroup,
+    QCheckBox, QDialogButtonBox, QDockWidget, QFrame,
+    QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QMainWindow, QMenu, QMenuBar, QPushButton,
+    QRadioButton, QScrollArea, QSizePolicy, QSlider,
+    QSpacerItem, QSpinBox, QSplitter, QStatusBar,
+    QToolButton, QVBoxLayout, QWidget)
 
-from library.widgets.description import descriptionTextBrowser
+from library.widgets.description import (DescriptionTextEdit, descriptionTextBrowser)
 import resources_rc
 
 class Ui_RelicMainWindow(object):
     def setupUi(self, RelicMainWindow):
         if not RelicMainWindow.objectName():
             RelicMainWindow.setObjectName(u"RelicMainWindow")
-        RelicMainWindow.resize(904, 1452)
+        RelicMainWindow.resize(1106, 656)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -1353,7 +1354,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 904, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1106, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -1383,7 +1384,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 54, 279))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 256, 297))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1598,7 +1599,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 279))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 297))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)
@@ -1618,13 +1619,17 @@ class Ui_RelicMainWindow(object):
         self.descriptionDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidgetContents_5 = QWidget()
         self.dockWidgetContents_5.setObjectName(u"dockWidgetContents_5")
-        self.verticalLayout_7 = QVBoxLayout(self.dockWidgetContents_5)
-        self.verticalLayout_7.setSpacing(0)
-        self.verticalLayout_7.setContentsMargins(9, 9, 9, 9)
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_7.setContentsMargins(6, 3, 6, 3)
+        self.verticalLayout_8 = QVBoxLayout(self.dockWidgetContents_5)
+        self.verticalLayout_8.setSpacing(6)
+        self.verticalLayout_8.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
         self.descriptionDockTitle = QFrame(self.dockWidgetContents_5)
         self.descriptionDockTitle.setObjectName(u"descriptionDockTitle")
+        sizePolicy7 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy7.setHorizontalStretch(0)
+        sizePolicy7.setVerticalStretch(0)
+        sizePolicy7.setHeightForWidth(self.descriptionDockTitle.sizePolicy().hasHeightForWidth())
+        self.descriptionDockTitle.setSizePolicy(sizePolicy7)
         self.descriptionDockTitle.setStyleSheet(u"QFrame#descriptionDockTitle {\n"
 "    background-color: rgb(57, 57, 57);\n"
 "    border: 2px solid rgb(57,57,57);\n"
@@ -1748,19 +1753,45 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_17.addWidget(self.descriptionCloseButton)
 
 
-        self.verticalLayout_7.addWidget(self.descriptionDockTitle)
+        self.verticalLayout_8.addWidget(self.descriptionDockTitle)
 
-        self.descriptionTextBrowser = descriptionTextBrowser(self.dockWidgetContents_5)
+        self.splitter = QSplitter(self.dockWidgetContents_5)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Horizontal)
+        self.descriptionEditorFrame = QFrame(self.splitter)
+        self.descriptionEditorFrame.setObjectName(u"descriptionEditorFrame")
+        self.descriptionEditorFrame.setFrameShape(QFrame.StyledPanel)
+        self.descriptionEditorFrame.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_7 = QVBoxLayout(self.descriptionEditorFrame)
+        self.verticalLayout_7.setSpacing(6)
+        self.verticalLayout_7.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.descriptionButtonBox = QDialogButtonBox(self.descriptionEditorFrame)
+        self.descriptionButtonBox.setObjectName(u"descriptionButtonBox")
+        self.descriptionButtonBox.setStandardButtons(QDialogButtonBox.Help|QDialogButtonBox.Reset|QDialogButtonBox.Save)
+        self.descriptionButtonBox.setCenterButtons(False)
+
+        self.verticalLayout_7.addWidget(self.descriptionButtonBox)
+
+        self.descriptionTextEdit = DescriptionTextEdit(self.descriptionEditorFrame)
+        self.descriptionTextEdit.setObjectName(u"descriptionTextEdit")
+        font6 = QFont()
+        font6.setPointSize(10)
+        self.descriptionTextEdit.setFont(font6)
+
+        self.verticalLayout_7.addWidget(self.descriptionTextEdit)
+
+        self.splitter.addWidget(self.descriptionEditorFrame)
+        self.descriptionTextBrowser = descriptionTextBrowser(self.splitter)
         self.descriptionTextBrowser.setObjectName(u"descriptionTextBrowser")
-        sizePolicy2.setHeightForWidth(self.descriptionTextBrowser.sizePolicy().hasHeightForWidth())
-        self.descriptionTextBrowser.setSizePolicy(sizePolicy2)
-        self.descriptionTextBrowser.setMinimumSize(QSize(795, 942))
-        self.descriptionTextBrowser.setFont(font2)
+        self.descriptionTextBrowser.setFont(font6)
         self.descriptionTextBrowser.setStyleSheet(u"QTextBrowser {padding: 6px;}")
-        self.descriptionTextBrowser.setFrameShape(QFrame.NoFrame)
+        self.descriptionTextBrowser.setFrameShape(QFrame.Box)
+        self.descriptionTextBrowser.setFrameShadow(QFrame.Raised)
         self.descriptionTextBrowser.setOpenLinks(False)
+        self.splitter.addWidget(self.descriptionTextBrowser)
 
-        self.verticalLayout_7.addWidget(self.descriptionTextBrowser)
+        self.verticalLayout_8.addWidget(self.splitter)
 
         self.descriptionDock.setWidget(self.dockWidgetContents_5)
         RelicMainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.descriptionDock)
@@ -1861,5 +1892,6 @@ class Ui_RelicMainWindow(object):
         self.descriptionFilterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Find...", None))
         self.foundResultsLabel.setText(QCoreApplication.translate("RelicMainWindow", u"1 / 2", None))
         self.descriptionCloseButton.setText("")
+        self.descriptionTextEdit.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Add description text (Markdown) here...", None))
     # retranslateUi
 

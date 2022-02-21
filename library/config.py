@@ -63,8 +63,7 @@ def peakPreview(path):
         path = path.suffixed('_proxy', '.mp4')
     else:
         path = path.suffixed('_proxy', '.jpg')
-
-    if not path.exists:
+    if not path.exists():
         return False
     peakLoad(path)
     return True
@@ -82,8 +81,14 @@ class RelicPreferences(Preferences):
     }
 
     options = {
-        'host': ['http://localhost:8000/', 'https://yoursite.shotgunstudio.com/api/v1/'],
+        'host': ['ws://localhost:8000/session', 'https://yoursite.shotgunstudio.com/api/v1/'],
     }
+
+    def __getattr__(self, name):
+        result = super(RelicPreferences, self).__getattr__(name)
+        if result is None:
+            result = RelicPreferences.defaults.get(name)
+        return result
 
 RELIC_PREFS = RelicPreferences('Relic')
 

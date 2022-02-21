@@ -168,7 +168,7 @@ class BaseClip(object):
 
     @property
     def annotation_folder(self):
-        return self.path.parents(0) / 'annotations'
+        return self.path.parent / 'annotations'
 
     def annotated(self, frame):
         folder = self.annotation_folder
@@ -190,7 +190,7 @@ class BaseClip(object):
     def getImageAnnotations(self):
         self.annotations.clear()
         folder = self.annotation_folder
-        if not folder.exists:
+        if not folder.exists():
             return
         add_file = partial(
             self._validAnnotation,
@@ -252,11 +252,9 @@ class SeqClip(BaseClip):
             self.setBlankImage()
 
     def loadFile(self, file_path):
-        frames = sorted(glob.glob(file_path.sequence_path))
-        self.first = int(re.search(file_path.SEQUENCE_REGEX, frames[0]).group(1))
-        self.last = (self.first - 1) + len(frames)
-        self.setImageGeometry(frames[0])
-
+        self.first, self.last = file_path.getFrameRange()
+        file_path.padSequence(self.first)
+        self.setImageGeometry(str(file_path.padded_sequence_path))
 
 #class GeoClip(BaseClip):
 # TODO: Geometry loading
@@ -482,7 +480,8 @@ class timelineGLView(InteractiveGLView):
     def addFileAsClip(self, path, offset, sequence_index):
         # Validate path
         if isinstance(path, str):
-            path = Path(path, checksequence=True)
+            path = Path(path)
+            path.checkSequence()
         else:
             path.checkSequence()
 

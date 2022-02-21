@@ -179,7 +179,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
 
     newItem = Signal(str)
     renameItem = Signal(str)
-    linkItem = Signal(object)
+    linkItem = Signal(SimpleAsset)
 
     def __init__(self, *args, **kwargs):
         super(ListViewFocus, self).__init__(*args, **kwargs)
@@ -314,6 +314,8 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         return QSize(275, 250)
 
     def show(self):
+        self.itemModel.clear()
+        self.searchBox.clear()
         pos = QCursor.pos()
         x = pos.x() - (self.sizeHint().width() / 2)
         y = pos.y()
@@ -331,6 +333,7 @@ class ListViewFiltered(ListViewFocus):
 
 class AssetNameListView(ListViewFocus):
 
+
     def __init__(self, *args, **kwargs):
         super(AssetNameListView, self).__init__(*args, **kwargs)
         self.searchBox.removeEventFilter(self.focus_filter)
@@ -344,10 +347,17 @@ class AssetNameListView(ListViewFocus):
 
     @Slot()
     def onViewReturn(self):
-        super(AssetNameListView, self).onViewReturn()
-        self.searchBox.clear()
-        self.show()
+        try:
+            index = self.listView.selectedIndexes()[0]
+        except Exception:
+            index = self.proxyModel.index(0, 0)
 
+        if index.data():
+            asset = index.data(polymorphicItem.Object)
+            self.linkItem.emit(asset)
+        else:
+            self.newItem.emit(str(self.searchBox.text()))
+        self.searchBox.clear()
 
 class FocusListView(QListView):
 

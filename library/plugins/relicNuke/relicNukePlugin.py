@@ -11,11 +11,8 @@ import nukescripts
 # -- Third-party --
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-from PySide2.QtOpenGL import *
 from PySide2.QtWidgets import *
-from OpenGL.GL import (GL_FRONT, GL_PACK_ALIGNMENT, GL_UNSIGNED_BYTE,
-                       glPixelStorei, glReadBuffer, glReadPixels,
-                       GL_RGB, GL_RGBA)
+from PySide2.QtOpenGL import QGLWidget
 
 # -- First-party --
 from sequencePath import sequencePath as Path
@@ -52,12 +49,17 @@ class RelicPanel(asset_views.RelicSceneForm):
                 for fields in sorted_values:
                     asset = constructor(**fields)
                     added = self.group_widget.addAsset(asset)
+                    app_drop = partial(assetDropAction, asset)
                     if added:
-                        app_drop = partial(assetDropAction, asset)
                         icon_update = partial(asset_views.updateIcon, asset)
                         callbacks = [icon_update, app_drop]
                         asset.setDownloadCompletionCallbacks(callbacks)
                         asset.download()
+                    else:
+                        msg = 'Asset {} already exists. Do you want to add it again?'.format(asset.name)
+                        yes = nuke.ask(msg)
+                        if yes:
+                            self.drop_callback = QTimer.singleShot(10, app_drop)
             self.group_widget.updateGroups()
             self.update()
             return True
@@ -125,11 +127,17 @@ def addRelicAttributes(nodes, asset):
     return nodes
 
 def processUnresolvedAssets(asset):
-    already_exists = False
     nukescripts.clear_selection_recursive()
     for node in nuke.allNodes(recurseGroups=True):
-        if node.knob('RELIC_hash') and node['RELIC_hash'].value() == asset.filehash:
-            already_exists = True
+        try:
+            hash_knob = node.knob('RELIC_hash')
+        except:
+            hash_knob = False
+
+        if hash_knob:
+            if hash_knob.getValue() != asset.filehash:
+                continue
+
             if node.Class() != 'Group' and node.knob('file'):
                 node['file'].setValue(str(asset.local_path))
                 continue
@@ -152,7 +160,6 @@ def processUnresolvedAssets(asset):
             b.end()
             nuke.delete(a)
 
-    return already_exists
 
 def processUnresolvedFiles(asset_path):
     for node in nuke.allNodes(recurseGroups=True):
@@ -162,9 +169,9 @@ def processUnresolvedFiles(asset_path):
 def assetDropAction(asset):
     asset_path = asset.local_path
     # check for nodes of this type already in the scene.
-    already_exists = processUnresolvedAssets(asset)
-    if already_exists:
-        return
+
+    processUnresolvedAssets(asset)
+
     if asset_path.ext == '.nk':
         nuke.nodePaste(str(asset_path))
         selection = nuke.selectedNodes()
@@ -195,6 +202,8 @@ def makeFileRead(asset_path):
         c_read['proxy'].fromUserText(str(proxy_path))
         proxy_last = int(c_read['last'].value())
         first, last = asset_path.getRange()
+        print(first, last)
+        print('proxy', proxy_last)
         c_read['frame_mode'].setValue('expression')
         c_read['frame'].setValue(FRAME_EXPR.format(start=first))
         c_read['first'].setExpression(FIRST_EXPR.format(start=first))
@@ -247,7 +256,7 @@ def collectFilePath(node):
     if not node_file:
         return None
     file_path = Path(node_file)
-    if not file_path.parents(0).exists:
+    if not file_path.parent.exists():
         return None
 
     subfolder = config.getAssetSourceLocation(str(file_path))
@@ -276,9 +285,12 @@ def exportSelection(asset_type=None):
     if len(selection) >= 2:
         asset.type = 3 # Collection
     elif selection[0].Class() == 'Group':
-        asset.type = 1 # Component
+        asset.type = 2 # Asset
     elif selection[0].Class() == 'Read':
         asset.type = 5 # Variant
+    else:
+        asset.type = 1 # Component
+
     if asset_type: # Overrride the type
         asset.type = asset_type
     software_tag_name = 'nuke' + re.sub(config.SOFTWARE_REGEX, '', nuke.NUKE_VERSION_STRING)
@@ -288,7 +300,7 @@ def exportSelection(asset_type=None):
     setNodeAssetInfo(asset)
     dependent_files, dependent_assets = getSelectionDependencies(selection)
     asset.dependencies = list(dependent_files)
-    asset.links = [x for x in dependent_assets.values()] # unpack our unique asset links 
+    asset.links = [x for x in dependent_assets.values()] # unpack our unique asset links
 
     LOG.debug('Capturing snapshot of nodegraph')
     captureViewport(asset.path.suffixed('_icon', ext='.jpg'))
@@ -321,7 +333,7 @@ def setNodeAssetInfo(asset):
     asset.nodecount = count
 
 def alembicPatch(node):
-    sceneView = node['scene_view'] 
+    sceneView = node['scene_view']
     # get a list of all nodes stored in the abc file
     allItems = sceneView.getAllItems()
     # import all items into the ReadGeo node
@@ -334,9 +346,9 @@ def applyRepath(node, asset_path):
     if not file_path.startswith('source_'):
         return
 
-    repath = asset_path.parents(0) / file_path
+    repath = asset_path.parent / file_path
 
-    if repath.parents(0).exists:
+    if repath.parent.exists():
         node['file'].setValue(str(repath))
         if str(repath).endswith('.abc'):
             try:
@@ -345,7 +357,11 @@ def applyRepath(node, asset_path):
 
 
 def captureViewport(save_path):
+    from OpenGL.GL import (GL_FRONT, GL_PACK_ALIGNMENT, GL_UNSIGNED_BYTE,
+                        glPixelStorei, glReadBuffer, glReadPixels,
+                        GL_RGB, GL_RGBA)
     mainWindow, panel = getMainWindows()
+
     try:
         glwidget = panel.children()[1]
     except:
@@ -374,7 +390,7 @@ def captureViewport(save_path):
 
 
 def setNukeZeroMarginsWidget(widget_object):
-    parentApp = QApplication.allWidgets()    
+    parentApp = QApplication.allWidgets()
     for parent in parentApp:
         for child in parent.children():
             if widget_object.__class__ != child.__class__:
@@ -389,15 +405,14 @@ def setNukeZeroMarginsWidget(widget_object):
                     tinychild.setContentsMargins(0, 0, 0, 0)
 
 
-
 def main():
     pane = nuke.getPaneFor('Properties.1')
     panel = nukescripts.panels.registerWidgetAsPanel(
-                widget='relicNukePlugin.RelicPanel',  
+                widget='relicNukePlugin.RelicPanel',
                 name=RelicPanel.TITLE,
                 id=RelicPanel.ID,
                 create=True)
-    
+
     panel.addToPane(pane)
     #if not panel.customKnob.getObject():
     #    panel.customKnob.makeUI()
@@ -407,7 +422,7 @@ def main():
     relic_menu = menu.addMenu('Relic')
     relic_menu.addCommand('Export Asset', 'relicNukePlugin.exportSelection()')
     relic_menu.addCommand('Export Variation', 'relicNukePlugin.exportSelection(5)')
-    relic_menu.addSeparator() 
+    relic_menu.addSeparator()
 
 if __name__== '__main__':
     main()

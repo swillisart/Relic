@@ -4,11 +4,10 @@ from PySide6.QtCore import QThreadPool, Signal, Slot, QRect, Qt, QSize, QPoint, 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QVBoxLayout, QLayout, QSizePolicy, QWidget
 
-from library.objectmodels import db
 from library.widgets.metadataView import typeWidget
 from library.widgets.assets import assetItemModel, assetListView, polymorphicItem
 from library.ui.expandableTabs import Ui_ExpandableTabs
-from library.io.database import LocalThumbnail
+from library.io.util import LocalThumbnail
 
 class assetTypeFilter(QSortFilterProxyModel):
     def __init__(self, attr, parent=None):
@@ -19,6 +18,8 @@ class assetTypeFilter(QSortFilterProxyModel):
     def filterAcceptsRow(self, sourceRow, sourceParent):
         idx = self.sourceModel().index(sourceRow, 0, sourceParent)
         asset = idx.data(polymorphicItem.Object)
+        if not asset:
+            return False
         # Filter asset types
         if idx.isValid() and asset.type == self.attr:
             if self.text == '' or self.text.lower() in asset.name.lower():
@@ -29,21 +30,6 @@ class assetTypeFilter(QSortFilterProxyModel):
         else:
             return False
 
-"""
-class typeExpander(object):
-
-    def setContentAreaVisible(self, state):
-        arrow_type = Qt.DownArrow if state else Qt.LeftArrow
-        self.labelB.setArrowType(arrow_type)
-        if state:
-            self.setMaximumSize(99999, 99999)
-            self.setMinimumSize(0, 0)
-        else:
-            self.height_store = self.size().height()
-            self.setFixedHeight(26)
-        self.areaContent.setVisible(state)
-        self.collapseExpand.emit(state)
-"""
 
 class ExpandableTab(Ui_ExpandableTabs, QWidget):
 

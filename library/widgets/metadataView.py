@@ -1,5 +1,6 @@
 import datetime
 import time
+from functools import partial
 
 import numpy as np
 from PySide6.QtCore import QObject, QRect, QSignalBlocker, QSize, Signal, Slot
@@ -12,8 +13,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFrame,
                                QTextBrowser, QWidget)
 
 from library.config import RELIC_PREFS
-from library.objectmodels import (allCategories, alusers, polymorphicItem,
-                                  relationships, subcategory, tags)
+from library.objectmodels import (session, allCategories, alusers, polymorphicItem,
+                                  relationships, subcategory, tags, attachLinkToAsset)
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
 
 from sequencePath import sequencePath as Path
@@ -21,8 +22,7 @@ from sequencePath import sequencePath as Path
 TYPE_LABELS = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
     'Reference']
 TYPE_ICONS = [QIcon(':/resources/asset_types/{}.svg'.format(x.lower())) for x in TYPE_LABELS]
-CATEGORY_ICONS = [QIcon(':/resources/categories/{}.svg'.format(x.lower())) for x in allCategories.__slots__]
-
+CATEGORY_ICONS = [QIcon(':/resources/categories/{}.svg'.format(x.lower())) for x in allCategories.slots]
 
 class UpdatableField(QObject):
 
@@ -227,7 +227,7 @@ class dateLabel(baseLabel):
         super(dateLabel, self).__init__(*args, **kwargs)
 
     def setValue(self, value):
-        date = datetime.datetime.strptime(value,'%Y-%m-%dT%H:%M:%S.%f')
+        date = datetime.datetime.strptime(value,'%Y-%m-%d %H:%M:%S.%f')
         self.setText(date.strftime("%b %d, %Y %H:%M"))
 
 
@@ -265,18 +265,21 @@ class tagListViewer(ListViewFiltered):
     def __init__(self, parent):
         super(tagListViewer, self).__init__(parent)
         self.checked_db = False
+        session.searchcategory.callback.connect(self.filterCallback)
 
+    @Slot(list)
+    def filterCallback(self, results):
+        for x in results:
+            tag = tags(*x)
+            tag_item = polymorphicItem(fields=tag)
+            self.itemModel.appendRow(tag_item)
 
     def filterRegExpChanged(self):
         # Search database
         text = self.searchBox.text()
         if len(text) >= 3 and not self.checked_db:
             self.checked_db = True
-            tag_search = tags().search(text)
-            for x in tag_search:
-                tag = tags(*x)
-                tag_item = polymorphicItem(fields=tag)
-                self.itemModel.appendRow(tag_item)
+            session.searchcategory.execute('tags', text)
         elif len(text) == 0:
             self.checked_db = False
             self.proxyModel.setFilterRegularExpression(None)
@@ -293,17 +296,22 @@ class userListViewer(ListViewFiltered):
     def __init__(self, parent):
         super(userListViewer, self).__init__(parent)
         self.checked_db = False
+        session.searchcategory.callback.connect(self.filterCallback)
+
+
+    @Slot(list)
+    def filterCallback(self, results):
+        for x in results:
+            user = alusers(*x)
+            user_item = polymorphicItem(fields=user)
+            self.itemModel.appendRow(user_item)
 
     def filterRegExpChanged(self):
         # Search database
         text = self.searchBox.text()
         if len(text) >= 3 and not self.checked_db:
             self.checked_db = True
-            user_search = alusers().search(text)
-            for x in user_search:
-                user = alusers(*x)
-                user_item = polymorphicItem(fields=user)
-                self.itemModel.appendRow(user_item)
+            session.searchcategory.execute('alusers', text)
         elif len(text) == 0:
             self.checked_db = False
             self.proxyModel.setFilterRegularExpression(None)
@@ -342,30 +350,48 @@ class metadataRelationView(QListView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._createContextMenus)
         self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 2px;')
+        self.constructor = None
+        self.last_selection = None
 
     @Slot()
-    def linkItem(self, tag):
+    def onLinkItem(self, primary_asset):
+        item = polymorphicItem(fields=primary_asset)
+        relations = []
         for asset in self.parent().selected_assets:
-            relation = relationships(
-                category_map=self.category_map,
-                category_id=tag.id,
-                link=asset.links,
-            )
-            relation.create()
-        self.addItems([polymorphicItem(fields=tag)])
+            relation = [primary_asset.relationMap, primary_asset.id, asset.links]
+            relations.append(relation)
+            attachLinkToAsset(asset, item)
+
+        session.createrelationships.execute(relations)
+        self.addItems([item])
 
     @Slot()
     def createNewItem(self, name):
-        new_tag = tags(name=name)
-        new_tag.create()
-        for asset in self.parent().selected_assets:
-            relation = relationships(
-                category_map=self.category_map,
-                category_id=new_tag.id,
-                link=asset.links,
-            )
-            relation.create()
-        self.addItems([polymorphicItem(fields=new_tag)])
+        if self.last_selection:
+            return
+        primary_asset = self.constructor(name=name)
+        id_mapping = []
+        self.last_selection = self.parent().selected_assets
+        for asset in self.last_selection:
+            id_mapping.append([primary_asset.relationMap, asset.links])
+
+        primary_asset.createNew(id_mapping)
+
+    @Slot(dict)
+    def onCreate(self, data):
+        if not self.last_selection:
+            return
+        for category_name, assets in data.items():
+            for fields in assets:
+                asset = self.constructor(**fields)
+                item = polymorphicItem(fields=asset)
+                for downstream in self.last_selection:
+                    if isinstance(asset, tags):
+                        downstream.tags.append(item)
+                    elif isinstance(asset, alusers):
+                        downstream.alusers.append(item)
+                self.addItems([item])
+        self.last_selection = None
 
     def _createContextMenus(self, value):
         context_menu = QMenu(self)
@@ -379,16 +405,30 @@ class metadataRelationView(QListView):
 
     def removeSelectedItems(self):
         selection = reversed(sorted(self.selectedIndexes()))
+        relations = []
+        primary_asset = self.parent().selected_assets[-1]
         for x in selection:
             item = x.data(polymorphicItem.Object)
             relation = relationships(
                 category_map=self.category_map,
                 category_id=item.id,
-                link=self.parent().selected_assets[-1].links,
+                link=primary_asset.links,
             )
-            relation.fetch() # Need to fetch the relation id to remove it.
-            relation.remove()
+            relations.append(relation.export)
+            if primary_asset.tags:
+                for index, user in enumerate(primary_asset.tags):
+                    if user.id == item.id:
+                        primary_asset.tags.pop(index)
+                        break
+            if primary_asset.alusers:
+                for index, user in enumerate(primary_asset.alusers):
+                    if user.id == item.id:
+                        primary_asset.alusers.pop(index)
+                        break
+
             self.itemModel.takeRow(x.row())
+
+        relationships.removeAll(relations)
 
     def sizeHint(self):
         return QSize(1920, 32)
@@ -446,7 +486,9 @@ class tagsWidget(metadataRelationView):
         self.relationalDataLinks = tagListViewer(self)
         self.relationalDataLinks.hide()
         self.relationalDataLinks.newItem.connect(self.createNewItem)
-        self.relationalDataLinks.linkItem.connect(self.linkItem)
+        self.relationalDataLinks.linkItem.connect(self.onLinkItem)
+        session.createtag.callback.connect(self.onCreate)
+        self.constructor = tags
 
 
 class alusersWidget(metadataRelationView):
@@ -461,7 +503,9 @@ class alusersWidget(metadataRelationView):
         self.relationalDataLinks = userListViewer(self)
         self.relationalDataLinks.hide()
         self.relationalDataLinks.newItem.connect(self.createNewItem)
-        self.relationalDataLinks.linkItem.connect(self.linkItem)
+        self.relationalDataLinks.linkItem.connect(self.onLinkItem)
+        session.createuser.callback.connect(self.onCreate)
+        self.constructor = alusers
 
 
 class qualityWidget(baseRating):
@@ -495,7 +539,6 @@ class descriptionWidget(QLabel, UpdatableField):
             Qt.LinksAccessibleByKeyboard|Qt.LinksAccessibleByMouse|
             Qt.TextBrowserInteraction|Qt.TextEditable|Qt.TextEditorInteraction|
             Qt.TextSelectableByKeyboard|Qt.TextSelectableByMouse)
-        #self.setStyleSheet('background-color: rgb(43, 43, 43);padding: 4px;')
         self.linkActivated.connect(self.onActivated)
         self.base_url = "<a style='color: rgb(92,108,245)' href=\"NONE\">{}</a>"
         self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -509,13 +552,20 @@ class descriptionWidget(QLabel, UpdatableField):
         context_menu.exec(QCursor.pos())
 
     def update_asset(self):
+        parent = self.parent()
+        selected = parent.selected_assets[-1]
         doc = self.findChild(QTextDocument)
         self.updateValue(doc.toPlainText())
+        path = selected.network_path.suffixed('_description', '.md')
+        with open(str(path), 'w') as fp:
+            fp.write('')
+        parent.openDescription.emit(path)
 
     @Slot()
     def onActivated(self, link_url):
         parent = self.parent()
-        path = parent.selected_assets[-1].network_path.suffixed('_description', '.md')
+        selected = parent.selected_assets[-1]
+        path = selected.network_path.suffixed('_description', '.md')
         parent.openDescription.emit(path)
 
     def setValue(self, value):
@@ -688,7 +738,7 @@ class pathWidget(descriptionWidget):
 
 class categoryWidget(QComboBox):
 
-    LABELS = allCategories.__slots__
+    LABELS = allCategories.slots
     ICONS = CATEGORY_ICONS
 
     def __init__(self, *args, **kwargs):

@@ -70,8 +70,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedListView.assetsDeleted.connect(self.updateLabelCounts)
         self.existingNamesList.newItem.connect(self.onNewItem)
         self.existingNamesList.linkItem.connect(self.onLinkItem)
-        self.todo = 0
-        self.done = 0
         self.ingest_thread = IngestionThread(self)
         self.ingest_thread.itemDone.connect(self.assetIngested)
         self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -91,6 +89,15 @@ class IngestForm(Ui_IngestForm, QDialog):
         session.retrieveassetnames.callback.connect(self.onAssetNameRetrieval)
         session.initializeprimaryasset.callback.connect(self.createVariations)
         session.createassets.callback.connect(self.ingestAssets)
+
+    def show(self):
+        super(IngestForm, self).show()
+        self.todo = 0
+        self.done = 0
+        self.updateLabelCounts(None)
+        self.completedLabel.hide()
+        self.processCompleteLabel.hide()
+        self.tabWidget.setCurrentIndex(0)
 
     @Slot()
     def removeIngestFiles(self, index):
@@ -167,7 +174,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         if total > 1:
             primary_asset = asset_constructor(
                 name=name,
-                dependencies=total,
                 path=f'{subcategory.name}/{name}',
                 links=(subcategory.relationMap, subcategory.id),
                 type=RelicTypes.COLLECTION,)
@@ -182,32 +188,38 @@ class IngestForm(Ui_IngestForm, QDialog):
             session.createassets.execute(asset_data)
 
     @Slot(SimpleAsset)
-    def onLinkItem(self, item):
+    def onLinkItem(self, simple_asset):
         """Handles linking of a new asset (as a Variant) to a primary asset or collection.
 
         Parameters
         ----------
-        item : SimpleAsset
+        simple_asset : SimpleAsset
             The existing asset name, id handling object.
         """
-        if not self.getSelection():
+        selection = self.getSelection()
+        if not selection:
             return
-            
-        name = item.name
+
+        name = simple_asset.name
         # Split the increment and add 1 to give unique, associative subasset name.
         if ' ' in name:
             base, num = name.split(' ')
-            self.increment = int(num) + 1
+            self.increment = int(num)
         else: # Starting the at 1 to for uniqeness.
             base = name
             self.increment = 0
-        new_name = f'{base}_{self.increment}'
+
+        # upate the group item with new count.
+        total = self.increment + len(selection)
+        index = self.existingNamesList.listView.selectedIndexes()[0]
+        qitem = self.existingNamesList.indexToItem(index)
+        simple_asset.name = f'{base} {total}'
+        qitem.setData(simple_asset.name, Qt.DisplayRole)
 
         category_id = self.categoryComboBox.currentIndex()
         asset_constructor = getCategoryConstructor(category_id)
 
-        primary_asset = asset_constructor(name=base, id=item.id)
-
+        primary_asset = asset_constructor(name=base, id=simple_asset.id)
         primary_data = {primary_asset.categoryName: primary_asset.export}
         session.initializeprimaryasset.execute(primary_data)
 
@@ -219,7 +231,13 @@ class IngestForm(Ui_IngestForm, QDialog):
         
         selection = self.collectedListView.selectedIndexes()
         subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
+        if primary_asset.dependencies:
+            upstream_count = len(selection) + primary_asset.dependencies
+        else:
+            upstream_count = len(selection)
 
+        primary_asset.dependencies = upstream_count
+        primary_asset.update(fields=['dependencies'])
         assets = []
         for num, index in enumerate(selection):
             increment = self.increment + num + 1
@@ -269,6 +287,9 @@ class IngestForm(Ui_IngestForm, QDialog):
             extra_files = temp_asset.dependencies
 
             self.ingest_thread.load([temp_filename, asset, extra_files])
+            # add any new (unique) asset to the existing assets list view
+            if '_' not in asset.name:
+                self.existingNamesList.addItem(asset.name, asset.id)
 
         # Update counts on assets and subcategories
         count_data = {subcategory.id: len(selection)}
@@ -417,10 +438,15 @@ class IngestForm(Ui_IngestForm, QDialog):
         # make all category widgets visible again
         [category.show() for category in self.category_widgets]
         self.beforeClose.emit(self.category_dock)
-        self.ingest_thread.stop()
-        self.ingest_thread.quit()
-        if hasattr(self, 'collect_thread'):
-            self.collect_thread.quit()
+        # Clear the models.
+        self.collect_item_model.clear()
+        self.new_asset_item_model.clear()
+        self.collectPathTextEdit.clear()
+        #self.ingest_thread.stop()
+        #self.ingest_thread.quit()
+        #if hasattr(self, 'collect_thread'):
+        #    self.collect_thread.stop()
+        #    self.collect_thread.quit()
         self.parent().close()
 
     @Slot()
@@ -448,8 +474,11 @@ class IngestForm(Ui_IngestForm, QDialog):
         for asset in asset_data:
             name, _id = asset
             if separator in name:
-                name = splitter(name)[0]
-                groups[name] += 1
+                name, index = splitter(name)
+                # Needed to check if we have a index greater than count.
+                index_number = int(index)
+                if index_number > groups[name]:
+                    groups[name] = index_number + 1
             else:
                 adder(name, _id)
 

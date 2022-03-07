@@ -532,6 +532,10 @@ class ViewerTitleBar(CompactTitleBar):
 
         self.exposure_control.setValue(value)
 
+class TimelineFrame(QFrame):
+
+    def sizeHint(self):
+        return QSize(24, 64)
 
 class PlayerAppWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -559,7 +563,7 @@ class PlayerAppWindow(QMainWindow):
         self.timeline = timelineGLView()
 
         self.timeline.onContextMenu.connect(self.showTimelineContextMenu)
-        self.timelineFrame = QFrame(self)
+        self.timelineFrame = TimelineFrame(self)
         timeline_layout = QHBoxLayout()
         timeline_container = QWidget.createWindowContainer(self.timeline)
 

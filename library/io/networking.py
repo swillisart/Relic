@@ -173,6 +173,9 @@ class RelicClientSession(QObject):
         self.socket.close()
         self.socket.open(QUrl(hostname))
 
+    def rebind(self):
+        self.bindTo(RelicClientSession.URI)
+
     @Slot(str)
     def receiveText(self, text):
         result = json.loads(text)

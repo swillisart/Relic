@@ -223,6 +223,10 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         self.layout().insertWidget(1, self.listView)
         self.searchFrame.layout().insertWidget(1, self.searchBox)
 
+    def indexToItem(self, index):
+        remapped_index = self.proxyModel.mapToSource(index)
+        item = self.itemModel.itemFromIndex(remapped_index)
+        return item
 
     def addItems(self, data_model, replace=False):
         if replace:
@@ -298,6 +302,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         if index.data():
             asset = index.data(polymorphicItem.Object)
             if not asset.id:
+                print('HEY HEY HAY REMOVE ME!!!!!')
                 asset = asset.name
             self.linkItem.emit(asset)
         else:

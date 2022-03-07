@@ -21,7 +21,7 @@ from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
 from library.objectmodels import (Library, alusers, attachLinkToAsset,
                                   getCategoryConstructor, polymorphicItem,
-                                  session, subcategory, RELATE_MAP, relationships)
+                                  session, subcategory, RELATE_MAP, relationships, RelicTypes)
 
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
@@ -45,7 +45,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
         self.pool = QThreadPool.globalInstance()
-        #self.tray.showMessage('Relic', 'Relic is now running...', self.app_icon, 2)
         # Assign the dock's title bar to search widget 
         # then set the dock's widget to an empty widget so separators disappear
         empty_widget = QWidget(self)
@@ -107,6 +106,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
         self.actionIngest.triggered.connect(self.beginIngest)
         self.actionDocumentation.triggered.connect(self.browseDocumentation)
+        self.actionReconnect.triggered.connect(session.rebind)
 
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
@@ -116,6 +116,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.assets_view.selmod.selectionChanged.connect(self.loadAssetData)
         self.assets_view.onLinkLoad.connect(self.loadLinkData)
         self.assets_view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
+        for view in self.links_view.all_views:
+            view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
+
         self.backButton.clicked.connect(self.assetViewing)
         self.descriptionTextEdit.setMinimumSize(795, 942)
         self.descriptionTextEdit.textChanged.connect(self.descriptionTextBrowser.onPlainTextEditChanged)
@@ -146,6 +149,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         session.onVideoReceived.connect(self.setVideo)
         self.selected_assets_by_link = {} # Used for dependency linking
         self.asset_startup_path = None
+        self._ingester = None
 
     @Slot(bytes)
     def setVideo(self, data):
@@ -162,10 +166,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot(dict)
     def recieveNewSubcategory(self, data):
         library_categories = self.library.categories
-        for category_name, fields in data.items():
-            asset_obj = subcategory(**fields)
-            category = library_categories.get(int(asset_obj.category))
-            category.tree.onNewSubcategory(asset_obj)
+        for category_name, assets in data.items():
+            for fields in assets:
+                asset_obj = subcategory(**fields)
+                category = library_categories.get(int(asset_obj.category))
+                category.tree.onNewSubcategory(asset_obj)
 
     @Slot(polymorphicItem)
     def assetSubcategoryDrop(self, new_subcategory):
@@ -229,6 +234,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         user_exists = RELIC_PREFS.user_id
         if not user_exists: # user not cached local OR does not exist
             session.createuser.execute({user.categoryName: [user.export]})
+
+        #self.tray.showMessage('Connected', 'Relic is now running and connected.', self.app_icon, 2)
 
     @Slot(dict)
     def onUserCreate(self, data):
@@ -301,22 +308,27 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             self.removeEventFilter(self.overlay)
             self.overlay.close()
 
+    @property
+    def ingest_form(self):
+        if self._ingester is None:
+            ingester = IngestForm()
+            ingester.beforeClose.connect(self.onIngestClosed)
+            self._ingester = ingester
+        return self._ingester
+
     @Slot()
     def beginIngest(self):
         self.assets_view.hide()
         self.attributeDock.hide()
-        ingester = IngestForm()
         self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.Minimum) 
-        ingester.setCategoryView(self.categoryDock, self.categoryLayout)
-        ingester.beforeClose.connect(self.onIngestClosed)
+        self.ingest_form.setCategoryView(self.categoryDock, self.categoryLayout)
         self.category_manager.blockSignals(True)
-        DialogOverlay(self, ingester, modal=False)
-        return ingester
+        DialogOverlay(self, self.ingest_form, modal=False)
 
     @Slot()
     def externalPluginCommand(self, asset_data):
-        ingester = self.beginIngest()
-        ingester.collectAssetsFromPlugin(asset_data)
+        self.beginIngest()
+        self.ingest_form.collectAssetsFromPlugin(asset_data)
 
     @Slot()
     def browseTo(self, path):
@@ -487,8 +499,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             if load_icons:
                 on_complete = partial(setattr, asset, 'icon')
                 icon_path = asset.network_path.suffixed('_icon', '.jpg')
-                if not icon_path.exists():
-                    copyRelatedIcon(asset)
                 worker = LocalThumbnail(icon_path, on_complete)
                 self.pool.start(worker)
 
@@ -643,9 +653,15 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     link_item = link_map[index]
                     attatch(asset, link_item)
             assets.append(asset)
-    
+
         if not assets:
             return
+        # copy upstream icons on empty collections
+        for asset in assets:
+            if asset.type == RelicTypes.COLLECTION:
+                icon_path = asset.network_path.suffixed('_icon', '.jpg')
+                if not icon_path.exists():
+                    copyRelatedIcon(asset)
         self.metatdata_view.loadAssets(assets)
 
     @Slot(QModelIndex)
@@ -712,12 +728,13 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
 def copyRelatedIcon(asset):
     # TODO: Re-assess if this is really needed.
-    for item in asset.upstream:
-        linked_asset = item.data(polymorphicItem.Object)
-        related_icon = linked_asset.network_path.suffixed('_icon', '.jpg')
-        asset_icon = asset.network_path.suffixed('_icon', '.jpg')
-        related_icon.copyTo(asset_icon)
-        break
+    if asset.upstream:
+        for item in asset.upstream:
+            linked_asset = item.data(polymorphicItem.Object)
+            related_icon = linked_asset.network_path.suffixed('_icon', '.jpg')
+            asset_icon = asset.network_path.suffixed('_icon', '.jpg')
+            related_icon.copyTo(asset_icon)
+            break
 
 
 def main(args):

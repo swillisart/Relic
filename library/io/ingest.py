@@ -703,9 +703,11 @@ class IngestionThread(QThread):
                             frame = Path(seq_file).frame
                             src.frame = frame
                             dst.frame = frame
-                            src.moveTo(dst)
+                            #src.moveTo(dst)
+                            src.copyTo(dst)
                     else:
-                        src.moveTo(dst)
+                        #src.moveTo(dst)
+                        src.copyTo(dst)
 
                 # Calculate the final hash and size of the asset.
                 item.filehash = out_path.parent.hash

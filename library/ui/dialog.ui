@@ -2158,6 +2158,7 @@ QPushButton:hover {
      <string>Help</string>
     </property>
     <addaction name="actionDocumentation"/>
+    <addaction name="actionReconnect"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2219,8 +2220,8 @@ QPushButton:hover {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>256</width>
-          <height>297</height>
+          <width>54</width>
+          <height>279</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryLayout">
@@ -2837,7 +2838,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>297</height>
+          <height>279</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">
@@ -3279,6 +3280,11 @@ QPushButton:hover {
    </property>
    <property name="statusTip">
     <string>Use the selected Subcategories child-items in the active selection filter. (Enable Recursive Loading)</string>
+   </property>
+  </action>
+  <action name="actionReconnect">
+   <property name="text">
+    <string>Reconnect</string>
    </property>
   </action>
  </widget>

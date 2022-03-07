@@ -140,6 +140,7 @@ class BaseFields(object):
             category_id=self.id,
             link=downstream.links,
         )
+        print(relation)
         relation.create()
 
     def unlinkTo(self, asset):
@@ -215,7 +216,6 @@ class BaseFields(object):
                     yield from BaseFields.recurseDependencies(upstream)
         yield asset
 
-    @staticmethod
     def createCollection(self, link_mapping):
         if self.type != 3: # collection type
             return
@@ -413,7 +413,7 @@ class relationships(BaseFields):
     )
 
     def create(self):
-        relation = [self.relationMap, self.id, self.link]
+        relation = [self.category_map, self.category_id, self.link]
         session.createrelationships.execute([relation])
 
     @staticmethod

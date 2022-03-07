@@ -365,7 +365,11 @@ class assetListView(QListView):
             for fields in values:
                 asset = constructor(**fields)
                 asset.linkTo(primary_asset)
-                primary_asset.dependencies += 1
+                if not primary_asset.dependencies:
+                    primary_asset.dependencies = 1
+                else:
+                    primary_asset.dependencies += 1
+
         primary_asset.update(fields=['dependencies'])
 
     @Slot()

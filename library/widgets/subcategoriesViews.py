@@ -367,13 +367,19 @@ class subcategoryTreeView(QTreeView):
 
     def dragEnterEvent(self, event):
         super(subcategoryTreeView, self).dragEnterEvent(event)
-
-        if event.mimeData().hasUrls():
-            # ensure the payload category matches the current tree's category
+        mime_data = event.mimeData()
+        if mime_data.hasUrls():
+            # ensure the payload category matches the current tree's category.
+            # files / folders dragged from explorer are also accepted as ingests 
             category = self.category.name.lower()
-            payload = json.loads(event.mimeData().text())
-            if category in payload.keys():
-                event.acceptProposedAction()
+            for url in mime_data.urls():
+                if url.toString().startswith('file:///'):
+                    event.acceptProposedAction()
+                else:
+                    payload = json.loads(mime_data.text())
+                    if category in payload.keys():
+                        event.acceptProposedAction()
+                break
         else:
             selection = self.selectedIndexes()
             # Reset counts data to build our items
@@ -390,7 +396,6 @@ class subcategoryTreeView(QTreeView):
         index = self.indexAt(event.pos())
         if not index.isValid() or index in self.selectedIndexes():
             event.ignore()
-            return
         elif event.mimeData().hasUrls():
             self.setFocus()
             event.acceptProposedAction()
@@ -418,14 +423,20 @@ class subcategoryTreeView(QTreeView):
         mime = event.mimeData()
         destination_item = self.getDropDestinationItem(event)
 
-        # Drag and drop re-categorization (from the asset list view)
-        if mime.hasUrls() and destination_item:
-            accepted_item, ok = QInputDialog.getItem(self,
-                'Re-parent Asset',
-                'Move the assets subcategory into "{}"?'.format(destination_item.name),
-                ['Move Assets'], True)
-            if not ok:
+        if mime.hasUrls():
+            # External filesystem drop.
+            if mime.urls()[0].toString().startswith('file:///'):
+                paths = [x.toLocalFile() for x in mime.urls()]
+                self.externalFilesDrop.emit(self.category.id, paths)
+                self.selection_model.select(self.indexAt(event.pos()), QItemSelectionModel.ClearAndSelect)
                 return
+            elif destination_item: # Drag and drop re-categorization (from the asset list view)
+                accepted_item, ok = QInputDialog.getItem(self,
+                    'Re-parent Asset',
+                    'Move the assets subcategory into "{}"?'.format(destination_item.name),
+                    ['Move Assets'], True)
+                if not ok:
+                    return
 
             event.setDropAction(Qt.MoveAction)
             event.accept()
@@ -587,6 +598,7 @@ class CategoryManager(QObject):
 
     onSelection = Signal(dict)
     onAssetDrop = Signal(dict)
+    externalFilesDrop = Signal(int, list)
 
     def __init__(self, *args, **kwargs):
         super(CategoryManager, self).__init__(*args, **kwargs)
@@ -631,6 +643,7 @@ class CategoryManager(QObject):
 
             tree = subcategoryTreeView(category=category)
             tree.onAssetDrop = self.onAssetDrop
+            tree.externalFilesDrop = self.externalFilesDrop
             # This is the source of a nasty bug that duplicates items instead of moving in the treeview.
             # make sure to only organize in administration mode.
             tree.selection_model.selectionChanged.connect(self.getAllSelectedItems)

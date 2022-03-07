@@ -335,7 +335,6 @@ class assetListView(QListView):
         index = self.indexAt(event.pos())
         if not index.isValid() or index in self.selectedIndexes():
             event.ignore()
-            return
         elif event.mimeData().hasUrls():
             self.setFocus()
             event.acceptProposedAction()

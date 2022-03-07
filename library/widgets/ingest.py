@@ -344,6 +344,8 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.kept_original_name = False 
 
         paths = self.collectPathTextEdit.toPlainText().split('\n')
+        # sanitize the paths leaving only literal filepaths
+        filepaths = [x.replace('file:///', '') for x in paths if x]
         function_map = self.getConversionMap()
 
         self.collect_thread = QThread(self)
@@ -353,7 +355,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.router.progress.connect(self.receiveAsset)
         self.router.started.connect(self.updateLabelCounts)
         self.collect_thread.started.connect(self.router.run)
-        self.router.addToQueue(paths)
+        self.router.addToQueue(filepaths)
         self.collect_thread.start()
 
     @Slot()

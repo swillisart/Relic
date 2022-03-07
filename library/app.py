@@ -56,6 +56,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.category_manager = CategoryManager(self)
         self.category_manager.onSelection.connect(self.searchLibrary)
         self.category_manager.onAssetDrop.connect(self.assetSubcategoryDrop)
+        self.category_manager.externalFilesDrop.connect(self.externalSubcategoryDrop)
         self.searchBox.returnPressed.connect(self.searchLibrary)
         self.pageSpinBox.valueChanged.connect(self.updateAssetView)
         self.buttonGroup.buttonClicked.connect(self.updateAssetView)
@@ -171,6 +172,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 asset_obj = subcategory(**fields)
                 category = library_categories.get(int(asset_obj.category))
                 category.tree.onNewSubcategory(asset_obj)
+
+    @Slot(int, list)
+    def externalSubcategoryDrop(self, category_id: int, paths: list):
+        self.beginIngest()
+        self.ingest_form.categoryComboBox.setCurrentIndex(category_id)
+        self.ingest_form.collectPathTextEdit.setPlainText('\n'.join(paths))
 
     @Slot(polymorphicItem)
     def assetSubcategoryDrop(self, new_subcategory):

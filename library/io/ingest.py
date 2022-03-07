@@ -177,8 +177,10 @@ class ConversionRouter(QObject):
     def processDirectory(self, directory):
         conversion_functions = []
         sequences = []
+        if directory.is_file():
+            directory = [directory]
         for img in directory:
-            if img.path.is_dir():
+            if img.is_dir():
                 self.addToQueue([str(img)])
                 continue
 

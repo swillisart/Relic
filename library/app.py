@@ -320,6 +320,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         if self._ingester is None:
             ingester = IngestForm()
             ingester.beforeClose.connect(self.onIngestClosed)
+            collect_finish_msg = lambda x: self.tray.showMessage(
+                'Finished Collecting',
+                'Relic has completed collection of queued Assets.\nReady to be processed.',
+                self.app_icon,
+                1
+            )
+            process_finish_msg = lambda x: self.tray.showMessage(
+                'Finished Processing',
+                'Relic has processed all the queued Assets.',
+                self.app_icon,
+                2
+            )
+            ingester.finishedCollection.connect(collect_finish_msg)
+            ingester.finishedProcessing.connect(process_finish_msg)
             self._ingester = ingester
         return self._ingester
 

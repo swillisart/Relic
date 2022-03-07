@@ -40,6 +40,8 @@ Are you sure you want to cancel and close?
 class IngestForm(Ui_IngestForm, QDialog):
 
     beforeClose = Signal(QWidget)
+    finishedCollection = Signal(bool)
+    finishedProcessing = Signal(bool)
 
     def __init__(self, *args, **kwargs):
         super(IngestForm, self).__init__(*args, **kwargs)
@@ -124,6 +126,7 @@ class IngestForm(Ui_IngestForm, QDialog):
     def assetIngested(self, asset):
         # Update the asset's fields in the database 
         asset.update()
+        self.updateLabelCounts(None)
 
         # Check if all the other background copy operations have completed.
         if len(self.ingest_thread.queue) == 0:
@@ -136,6 +139,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         else:
             # Still processing
             self.processLoadingLabel.show()
+            self.processCompleteLabel.hide()
 
     def collectAssetsFromPlugin(self, assets):
         self.categorizeTab.setEnabled(True)
@@ -363,6 +367,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.loadingLabel.hide()
         self.completedLabel.show()
         self.collect_thread.quit()
+        self.finishedCollection.emit(True)
 
     @Slot()
     def receiveAsset(self, asset):
@@ -392,7 +397,10 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedLabel.setText(collect_msg)
         assets_msg = 'Processed : {}/{}'.format(self.done, self.todo)
         self.newAssetsLabel.setText(assets_msg)
-        if len(self.ingest_thread.queue) == 0 and self.done == self.todo:
+        if collected == 0 and self.todo == 0:
+            self.nextButton.setText('Collect')
+        elif len(self.ingest_thread.queue) == 0 and self.done == self.todo:
+            self.finishedProcessing.emit(True)
             self.nextButton.setText('Finish')
             self.next_enabled()
 

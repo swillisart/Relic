@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ScreenCapture</class>
- <widget class="QWidget" name="ScreenCapture">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>492</width>
-    <height>311</height>
+    <width>341</width>
+    <height>412</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Screen Capture</string>
+   <string>Form</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="../resources.qrc">
-    <normaloff>:/resources/icons/capture.svg</normaloff>:/resources/icons/capture.svg</iconset>
+  <property name="autoFillBackground">
+   <bool>false</bool>
   </property>
   <property name="styleSheet">
    <string notr="true">QWidget {
@@ -109,32 +108,20 @@ QMenu::indicator:non-exclusive:unchecked {
     image: url(:/resources/style/checkbox.svg);
 }
 
-QLineEdit:focus,
-QTextEdit:focus {
-    border: 2px solid rgb(150, 146, 137);
-}
 QLineEdit,
 QAbstractSpinBox,
 QTextEdit {
     background-color: rgb(43, 43, 43);
+    background-image: url();
+    color: rgb(200, 200, 200);
+/*
     border: 2px solid rgb(43, 43, 43);
     border-radius: 3px;
     color: rgb(200, 200, 200);
     padding: 1px;
     margin-top: 0px;
     padding-left: 0px;
-}
-interactiveSpinBox {
-    padding: 1px;
-    margin: 1px;
-    border: 1px solid rgb(43, 43, 43);
-
-}
-QTextEdit:disabled,
-QAbstractSpinBox:disabled,
-QLineEdit:disabled {
-    background-color: rgb(43, 43, 43);
-    color: #787878;
+*/
 }
 
 /* QSlider ---------------------------------------------------------------- */
@@ -289,8 +276,7 @@ QHeaderView::section {
 	border-radius: 0px;
 	text-align: center;
 }
-QHeaderView::section:vertical,
-QHeaderView::section:horizontal {
+QHeaderView::section:vertical {
 	padding-left: 4px;
 }
 QListView,
@@ -299,42 +285,62 @@ QTableView,
 QColumnView {
     border: none;
 	alternate-background-color: rgb(75,75,75);
+    background-color: rgb(43, 43, 43);
+    padding-top: 1px;
 }
 QListView::item,
 QTreeView::item,
 QTableView::item,
 QColumnView::item {
     border-top: none;
-    padding-right: 8px;
+    padding-right: 8px; /*DO NOT CHANGE*/
     padding-left: 1px;
     margin-top: 1px;
     margin-bottom: 1px;
     margin-left: 1px;
 }
-QTreeView::branch {
-    border-top: 0px solid rgb(43, 43, 43);
-    border-bottom: 0px solid rgb(43, 43, 43);
-    padding: 4px;
-    margin-top: 2px;
-    margin-bottom: 2px;
+
+QTreeView::item:has-children {
+    background-color: rgb(93, 93, 93);
 }
+
+QTreeView::branch {
+    padding: 4px; /*DO NOT CHANGE*/
+    margin-top: 1px;
+    margin-bottom: 1px;
+    margin-left: 1px;
+    margin-right: -3px;
+    border-left: 2px solid rgb(43,43,43);
+	border-radius: 3px 3px 0px 0px;
+}
+/*
 QTreeView::branch:has-siblings:!adjoins-item {
     border-image: url(:/resources/style/stylesheet-vline.png);
 }
 QTreeView::branch:has-siblings:adjoins-item {
     border-image: url(:/resources/style/stylesheet-branch-more.png);
 }
+
 QTreeView::branch:!has-children:!has-siblings:adjoins-item {
     border-image: url(:/resources/style/stylesheet-branch-end.png);
 }
+*/
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    image: url(:/resources/style/treeExpand.svg);
+    background-color: rgb(93, 93, 93);
+    image: url(:/resources/style/stylesheet-branch-closed.png);
+    border-left: 3px solid rgb(93, 93, 93);
+    border-bottom: 3px solid rgb(93, 93, 93);
+    border-top: 2px solid rgb(93, 93, 93);
 }
 QTreeView::branch:open:has-children:!has-siblings,
 QTreeView::branch:open:has-children:has-siblings  {
-    image: url(:/resources/style/treeCollapse.svg);
+    background-color: rgb(93, 93, 93);
+    border-left: 2px solid rgb(93, 93, 93);
+    border-radius: 0px 0px 3px 0px;
+    image: url(:/resources/style/stylesheet-branch-open.png);
 }
+
 
 /* QCombobox -------------------------------------------------------------- */
 QComboBox {
@@ -431,19 +437,9 @@ QListView::indicator:unchecked {
 
 
 
-QGroupBox {
-	background-color: rgb(68, 68, 68);
-    color: rgb(225, 225, 225);
-	border: 1px solid rgb(43, 43, 43);
-	border-radius: 2px;
-    padding-top: 14px;
-}
-QGroupBox:title { 
-    subcontrol-origin: padding;
-    padding-left: 6px;
-    padding-top: 3px;
-    margin-top: -2px;
-}
+
+
+
 
 
 /* QTabWiget -------------------------------------------------------------- */
@@ -596,344 +592,87 @@ QRadioButton::indicator:unchecked {
 QRadioButton:indicator:hover {
     border: 2px solid rgb(150, 146, 137);
 }
-
-QToolButton {
-    padding: 0px;
-    margin: 0px;
-    border-radius: 3px;
-    border: 1px solid rgb(68, 68, 68);
-}
-QToolButton:pressed {
-    background-color: rgb(43, 43, 43);
-    border: 1px solid rgb(150, 149, 147);
-}
-QToolButton:checked {
-    background-color: rgb(140, 136, 127);
-    border: 1px solid rgb(150, 146, 137);
-    color: rgb(255, 255, 255);
-}
-QToolButton:hover {
-    background-color: rgb(108, 108, 108);
-    color: rgb(250, 250, 250);
-}
-
-QToolButton::left-arrow,
-QToolButton::left-arrow:on {
-    border: 1px solid rgb(43, 43, 43);
-    background-color: rgb(68, 68, 68);
-    padding: 1px;
-    margin: 2px;
-    image: url(:/resources/checkbox.svg);
-}
-
-QToolButton::down-arrow,
-QToolButton::down-arrow:on {
-    border: 1px solid rgb(150, 146, 137);
-    background-color: rgb(68, 68, 68);
-    padding: 0px;
-    margin: 2px;
-    image: url(:/resources/checkbox_checked.svg);
-}
-
 QAbstractSpinBox {
     padding: 1px;
     padding-left: 4px;
     margin: 1px;
     border: 1px solid rgb(43, 43, 43);
-}
-QToolBox {
-	font-size: 11px;
-	border: 0px;
-	border-radius: 3px;
-    border: 1px solid rgb(43,43,43);
-}
-
-QToolBox::tab {
-    border: 0px solid rgb(108, 108, 108);
-    border-radius: 3px;
-    background-color:rgb(92, 92, 92);
-    margin: 0px;
-    padding: 0px;
-}
-QToolBox::tab:selected {
-    border-left: 2px solid rgb(150, 146, 137);
-    background-color:rgb(108,108,108);
 }</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>2</number>
+   </property>
    <property name="leftMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <property name="topMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <property name="rightMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <property name="bottomMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>2</number>
+     </property>
+     <property name="topMargin">
+      <number>2</number>
+     </property>
+     <property name="rightMargin">
+      <number>2</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
      <item>
-      <widget class="QToolButton" name="captureButton">
-       <property name="toolTip">
-        <string>Capture a single snapshot of a region.</string>
+      <widget class="QFrame" name="searchFrame">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <property name="text">
-        <string>Capture</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources.qrc">
-         <normaloff>:/resources/icons/screenshot_20.png</normaloff>:/resources/icons/screenshot_20.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>24</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonTextUnderIcon</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="recordButton">
-       <property name="toolTip">
-        <string>Captures a continuous recording of a defined region in the screen.
-
- Click again to stop.</string>
-       </property>
-       <property name="text">
-        <string>Record</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources.qrc">
-         <normaloff>:/resources/icons/rec.png</normaloff>
-         <activeon>:/resources/icons/stop.png</activeon>:/resources/icons/rec.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>24</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonTextUnderIcon</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="delayComboBox">
-       <property name="toolTip">
-        <string>Time Delay in seconds for snapshot or recording actions.</string>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-       <item>
-        <property name="text">
-         <string>0s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>1s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>3s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>5s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="expandButton">
-       <property name="toolTip">
-        <string>Toggle list of capture history for viewing.</string>
-       </property>
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources.qrc">
-         <normaloff>:/resources/icons/narrowLeft.png</normaloff>
-         <activeon>:/resources/icons/narrowDown.png</activeon>:/resources/icons/narrowLeft.png</iconset>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonIconOnly</enum>
-       </property>
-       <property name="arrowType">
-        <enum>Qt::NoArrow</enum>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="historyGroupBox">
-     <property name="styleSheet">
-      <string notr="true">QTreeView {
-    border: none;
-	alternate-background-color: rgb(75,75,75);
-    background-color: rgb(48, 48, 48);
-    padding-top: 1px;
-}
-QTreeView::item {
-    border-top: none;
-    padding-right: 8px; /*DO NOT CHANGE*/
-    padding-left: 3px;
-    margin-top: 1px;
-    margin-bottom: 1px;
-}
-QTreeView::item:has-children {
-    background-color: rgb(93, 93, 93);
-}
-QTreeView::branch {
-    padding: 4px; /*DO NOT CHANGE*/
-    margin-top: 1px;
-    margin-bottom: 1px;
-    margin-left: 1px;
-    margin-right: -3px;
-    border-left: 2px solid rgb(43,43,43);
-	border-radius: 3px 3px 0px 0px;
-}
-QTreeView::branch:has-siblings:!adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:has-siblings:adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:has-children:!has-siblings:closed,
-QTreeView::branch:closed:has-children:has-siblings {
-    background-color: rgb(93, 93, 93);
-    image: url(:/resources/style/stylesheet-branch-closed.png);
-    border-left: 3px solid rgb(93, 93, 93);
-    border-radius: 0px 0px 3px 0px;
-}
-QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    background-color: rgb(93, 93, 93);
-    border-left: 2px solid rgb(93, 93, 93);
-    border-radius: 0px 0px 3px 0px;
-    image: url(:/resources/style/stylesheet-branch-open.png);
+       <property name="styleSheet">
+        <string notr="true">QFrame {
+    border: 0px solid rgb(43, 43, 43);
+    background-color: rgb(43, 43, 43);
+    border-radius: 3px;
 }</string>
-     </property>
-     <property name="title">
-      <string>History</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_5">
-      <property name="spacing">
-       <number>6</number>
-      </property>
-      <property name="leftMargin">
-       <number>6</number>
-      </property>
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="rightMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout">
         <property name="spacing">
          <number>0</number>
         </property>
         <property name="leftMargin">
-         <number>2</number>
+         <number>0</number>
         </property>
         <property name="topMargin">
-         <number>2</number>
+         <number>0</number>
         </property>
         <property name="rightMargin">
-         <number>2</number>
+         <number>0</number>
         </property>
         <property name="bottomMargin">
          <number>0</number>
         </property>
         <item>
-         <widget class="QFrame" name="searchFrame">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+         <widget class="QPushButton" name="searchButton">
           <property name="styleSheet">
-           <string notr="true">QFrame {
-    border: 0px solid rgb(43, 43, 43);
-    background-color: rgb(43, 43, 43);
-    border-radius: 3px;
-}</string>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Plain</enum>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_4">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QPushButton" name="searchButton">
-             <property name="styleSheet">
-              <string notr="true">QPushButton {
+           <string notr="true">QPushButton {
     background-color: rgb(43, 43, 43);
     padding: 2px;
     margin-left: 1px;
@@ -944,88 +683,257 @@ QPushButton::hover {
     background-color: rgb(63, 63, 63);
     /*border: 1px solid rgb(150, 146, 137);*/
 }</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../resources.qrc">
-               <normaloff>:/resources/style/search_light.svg</normaloff>:/resources/style/search_light.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>18</width>
-               <height>18</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="searchLine">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>256</width>
-               <height>26</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">QLineEdit { padding: 0px;}
-QLineEdit:focus,
-QTextEdit:focus {
-    border: none;
-}</string>
-             </property>
-             <property name="frame">
-              <bool>false</bool>
-             </property>
-             <property name="placeholderText">
-              <string>Search...</string>
-             </property>
-             <property name="clearButtonEnabled">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../resources.qrc">
+            <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>18</width>
+            <height>18</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="searchBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>256</width>
+            <height>26</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QLineEdit { padding: 0px;}
+</string>
+          </property>
+          <property name="frame">
+           <bool>false</bool>
+          </property>
+          <property name="placeholderText">
+           <string>Search...</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
        </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="treeWidget">
+     <property name="dragEnabled">
+      <bool>true</bool>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>false</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::ExtendedSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+     <property name="headerHidden">
+      <bool>false</bool>
+     </property>
+     <attribute name="headerShowSortIndicator" stdset="0">
+      <bool>true</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>Items</string>
+      </property>
+      <property name="font">
+       <font>
+        <stylestrategy>PreferAntialias</stylestrategy>
+       </font>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Status</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Date</string>
+      </property>
+     </column>
+     <item>
+      <property name="text">
+       <string>Videos</string>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <bold>false</bold>
+        <stylestrategy>PreferAntialias</stylestrategy>
+       </font>
+      </property>
+      <property name="icon">
+       <iconset>
+        <normaloff>:/resources/icons/video96.png</normaloff>:/resources/icons/video96.png</iconset>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <item>
+       <property name="text">
+        <string>untitled_06</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
       </item>
-     </layout>
+      <item>
+       <property name="text">
+        <string>untitled_05</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </item>
+     </item>
+     <item>
+      <property name="text">
+       <string>Screenshots</string>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <bold>false</bold>
+        <stylestrategy>PreferAntialias</stylestrategy>
+       </font>
+      </property>
+      <property name="icon">
+       <iconset resource="../../capture/resources.qrc">
+        <normaloff>:/resources/icons/snapshot.svg</normaloff>:/resources/icons/snapshot.svg</iconset>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <item>
+       <property name="text">
+        <string>untitled_04</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="text">
+        <string>dasfasdf</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>untitled_02</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="text">
+        <string>dasdfasdf</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>untitled_01</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="text">
+        <string>ewadd</string>
+       </property>
+      </item>
+     </item>
+     <item>
+      <property name="text">
+       <string>Animated</string>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <bold>false</bold>
+        <stylestrategy>PreferAntialias</stylestrategy>
+       </font>
+      </property>
+      <property name="icon">
+       <iconset resource="../../capture/resources.qrc">
+        <normaloff>:/resources/icons/gif.png</normaloff>:/resources/icons/gif.png</iconset>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <item>
+       <property name="text">
+        <string>d3ead</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </item>
+     </item>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
     </widget>
    </item>
   </layout>
  </widget>
  <resources>
-  <include location="../resources.qrc"/>
+  <include location="../../resources.qrc"/>
+  <include location="../../capture/resources.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>expandButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>historyGroupBox</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>209</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>117</x>
-     <y>223</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

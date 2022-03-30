@@ -1,10 +1,11 @@
 import subprocess
+import os
 from PySide6.QtMultimedia import (
     QAudioFormat,
     QMediaDevices,
     QAudioSource,
 )
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QRunnable
 CREATE_NO_WINDOW = 0x08000000
 
 class AudioRecord(QObject):
@@ -47,3 +48,44 @@ class AudioRecord(QObject):
     def _readyRead(self):
         data = self._io_device.readAll()
         self.ffproc.stdin.write(data.data())
+
+
+class ShellCommand(QRunnable):
+
+    def __init__(self, cmd, obj, signal=None, callback=None):
+        super(ShellCommand, self).__init__(signal)
+        self.cmd = cmd
+        self.obj = obj
+        self.signal = signal
+        self.callback = callback
+
+    def run(self):
+        subprocess.call(self.cmd, creationflags=CREATE_NO_WINDOW)
+        if self.callback:
+            self.callback(self.obj)
+        if self.signal:
+            self.signal.emit(self.obj)
+
+
+def video_to_gif(path):
+    out_path = path.suffixed('', ext='.gif')
+    gif_palette = path.suffixed('_palette', ext='.png')
+    cmd1 = [
+        'ffmpeg',
+        '-loglevel', 'error',
+        '-i', str(path),
+        '-vf', 'palettegen',
+        str(gif_palette),
+    ]
+    cmd2 = [
+        'ffmpeg',
+        '-loglevel', 'error',
+        '-i', str(path),
+        '-i', str(gif_palette),
+        '-filter_complex', 'fps=30,paletteuse',
+        str(out_path),
+    ]
+    subprocess.call(cmd1, creationflags=CREATE_NO_WINDOW)
+    subprocess.call(cmd2, creationflags=CREATE_NO_WINDOW)
+    os.remove(str(gif_palette))
+

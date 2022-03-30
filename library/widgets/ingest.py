@@ -486,7 +486,11 @@ class IngestForm(Ui_IngestForm, QDialog):
             if separator in name:
                 name, index = splitter(name)
                 # Needed to check if we have a index greater than count.
-                index_number = int(index)
+                try:
+                    index_number = int(index)
+                except ValueError: # asset is not part of a set
+                    adder(name, _id)
+                    continue
                 if index_number > groups[name]:
                     groups[name] = index_number + 1
             else:

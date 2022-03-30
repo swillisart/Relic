@@ -9,7 +9,7 @@ from functools import partial
 from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QPoint,
                             QThreadPool, Slot)
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap, Qt
-from PySide6.QtWidgets import (QApplication, QFrame, QGraphicsDropShadowEffect,
+from PySide6.QtWidgets import (QApplication, QFrame,
                                QLabel, QMainWindow, QMenu, QSizePolicy,
                                QSystemTrayIcon, QTextBrowser, QWidget, QAbstractButton, QDialogButtonBox)
 # -- First-party --
@@ -67,16 +67,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.linksDock.hide()
         self.descriptionDock.hide()
 
-        # Shadow graphics
-        shadow = QGraphicsDropShadowEffect(self, blurRadius=6.0,
-                color=QColor(31, 31, 31), offset=QPoint(0, 0))
-        self.categoryDock.setGraphicsEffect(shadow)
-        shadow = QGraphicsDropShadowEffect(self, blurRadius=6.0,
-                color=QColor(31, 31, 31), offset=QPoint(0, 0))
-        self.attributeDock.setGraphicsEffect(shadow)
-        shadow = QGraphicsDropShadowEffect(self, blurRadius=8.0,
-                color=QColor(31, 31, 31), offset=QPoint(0, 0))
-        self.linksDock.setGraphicsEffect(shadow)
         self.attributeDock.setAutoFillBackground(True)
         self.categoryDock.setAutoFillBackground(True)
         self.linksDock.setAutoFillBackground(True)

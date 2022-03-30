@@ -1,19 +1,19 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
-    <file>style.qss</file>
     <file>resources/icons/rec.png</file>
     <file>resources/icons/stop.png</file>
     <file>resources/icons/narrowDown.png</file>
     <file>resources/icons/narrowLeft.png</file>
-    <file>resources/icons/video96.png</file>
+    <file>resources/icons/video.png</file>
     <file>resources/icons/timer.png</file>
     <file>resources/icons/gif.png</file>
     <file>resources/icons/cursor.png</file>
     <file>resources/icons/capture.svg</file>
     <file>resources/icons/snapshot.svg</file>
-    <file>resources/icons/search.svg</file>
+    <file>resources/icons/screenshot_20.png</file>
     <file>resources/icons/folder.svg</file>
-    <file>resources/splashscreen.png</file>
+    <file>resources/icons/app_icon.ico</file>
+    <file>resources/style/search_light.svg</file>
     <file>resources/style/close.svg</file>
     <file>resources/style/maximize.svg</file>
     <file>resources/style/minimize.svg</file>
@@ -33,5 +33,10 @@
     <file>resources/style/stylesheet-vline.png</file>
     <file>resources/style/treeExpand.svg</file>
     <file>resources/style/treeCollapse.svg</file>
+</qresource>
+<qresource prefix="type/">
+    <file alias="screenshot.png">resources/icons/screenshot_20.png</file>
+    <file alias="video.png">resources/icons/video.png</file>
+    <file alias="gif.png">resources/icons/gif.png</file>
 </qresource>
 </RCC>

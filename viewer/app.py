@@ -19,7 +19,7 @@ from qtshared6.svg import rasterizeSVG
 from qtshared6.widgets import (CompactTitleBar, HoverTintButton,
                               InteractiveSpinBox)
 # -- First-Party -- 
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath
 from strand.server import StrandServer
 #import relic_base
 

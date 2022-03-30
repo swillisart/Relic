@@ -8,7 +8,7 @@ from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor
 from PySide6.QtWidgets import QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit
 
 from library.config import peakLoad
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
 

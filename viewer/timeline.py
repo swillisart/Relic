@@ -15,7 +15,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 import numpy as np
 import glm

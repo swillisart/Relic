@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QApplication, QFrame,
                                QLabel, QMainWindow, QMenu, QSizePolicy,
                                QSystemTrayIcon, QTextBrowser, QWidget, QAbstractButton, QDialogButtonBox)
 # -- First-party --
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 from strand import server
 
 from library.asset_grid import AssetGridView

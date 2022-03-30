@@ -9,7 +9,7 @@ from PySide6.QtCore import (QObject, QUrl, Signal, Slot)
 from PySide6.QtWebSockets import QWebSocket
 from PySide6.QtWidgets import QApplication
 
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 # -- Module -- 
 from library.config import RELIC_PREFS

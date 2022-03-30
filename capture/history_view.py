@@ -84,7 +84,12 @@ class CaptureItem(object):
 class CaptureItemModel(QStandardItemModel):
 
     def mimeData(self, indices):
-        paths = [QUrl.fromLocalFile(str(x.data(polymorphicItem.Object).path)) for x in indices]
+        paths = []
+        for index in indices:
+            obj = index.data(polymorphicItem.Object)
+            if isinstance(obj, polymorphicItem):
+                paths.append(QUrl.fromLocalFile(str(obj.path)))
+
         drag = QDrag(self)
         mimeData = QMimeData()
         mimeData.setUrls(paths)

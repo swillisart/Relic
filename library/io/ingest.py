@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QLineEdit, QListView, QMenu, QScrollArea,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget)
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 from imagine import hdr, libraw
 from imagine.colorchecker_detection import autoExpose
 from imagine.exif import EXIFTOOL

@@ -40,7 +40,7 @@ if not 'relicMixinWindow' in globals():
 #sys.path.append('P:/Code/Relic/library/plugins/Lib')
 from relic_base import asset_views, asset_classes
 from relic_base.ui.qtutil import updateWidgetProperty#, polymorphicItem
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 import relic_base.config as config
 from relic_base.config import RELIC_PREFS, LOG, INGEST_PATH, RELIC_CLIENT, logFunction
 #from OpenGL.GL import *

@@ -4,7 +4,7 @@ from PySide6.QtGui import QImage, QPainter, QColor, QPixmap
 from PySide6.QtCore import QSaveFile, QIODevice, QRunnable
 import cv2
 
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 from library.abstract_objects import ImageDimensions
 from library.qt_objects import SinglePainter

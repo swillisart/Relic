@@ -3,7 +3,7 @@ import os
 from functools import partial
 from collections import defaultdict
 from imagine.colorchecker_detection import detectColorChecker
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,

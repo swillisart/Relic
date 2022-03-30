@@ -1,6 +1,6 @@
 import sys
 
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 from PySide6.QtGui import QStandardItem
 from PySide6.QtCore import Qt, QSettings, QObject, Slot

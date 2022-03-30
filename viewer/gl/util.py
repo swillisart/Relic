@@ -6,7 +6,7 @@ from OpenGL.GL import *
 from ctypes import c_void_p
 #from OpenGL.GL import GL_ELEMENT_ARRAY_BUFFER
 from PySide6.QtCore import QPointF
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 from viewer.gl.shading import BaseProgram
 
 

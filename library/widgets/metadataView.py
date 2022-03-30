@@ -17,7 +17,7 @@ from library.objectmodels import (session, allCategories, alusers, polymorphicIt
                                   relationships, subcategory, tags, attachLinkToAsset)
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
 
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 TYPE_LABELS = ['Component', 'Asset', 'Collection', 'Motion', 'Variant',
     'Reference']

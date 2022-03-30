@@ -3,7 +3,7 @@ import logging
 
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 from strand.client import StrandClient
 from qtshared6.utils import Preferences
 

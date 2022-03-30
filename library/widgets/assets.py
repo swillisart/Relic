@@ -5,7 +5,7 @@ import time
 import json
 import subprocess
 from functools import partial
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 from collections import defaultdict
 # -- Module --
 import library.config as config

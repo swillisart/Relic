@@ -341,7 +341,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.strand_client.sendPayload(str(capture_obj.path))
             if self.strand_client.errored:
                 cmd = f'start peak://{capture_obj.path}'
-                subprocess.Popen(cmd)
+                os.system(cmd)
 
     @staticmethod
     def renameFile(path, name):

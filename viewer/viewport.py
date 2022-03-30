@@ -4,7 +4,7 @@ import copy
 from ctypes import c_void_p
 from collections import deque
 import string
-from sequencePath import sequencePath as Path
+from sequence_path.main import SequencePath as Path
 
 # -- Third-party -- 
 import glm

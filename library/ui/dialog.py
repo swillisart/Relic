@@ -16,15 +16,12 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QAbstractSpinBox, QApplication, QButtonGroup,
-    QCheckBox, QDialogButtonBox, QDockWidget, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMenu, QMenuBar, QPushButton,
-    QRadioButton, QScrollArea, QSizePolicy, QSlider,
-    QSpacerItem, QSpinBox, QSplitter, QStatusBar,
-    QToolButton, QVBoxLayout, QWidget)
-
-from library.widgets.description import (DescriptionTextEdit, descriptionTextBrowser)
+from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCheckBox,
+    QDockWidget, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QLineEdit, QMainWindow, QMenu,
+    QMenuBar, QPushButton, QRadioButton, QScrollArea,
+    QSizePolicy, QSlider, QSpacerItem, QSpinBox,
+    QStatusBar, QToolButton, QVBoxLayout, QWidget)
 import resources_rc
 
 class Ui_RelicMainWindow(object):
@@ -41,7 +38,7 @@ class Ui_RelicMainWindow(object):
         icon.addFile(u":/resources/app/app_icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         RelicMainWindow.setWindowIcon(icon)
         RelicMainWindow.setStyleSheet(u"QWidget {\n"
-"	background-color: rgb(68, 68, 68);\n"
+"    background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"
 "    selection-background-color: rgb(126, 126, 126);\n"
 "    selection-color: rgb(250, 250, 250);\n"
@@ -51,11 +48,11 @@ class Ui_RelicMainWindow(object):
 "    background-color: transparent;\n"
 "}\n"
 "QWidget:item:hover {\n"
-"    background-color: rgb(150, 146, 137);\n"
+"    background-color: rgb(75, 75, 75);\n"
 "    color: rgb(250, 250, 250);\n"
 "}\n"
 "QWidget:item:selected {\n"
-"    background-color: rgb(150, 146, 137);\n"
+"    background-color: rgb(120, 120, 120);\n"
 "    color: rgb(43, 43, 43);\n"
 "}\n"
 "QWidget:disabled {\n"
@@ -135,20 +132,34 @@ class Ui_RelicMainWindow(object):
 "    image: url(:/resources/style/checkbox.svg);\n"
 "}\n"
 "\n"
+"QLineEdit { padding: 0px;}\n"
+"QLineEdit:focus,\n"
+"QTextEdit:focus {\n"
+"    border: none;\n"
+"}\n"
 "QLineEdit,\n"
 "QAbstractSpinBox,\n"
 "QTextEdit {\n"
 "    background-color: rgb(43, 43, 43);\n"
-"    background-image: url();\n"
-"    color: rgb(200, 200, 200);\n"
-"/*\n"
 "    border: 2px solid rgb(43, 43, 43);\n"
 "    border-radius: 3px;\n"
 "    color: rgb(200, 200, 200);\n"
 "    padding: 1px;\n"
 "    margin-top: 0px;\n"
 "    padding-left: 0px;\n"
-"*/\n"
+"}\n"
+"interactiveSpinBox {\n"
+"    padding: 1px;\n"
+"    margin: 1px;\n"
+"    border: 1px solid rgb(43, 43, 43);\n"
+"\n"
+"}\n"
+"QTextEdit:disabled,\n"
+"QAbstractSpinBox:disabled,\n"
+"QLineEdit:disabled {\n"
+"    background-color: rgb(43, 4"
+                        "3, 43);\n"
+"    color: #787878;\n"
 "}\n"
 "\n"
 "/* QSlider ---------------------------------------------------------------- */\n"
@@ -156,8 +167,7 @@ class Ui_RelicMainWindow(object):
 "QSlider::sub-page:horizontal,\n"
 "QSlider::add-page:vertical, \n"
 "QSlider::sub-page:vertical {\n"
-"    background: rgb(43, 43, 43"
-                        ");\n"
+"    background: rgb(43, 43, 43);\n"
 "}\n"
 "QSlider::add-page:vertical, \n"
 "QSlider::sub-page:vertical {\n"
@@ -187,7 +197,8 @@ class Ui_RelicMainWindow(object):
 "}\n"
 "QSlider::groove {\n"
 "    background: rgb(43, 43, 43);\n"
-"    border: 1px solid rgb(68, 68, 68);\n"
+"    "
+                        "border: 1px solid rgb(68, 68, 68);\n"
 "    border-radius: 4px;\n"
 "    margin: 0px;\n"
 "}\n"
@@ -199,8 +210,7 @@ class Ui_RelicMainWindow(object):
 "}\n"
 "QSlider::sub-page:vertical:disabled, \n"
 "QSlider::sub-page:horizontal:disabled {\n"
-""
-                        "    background: #14506E;\n"
+"    background: #14506E;\n"
 "}\n"
 "\n"
 "/* QScrollBar ------------------------------------------------------------- */\n"
@@ -222,7 +232,8 @@ class Ui_RelicMainWindow(object):
 "QScrollBar::add-line:horizontal:on,\n"
 "QScrollBar::add-line:horizontal {\n"
 "    margin: 0px 3px 0px 0px;\n"
-"    border-image: url(:/resources/style/stylesheet-branch-closed.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-closed.png"
+                        ");\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
 "    subcontrol-position: right;\n"
@@ -232,8 +243,7 @@ class Ui_RelicMainWindow(object):
 "QScrollBar::sub-line:horizontal:on,\n"
 "QScrollBar::sub-line:horizontal {\n"
 "    margin: 0px 0px 0px 3px;\n"
-"    border-image:"
-                        " url(:/resources/style/stylesheet-branch-closedleft.png);\n"
+"    border-image: url(:/resources/style/stylesheet-branch-closedleft.png);\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
 "    subcontrol-position: left;\n"
@@ -256,7 +266,8 @@ class Ui_RelicMainWindow(object):
 "    margin: 3px 0px 0px 0px;\n"
 "    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
 "    height: 6px;\n"
-"    width: 10px;\n"
+"    width:"
+                        " 10px;\n"
 "    subcontrol-position: top;\n"
 "    subcontrol-origin: margin;\n"
 "}\n"
@@ -265,8 +276,7 @@ class Ui_RelicMainWindow(object):
 "    border-image: url(:/resources/style/stylesheet-branch-open.png);\n"
 "    height: 6px;\n"
 "    width: 10px;\n"
-"    subcontrol-position: bo"
-                        "ttom;\n"
+"    subcontrol-position: bottom;\n"
 "    subcontrol-origin: margin;\n"
 "}\n"
 "QScrollBar::sub-line:vertical:hover,\n"
@@ -289,7 +299,8 @@ class Ui_RelicMainWindow(object):
 "}\n"
 "QTableCornerButton::section {\n"
 "    background-color: rgb(92, 92, 92);\n"
-"	border: 1px rgb(43,43,43);\n"
+"	"
+                        "border: 1px rgb(43,43,43);\n"
 "	border-radius: 0px;\n"
 "}\n"
 "QHeaderView {\n"
@@ -300,15 +311,15 @@ class Ui_RelicMainWindow(object):
 "	border-radius: 0px;\n"
 "}\n"
 "QHeaderView::section {\n"
-"	background-color: rgb(92, 92, 92);"
-                        "\n"
+"	background-color: rgb(92, 92, 92);\n"
 "	color: rgb(200,200,200);\n"
 "    border-bottom: 1px solid rgb(43,43,43);\n"
 "    border-right: 1px solid rgb(43,43,43);\n"
 "	border-radius: 0px;\n"
 "	text-align: center;\n"
 "}\n"
-"QHeaderView::section:vertical {\n"
+"QHeaderView::section:vertical,\n"
+"QHeaderView::section:horizontal {\n"
 "	padding-left: 4px;\n"
 "}\n"
 "QListView,\n"
@@ -316,30 +327,32 @@ class Ui_RelicMainWindow(object):
 "QTableView,\n"
 "QColumnView {\n"
 "    border: none;\n"
-"	alternate-background-color: rgb(75,75,75);\n"
+"	alternate-background-color: rgb(56,56,56);\n"
+"    background-color: rgb(48, 48, 48);\n"
 "}\n"
 "QListView::item,\n"
 "QTreeView::item,\n"
 "QTableView::item,\n"
 "QColumnView::item {\n"
 "    border-top: none;\n"
-"    padding: 0px; /*DO NOT CHANGE*/\n"
-"    padding-right: 8px; /*DO NOT CHANGE*/\n"
-"    margin-top: 2px;\n"
-"    margin-bottom: 2px;\n"
+"    padding-right: 8px;\n"
+"    padding-left: 1px;\n"
+"    margin-top: 1px;\n"
+"    margin-bottom: 1px;\n"
+"    margin-left: 1px;\n"
 "}\n"
-"QTreeView::branch {\n"
+"QT"
+                        "reeView::branch {\n"
 "    border-top: 0px solid rgb(43, 43, 43);\n"
 "    border-bottom: 0px solid rgb(43, 43, 43);\n"
-"    padding: 4px; /*DO NOT CHANGE*/\n"
+"    padding: 4px;\n"
 "    margin-top: 2px;\n"
 "    margin-bottom: 2px;\n"
 "}\n"
 "QTreeView::branch:has-siblings:!adjoins-item {\n"
 "    border-image: url(:/resources/style/stylesheet-vline.png);\n"
 "}\n"
-"QTreeView::branch:has-siblings"
-                        ":adjoins-item {\n"
+"QTreeView::branch:has-siblings:adjoins-item {\n"
 "    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
 "}\n"
 "QTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
@@ -354,8 +367,8 @@ class Ui_RelicMainWindow(object):
 "    image: url(:/resources/style/treeCollapse.svg);\n"
 "}\n"
 "\n"
-"\n"
-"/* QCombobox -------------------------------------------------------------- */\n"
+"/* QCombobox -------------------------------------------------------------- *"
+                        "/\n"
 "QComboBox {\n"
 "    border: 0px;\n"
 "    border-radius: 3px;\n"
@@ -367,8 +380,7 @@ class Ui_RelicMainWindow(object):
 "    min-width: 75px;\n"
 "}\n"
 "QComboBox::drop-down {\n"
-"    subcon"
-                        "trol-origin: padding;\n"
+"    subcontrol-origin: padding;\n"
 "    subcontrol-position: top right;\n"
 "    width: 20px;\n"
 "    border-left-width: 2px;\n"
@@ -391,7 +403,8 @@ class Ui_RelicMainWindow(object):
 "\n"
 "\n"
 "QCheckBox::indicator:checked:hover,\n"
-"QTreeView::indicator:checked:hover,\n"
+"Q"
+                        "TreeView::indicator:checked:hover,\n"
 "QListView::indicator:checked:hover {\n"
 "    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
@@ -400,8 +413,7 @@ class Ui_RelicMainWindow(object):
 "QListView::indicator:unchecked:hover {\n"
 "    image: url(:/resources/style/checkbox_hover.svg);\n"
 "}\n"
-"QCheck"
-                        "Box::indicator {\n"
+"QCheckBox::indicator {\n"
 "    width: 14px;\n"
 "    height: 14px;\n"
 "}\n"
@@ -430,6 +442,8 @@ class Ui_RelicMainWindow(object):
 "\n"
 "\n"
 "\n"
+""
+                        "\n"
 "\n"
 "\n"
 "\n"
@@ -451,10 +465,19 @@ class Ui_RelicMainWindow(object):
 "\n"
 "\n"
 "\n"
-"\n"
-"\n"
-"\n"
-"\n"
+"QGroupBox {\n"
+"	background-color: rgb(68, 68, 68);\n"
+"    color: rgb(225, 225, 225);\n"
+"	border: 1px solid rgb(43, 43, 43);\n"
+"	border-radius: 2px;\n"
+"    padding-top: 14px;\n"
+"}\n"
+"QGroupBox:title { \n"
+"    subcontrol-origin: padding;\n"
+"    padding-left: 6px;\n"
+"    padding-top: 3px;\n"
+"    margin-top: -2px;\n"
+"}\n"
 "\n"
 "\n"
 "/* QTabWiget -------------------------------------------------------------- */\n"
@@ -463,8 +486,7 @@ class Ui_RelicMainWindow(object):
 "    padding: 4px;\n"
 "    padding-left: 16px;\n"
 "    padding-right: 16px;\n"
-"    selection-background-color"
-                        ": rgb(68, 68, 68);\n"
+"    selection-background-color: rgb(68, 68, 68);\n"
 "    border: 0;\n"
 "}\n"
 "QTabWidget::tab-bar {\n"
@@ -480,7 +502,8 @@ class Ui_RelicMainWindow(object):
 "\n"
 "/* QTabBar ---------------------------------------------------------------- */\n"
 "\n"
-"QTabBar {\n"
+"QTabB"
+                        "ar {\n"
 "    qproperty-drawBase: 0;\n"
 "    border-radius: 3px;\n"
 "    margin: 0px;\n"
@@ -504,8 +527,7 @@ class Ui_RelicMainWindow(object):
 "    background-color: rgb(68, 68, 68);\n"
 "}\n"
 "QTabBar::tab:bottom:selected:disabled {\n"
-"    border-top: 3px soli"
-                        "d #14506E;\n"
+"    border-top: 3px solid #14506E;\n"
 "    color: #787878;\n"
 "    background-color: rgb(68, 68, 68);\n"
 "}\n"
@@ -517,7 +539,8 @@ class Ui_RelicMainWindow(object):
 "QTabBar::tab:right:selected:disabled {\n"
 "    border-right: 3px solid #14506E;\n"
 "    color: #787878;\n"
-"    background-color: rgb(68, 68, 68);\n"
+"    bac"
+                        "kground-color: rgb(68, 68, 68);\n"
 "}\n"
 "\n"
 "/* QTabBar::tab - !selected and disabled ---------------------------------- */\n"
@@ -539,8 +562,7 @@ class Ui_RelicMainWindow(object):
 "    border-top-right-radius: 3px;\n"
 "    font-weight: normal;\n"
 "    border-bottom: 3px solid rgb(68, 68, 68);\n"
-"    border-right:"
-                        " 1px solid rgb(68, 68, 68);\n"
+"    border-right: 1px solid rgb(68, 68, 68);\n"
 "    border-left: 1px solid rgb(68, 68, 68);\n"
 "    border-top: 1px solid rgb(68, 68, 68);\n"
 "    color: rgb(100, 100, 100);\n"
@@ -550,7 +572,8 @@ class Ui_RelicMainWindow(object):
 "    color: #787878;\n"
 "    background-color: rgb(43, 43, 43);\n"
 "}\n"
-"QTabBar::tab:left:!selected:disabled {\n"
+"QTabBar::tab:left:!select"
+                        "ed:disabled {\n"
 "    border-right: 3px solid rgb(43, 43, 43);\n"
 "    color: #787878;\n"
 "    background-color: rgb(43, 43, 43);\n"
@@ -571,8 +594,7 @@ class Ui_RelicMainWindow(object):
 "    margin-bottom: 1px;\n"
 "    padding-left: 18px; \n"
 "    padding-right: 18px;\n"
-"    padding-to"
-                        "p: 4px;\n"
+"    padding-top: 4px;\n"
 "    padding-bottom: 4px;\n"
 "    min-width: 4px;\n"
 "    border-top-left-radius: 3px;\n"
@@ -581,7 +603,8 @@ class Ui_RelicMainWindow(object):
 "    border-bottom: 3px solid rgb(43, 43, 43);\n"
 "    border-right: 1px solid rgb(43, 43, 43);\n"
 "    border-left: 1px solid rgb(43, 43, 43);\n"
-"    border-top: 1px solid rgb(43, 43, 43);\n"
+"    border-top: 1px solid rgb(43, 43, 43);"
+                        "\n"
 "}\n"
 "\n"
 "QTabBar::tab:selected {\n"
@@ -601,8 +624,7 @@ class Ui_RelicMainWindow(object):
 "    border-radius:          6px;\n"
 "}\n"
 "QRadioButton::indicator:checked {\n"
-"   "
-                        " background-color:       gray;\n"
+"    background-color:       gray;\n"
 "    border:                 2px solid rgb(43,43,43);\n"
 "}\n"
 "QRadioButton::indicator:unchecked {\n"
@@ -612,11 +634,70 @@ class Ui_RelicMainWindow(object):
 "QRadioButton:indicator:hover {\n"
 "    border: 2px solid rgb(150, 146, 137);\n"
 "}\n"
-"QAbstractSpinBox {\n"
+"\n"
+"QToolButton {\n"
+""
+                        "    padding: 0px;\n"
+"    margin: 0px;\n"
+"    border-radius: 3px;\n"
+"    border: 1px solid rgb(68, 68, 68);\n"
+"}\n"
+"QToolButton:pressed {\n"
+"    background-color: rgb(43, 43, 43);\n"
+"    border: 1px solid rgb(150, 149, 147);\n"
+"}\n"
+"QToolButton:checked {\n"
+"    background-color: rgb(140, 136, 127);\n"
+"    border: 1px solid rgb(150, 146, 137);\n"
+"    color: rgb(255, 255, 255);\n"
+"}\n"
+"QToolButton:hover {\n"
+"    background-color: rgb(108, 108, 108);\n"
+"    color: rgb(250, 250, 250);\n"
+"}\n"
+"\n"
+"QToolButton::left-arrow,\n"
+"QToolButton::left-arrow:on {\n"
+"    border: 1px solid rgb(43, 43, 43);\n"
+"    background-color: rgb(68, 68, 68);\n"
+"    padding: 1px;\n"
+"    margin: 2px;\n"
+"    image: url(:/resources/checkbox.svg);\n"
+"}\n"
+"\n"
+"QToolButton::down-arrow,\n"
+"QToolButton::down-arrow:on {\n"
+"    border: 1px solid rgb(150, 146, 137);\n"
+"    background-color: rgb(68, 68, 68);\n"
+"    padding: 0px;\n"
+"    margin: 2px;\n"
+"    image: url(:/resources/checkbox_checked.svg);\n"
+"}\n"
+"\n"
+"QA"
+                        "bstractSpinBox {\n"
 "    padding: 1px;\n"
 "    padding-left: 4px;\n"
 "    margin: 1px;\n"
 "    border: 1px solid rgb(43, 43, 43);\n"
+"}\n"
+"QToolBox {\n"
+"	font-size: 11px;\n"
+"	border: 0px;\n"
+"	border-radius: 3px;\n"
+"    border: 1px solid rgb(43,43,43);\n"
+"}\n"
+"\n"
+"QToolBox::tab {\n"
+"    border: 0px solid rgb(108, 108, 108);\n"
+"    border-radius: 3px;\n"
+"    background-color:rgb(92, 92, 92);\n"
+"    margin: 0px;\n"
+"    padding: 0px;\n"
+"}\n"
+"QToolBox::tab:selected {\n"
+"    border-left: 2px solid rgb(150, 146, 137);\n"
+"    background-color:rgb(108,108,108);\n"
 "}")
         RelicMainWindow.setAnimated(True)
         RelicMainWindow.setDockNestingEnabled(True)
@@ -931,8 +1012,6 @@ class Ui_RelicMainWindow(object):
         font3 = QFont()
         font3.setPointSize(8)
         self.filterBox.setFont(font3)
-        self.filterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
-"")
         self.filterBox.setFrame(False)
         self.filterBox.setClearButtonEnabled(True)
 
@@ -1078,8 +1157,6 @@ class Ui_RelicMainWindow(object):
         self.attrFilterBox.setSizePolicy(sizePolicy4)
         self.attrFilterBox.setMinimumSize(QSize(0, 0))
         self.attrFilterBox.setFont(font3)
-        self.attrFilterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
-"")
         self.attrFilterBox.setFrame(False)
         self.attrFilterBox.setClearButtonEnabled(True)
 
@@ -1212,8 +1289,6 @@ class Ui_RelicMainWindow(object):
         self.linkFilterBox.setSizePolicy(sizePolicy4)
         self.linkFilterBox.setMinimumSize(QSize(0, 0))
         self.linkFilterBox.setFont(font3)
-        self.linkFilterBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
-"")
         self.linkFilterBox.setFrame(False)
         self.linkFilterBox.setClearButtonEnabled(True)
 
@@ -1386,7 +1461,7 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 54, 279))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 54, 502))
         self.categoryLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryLayout.setSpacing(4)
         self.categoryLayout.setContentsMargins(9, 9, 9, 9)
@@ -1537,8 +1612,6 @@ class Ui_RelicMainWindow(object):
         font4 = QFont()
         font4.setBold(True)
         self.searchBox.setFont(font4)
-        self.searchBox.setStyleSheet(u"QLineEdit { padding: 0px;}\n"
-"")
         self.searchBox.setFrame(False)
         self.searchBox.setClearButtonEnabled(True)
 
@@ -1601,7 +1674,7 @@ class Ui_RelicMainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 279))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 502))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(4)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)
@@ -1613,190 +1686,6 @@ class Ui_RelicMainWindow(object):
 
         self.attributeDock.setWidget(self.attrDockWidgetContents)
         RelicMainWindow.addDockWidget(Qt.RightDockWidgetArea, self.attributeDock)
-        self.descriptionDock = QDockWidget(RelicMainWindow)
-        self.descriptionDock.setObjectName(u"descriptionDock")
-        sizePolicy2.setHeightForWidth(self.descriptionDock.sizePolicy().hasHeightForWidth())
-        self.descriptionDock.setSizePolicy(sizePolicy2)
-        self.descriptionDock.setFloating(True)
-        self.descriptionDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
-        self.dockWidgetContents_5 = QWidget()
-        self.dockWidgetContents_5.setObjectName(u"dockWidgetContents_5")
-        self.verticalLayout_8 = QVBoxLayout(self.dockWidgetContents_5)
-        self.verticalLayout_8.setSpacing(6)
-        self.verticalLayout_8.setContentsMargins(9, 9, 9, 9)
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.descriptionDockTitle = QFrame(self.dockWidgetContents_5)
-        self.descriptionDockTitle.setObjectName(u"descriptionDockTitle")
-        sizePolicy7 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy7.setHorizontalStretch(0)
-        sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.descriptionDockTitle.sizePolicy().hasHeightForWidth())
-        self.descriptionDockTitle.setSizePolicy(sizePolicy7)
-        self.descriptionDockTitle.setStyleSheet(u"QFrame#descriptionDockTitle {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    border: 2px solid rgb(57,57,57);\n"
-"	padding: margin 0px;\n"
-"}")
-        self.descriptionDockTitle.setFrameShape(QFrame.StyledPanel)
-        self.descriptionDockTitle.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_17 = QHBoxLayout(self.descriptionDockTitle)
-        self.horizontalLayout_17.setSpacing(9)
-        self.horizontalLayout_17.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
-        self.horizontalLayout_17.setContentsMargins(3, 0, 3, 0)
-        self.toolButton_3 = QToolButton(self.descriptionDockTitle)
-        self.toolButton_3.setObjectName(u"toolButton_3")
-        self.toolButton_3.setEnabled(False)
-        self.toolButton_3.setStyleSheet(u"padding: -2px;\n"
-"margin-left: 4px;\n"
-"border: none;")
-
-        self.horizontalLayout_17.addWidget(self.toolButton_3)
-
-        self.descriptionTitle = QLabel(self.descriptionDockTitle)
-        self.descriptionTitle.setObjectName(u"descriptionTitle")
-        font5 = QFont()
-        font5.setPointSize(12)
-        self.descriptionTitle.setFont(font5)
-        self.descriptionTitle.setStyleSheet(u"border:none; background-color: transparent;")
-        self.descriptionTitle.setFrameShape(QFrame.NoFrame)
-        self.descriptionTitle.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_17.addWidget(self.descriptionTitle)
-
-        self.horizontalSpacer_9 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_17.addItem(self.horizontalSpacer_9)
-
-        self.filterFrame_2 = QFrame(self.descriptionDockTitle)
-        self.filterFrame_2.setObjectName(u"filterFrame_2")
-        sizePolicy1.setHeightForWidth(self.filterFrame_2.sizePolicy().hasHeightForWidth())
-        self.filterFrame_2.setSizePolicy(sizePolicy1)
-        self.filterFrame_2.setStyleSheet(u"QFrame#filterFrame_2 {\n"
-"	margin: 2px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame#filterFrame_2:hover {\n"
-"    border: 1px solid rgb(150, 146, 137);\n"
-"}")
-        self.filterFrame_2.setFrameShape(QFrame.StyledPanel)
-        self.filterFrame_2.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout_11 = QHBoxLayout(self.filterFrame_2)
-        self.horizontalLayout_11.setSpacing(0)
-        self.horizontalLayout_11.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.horizontalLayout_11.setContentsMargins(1, 0, 0, 0)
-        self.filterButton_2 = QPushButton(self.filterFrame_2)
-        self.filterButton_2.setObjectName(u"filterButton_2")
-        sizePolicy3.setHeightForWidth(self.filterButton_2.sizePolicy().hasHeightForWidth())
-        self.filterButton_2.setSizePolicy(sizePolicy3)
-        self.filterButton_2.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    padding: 0px;\n"
-"	border: none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(108, 108, 108);\n"
-"}\n"
-"QPushButton:checked {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}")
-        self.filterButton_2.setIcon(icon3)
-        self.filterButton_2.setIconSize(QSize(18, 18))
-        self.filterButton_2.setCheckable(True)
-        self.filterButton_2.setChecked(True)
-        self.filterButton_2.setFlat(False)
-
-        self.horizontalLayout_11.addWidget(self.filterButton_2)
-
-        self.descriptionFilterBox = QLineEdit(self.filterFrame_2)
-        self.descriptionFilterBox.setObjectName(u"descriptionFilterBox")
-        sizePolicy4.setHeightForWidth(self.descriptionFilterBox.sizePolicy().hasHeightForWidth())
-        self.descriptionFilterBox.setSizePolicy(sizePolicy4)
-        self.descriptionFilterBox.setMinimumSize(QSize(128, 0))
-        self.descriptionFilterBox.setFont(font3)
-        self.descriptionFilterBox.setFrame(False)
-        self.descriptionFilterBox.setClearButtonEnabled(True)
-
-        self.horizontalLayout_11.addWidget(self.descriptionFilterBox)
-
-
-        self.horizontalLayout_17.addWidget(self.filterFrame_2)
-
-        self.foundResultsLabel = QLabel(self.descriptionDockTitle)
-        self.foundResultsLabel.setObjectName(u"foundResultsLabel")
-        self.foundResultsLabel.setStyleSheet(u"background-color: transparent;")
-
-        self.horizontalLayout_17.addWidget(self.foundResultsLabel)
-
-        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_17.addItem(self.horizontalSpacer_6)
-
-        self.descriptionCloseButton = QPushButton(self.descriptionDockTitle)
-        self.descriptionCloseButton.setObjectName(u"descriptionCloseButton")
-        self.descriptionCloseButton.setStyleSheet(u"QPushButton {\n"
-"    padding: 3px;\n"
-"    background-color: rgb(97, 57, 57);\n"
-"	border :none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(192, 64, 64);\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"")
-        self.descriptionCloseButton.setIcon(icon1)
-        self.descriptionCloseButton.setIconSize(QSize(14, 16))
-        self.descriptionCloseButton.setCheckable(True)
-        self.descriptionCloseButton.setChecked(True)
-
-        self.horizontalLayout_17.addWidget(self.descriptionCloseButton)
-
-
-        self.verticalLayout_8.addWidget(self.descriptionDockTitle)
-
-        self.splitter = QSplitter(self.dockWidgetContents_5)
-        self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Horizontal)
-        self.descriptionEditorFrame = QFrame(self.splitter)
-        self.descriptionEditorFrame.setObjectName(u"descriptionEditorFrame")
-        self.descriptionEditorFrame.setFrameShape(QFrame.StyledPanel)
-        self.descriptionEditorFrame.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_7 = QVBoxLayout(self.descriptionEditorFrame)
-        self.verticalLayout_7.setSpacing(6)
-        self.verticalLayout_7.setContentsMargins(9, 9, 9, 9)
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.descriptionButtonBox = QDialogButtonBox(self.descriptionEditorFrame)
-        self.descriptionButtonBox.setObjectName(u"descriptionButtonBox")
-        self.descriptionButtonBox.setStandardButtons(QDialogButtonBox.Help|QDialogButtonBox.Reset|QDialogButtonBox.Save)
-        self.descriptionButtonBox.setCenterButtons(False)
-
-        self.verticalLayout_7.addWidget(self.descriptionButtonBox)
-
-        self.descriptionTextEdit = DescriptionTextEdit(self.descriptionEditorFrame)
-        self.descriptionTextEdit.setObjectName(u"descriptionTextEdit")
-        font6 = QFont()
-        font6.setPointSize(10)
-        self.descriptionTextEdit.setFont(font6)
-
-        self.verticalLayout_7.addWidget(self.descriptionTextEdit)
-
-        self.splitter.addWidget(self.descriptionEditorFrame)
-        self.descriptionTextBrowser = descriptionTextBrowser(self.splitter)
-        self.descriptionTextBrowser.setObjectName(u"descriptionTextBrowser")
-        self.descriptionTextBrowser.setFont(font6)
-        self.descriptionTextBrowser.setStyleSheet(u"QTextBrowser {padding: 6px;}")
-        self.descriptionTextBrowser.setFrameShape(QFrame.Box)
-        self.descriptionTextBrowser.setFrameShadow(QFrame.Raised)
-        self.descriptionTextBrowser.setOpenLinks(False)
-        self.splitter.addWidget(self.descriptionTextBrowser)
-
-        self.verticalLayout_8.addWidget(self.splitter)
-
-        self.descriptionDock.setWidget(self.dockWidgetContents_5)
-        RelicMainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.descriptionDock)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -1889,13 +1778,5 @@ class Ui_RelicMainWindow(object):
         self.searchButton.setText("")
         self.searchBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Search...", None))
         self.attributeDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Attributes", None))
-        self.descriptionDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Description", None))
-        self.toolButton_3.setText("")
-        self.descriptionTitle.setText(QCoreApplication.translate("RelicMainWindow", u"DESCRIPTIONS", None))
-        self.filterButton_2.setText("")
-        self.descriptionFilterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Find...", None))
-        self.foundResultsLabel.setText(QCoreApplication.translate("RelicMainWindow", u"1 / 2", None))
-        self.descriptionCloseButton.setText("")
-        self.descriptionTextEdit.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Add description text (Markdown) here...", None))
     # retranslateUi
 

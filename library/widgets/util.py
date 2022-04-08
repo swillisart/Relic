@@ -2,7 +2,7 @@ import re
 from functools import partial
 
 from library.ui.list_view_filtered import Ui_ListViewFiltered
-from library.widgets.assets import polymorphicItem
+from qtshared6.utils import polymorphicItem
 
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
                             QObject, QPoint, QRect, QRegularExpression, QSize,

@@ -44,6 +44,7 @@
     <file>resources/general/load_wheel_24.webp</file>
     <file>resources/general/load_wheel.webp</file>
     <file>resources/general/refresh.svg</file>
+    <file>resources/general/markdown.png</file>
     <file>resources/style/close.svg</file>
     <file>resources/style/maximize.svg</file>
     <file>resources/style/minimize.svg</file>
@@ -63,6 +64,7 @@
     <file>resources/style/stylesheet-vline.png</file>
     <file>resources/style/treeExpand.svg</file>
     <file>resources/style/treeCollapse.svg</file>
+    <file>resources/style/markdown_style.css</file>
     <file>resources/subcategories/3D.png</file>
     <file>resources/subcategories/Bifrost.png</file>
     <file>resources/subcategories/Channel.png</file>

@@ -1,63 +1,52 @@
 import sys
 
-from sequence_path.main import SequencePath as Path
+from enum import IntEnum
+from extra_types.enums import AutoEnum
+from qtshared6.delegates import Statuses, TextIndicator, ColorIndicator, IconIndicator, scale_icon
 
-from PySide6.QtGui import QStandardItem
-from PySide6.QtCore import Qt, QSettings, QObject, Slot
-from PySide6.QtWidgets import QApplication
+from sequence_path.main import SequencePath as Path
+from qtshared6.utils import polymorphicItem
+
+from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtCore import Qt, QSettings, QObject, Slot, QRect
 
 from library.io.networking import RelicClientSession
-
-from library.config import RELIC_PREFS
+from library.config import RELIC_PREFS, Classification
 
 session = RelicClientSession(RelicClientSession.URI)
-
-class RelicTypes:
-    COMPONENT = 1
-    ASSET = 2
-    COLLECTION = 3
-    MOTION = 4
-    VARIANT = 5
-    REFERENCE = 6
-
-TABLE_MAP = {
-    # Data Tables
-    'relationships': 0,
-    'alusers': 1,
-    'tags': 2,
-    'subcategory': 3,
-    # Categories
-    'references': 4,
-    'modeling': 5,
-    'elements': 6,
-    'lighting': 7,
-    'shading': 8,
-    'software': 9,
-    'mayatools': 10,
-    'nuketools': 11,
-}
-
-RELATE_MAP = {
-    0: 'relationships',
-    1: 'alusers',
-    2: 'tags',
-    3: 'subcategory',
-    4: 'references',
-    5: 'modeling',
-    6: 'elements',
-    7: 'lighting',
-    8: 'shading',
-    9: 'software',
-    10: 'mayatools',
-    11: 'nuketools',
-}
 
 LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
 NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
 serializable_types = [str, int, tuple]
 
+class Type(IconIndicator):
+    NONE = {}
+    COMPONENT = {'data': scale_icon(QPixmap('resources/asset_types/component.svg'))}
+    ASSET = {'data': scale_icon(QPixmap('resources/asset_types/asset.svg'))}
+    COLLECTION = {'data': scale_icon(QPixmap('resources/asset_types/collection.svg'))}
+    MOTION = {'data': scale_icon(QPixmap('resources/asset_types/motion.svg'))}
+    VARIANT = {'data': scale_icon(QPixmap('resources/asset_types/variant.svg'))}
+    REFERENCE = {'data': scale_icon(QPixmap('resources/asset_types/reference.svg'))}
+
+class CategoryColor(ColorIndicator):
+    references = {'data': QColor(168, 58, 58)}
+    modeling = {'data': QColor(156, 156, 156)}
+    elements = {'data': QColor(198, 178, 148)}
+    lighting = {'data': QColor(188, 178, 98)}
+    shading = {'data': QColor(168, 58, 198)}
+    software = {'data': QColor(168, 168, 198)}
+    mayatools = {'data': QColor(66, 118, 150)}
+    nuketools = {'data': QColor(168, 168, 198)}
+
+
 class BaseFields(object):
     __slots__ = ()
+
+    class Indicators(AutoEnum):
+        type =       {'data': Type, 'rect': QRect(12, -22, 16, 16)}
+        category =   {'data': CategoryColor, 'rect': QRect(6, -6, 3, -48)}
+        status =     {'data': Statuses, 'rect': QRect(30, -22, 16, 16)}
+        resolution = {'data': TextIndicator, 'rect': QRect(50, -22, 0, 16)}
 
     def __init__(self, *args, **kwargs):
         if args:
@@ -66,7 +55,6 @@ class BaseFields(object):
                     setattr(self, x, args[i])
                 except:
                     setattr(self, x, None)
-
         else:
             for i, x in enumerate(self.__slots__):
                 bykeword = kwargs.get(x)
@@ -104,7 +92,7 @@ class BaseFields(object):
 
     @property
     def relationMap(self):
-        return TABLE_MAP.get(self.categoryName)
+        return int(Category[self.categoryName.upper()])
 
     def update(self, fields=None):
         data = self.export
@@ -133,14 +121,12 @@ class BaseFields(object):
     def removeAll(relations):
         session.removerelationships.execute(relations)
 
-
     def linkTo(self, downstream):
         relation = relationships(
             category_map=self.relationMap,
             category_id=self.id,
             link=downstream.links,
         )
-        print(relation)
         relation.create()
 
     def unlinkTo(self, asset):
@@ -210,20 +196,32 @@ class BaseFields(object):
     def recurseDependencies(asset):
         """Recursively accesses an assets upstream dependencies.
         """
-        if asset.upstream:
+        if isinstance(asset.upstream, list):
             for upstream in asset.upstream:
-                if upstream.type != 5:
+                if upstream.type != Type.VARIANT:
                     yield from BaseFields.recurseDependencies(upstream)
         yield asset
 
     def createCollection(self, link_mapping):
-        if self.type != 3: # collection type
+        if self.type != Type.COLLECTION:
             return
         data = {
             self.categoryName: self.export,
             'link_map': link_mapping 
         }
         session.createcollection.execute(data)
+
+    @property
+    def thumbnail(self):
+        return self.icon
+
+    @thumbnail.setter
+    def thumbnail(self, other):
+        self.icon = other
+
+    @property
+    def count(self):
+        return self.dependencies
 
 
 class allCategories(QObject):
@@ -263,7 +261,6 @@ class allCategories(QObject):
             self.set(i, category(self.getLabel(i), i))
         session.getcategories.execute([])
 
-
 class Library(QObject):
 
     categories = allCategories()
@@ -278,7 +275,6 @@ class Library(QObject):
             categories = dict.fromkeys(self.categories.slot_range)
         return categories
 
-
 class category(object):
     def __init__(self, name, id):
         self.name = name.capitalize()
@@ -288,7 +284,6 @@ class category(object):
         self.subcategory_by_id = {}
         self.tree = None # QTreeView
         self.tab = None # TabWidget
-
 
 class subcategory(BaseFields):
     """
@@ -303,7 +298,6 @@ class subcategory(BaseFields):
         'count',
         'upstream', # This is not a modifiable database field.
     )
-    NAME, ID, CATEGORY, LINK, COUNT, UPSTREAM = range(6)
 
     LINK_CALLBACK = None 
 
@@ -362,7 +356,6 @@ class subcategory(BaseFields):
                 cls.LINK_CALLBACK(link)
         cls.LINK_CALLBACK = None
 
-
 class tags(BaseFields):
 
     __slots__ = (
@@ -420,7 +413,6 @@ class relationships(BaseFields):
     def removeAll(relations):
         session.removerelationships.execute(relations)
 
-
 class details:
     """
     Details / Info:
@@ -445,7 +437,7 @@ class details:
         datecreated
         datemodified
         filehash
-        local
+        status
         proxy
         icon
         video
@@ -473,7 +465,7 @@ class relic_asset:
     extra = [
         'tags',
         'alusers',
-        'local',
+        'status',
         'icon',
         'video',
         'subcategory',
@@ -481,6 +473,7 @@ class relic_asset:
         'upstream',
         'downstream',
         'traversed',
+        'progress',
     ]
 
 class temp_asset(BaseFields):
@@ -569,49 +562,21 @@ class mayatools(BaseFields):
         relic_asset.base + attrs + relic_asset.extra
     )
 
-class polymorphicItem(QStandardItem):
 
-    Object = Qt.UserRole + 1
+class Category(AutoEnum):
+    RELATIONSHIPS = {'type': relationships,}
+    ALUSERS = {'type': alusers,}
+    TAGS = {'type': tags,}
+    SUBCATEGORY = {'type': subcategory,}
+    REFERENCES = {'type': references, }
+    MODELING = {'type': modeling,}
+    ELEMENTS = {'type': elements,}
+    LIGHTING = {'type': lighting,}
+    SHADING = {'type': shading,}
+    SOFTWARE = {'type': software,}
+    MAYATOOLS = {'type': mayatools,}
+    NUKETOOLS = {'type': nuketools,}
 
-    def __init__(self, parent=None, fields=None):
-        super(polymorphicItem, self).__init__(parent)
-        self.setData(fields.name, Qt.DisplayRole)
-        self.setData(fields, polymorphicItem.Object)
-        for x in fields.__slots__:
-            AttrDescriptor.buildNodeAttr(self.__class__, x)
-
-    def __repr__(self):
-        return "<%s: %s>" % (self.__class__.__name__, self.text())        
-
-    def __str__(self):
-        return self.text()
-
-    def __int__(self):
-        return self.data(role=polymorphicItem.Object).id
-
-    def type(self):
-        return(Qt.UserType + 1)
-
-    def clone(self):
-        obj = polymorphicItem(fields=self.data(role=polymorphicItem.Object))
-        return obj
-    
-
-class AttrDescriptor(object):
-    def __init__(self, plug):
-        self.plug = plug
-
-    def __get__(self, obj, objType):
-        return getattr(obj.data(role=polymorphicItem.Object), self.plug)
-
-    def __set__(self, obj, value):
-        item = obj.data(role=polymorphicItem.Object)
-        setattr(item, self.plug, value)
-        obj.setData(item, polymorphicItem.Object)
-
-    @staticmethod
-    def buildNodeAttr(cls, attr):
-        setattr(cls, attr, AttrDescriptor(attr))
 
 OBJECT_MAP = {
     0: references,

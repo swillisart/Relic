@@ -13,7 +13,7 @@ from imagine.exif import EXIFTOOL
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from qtshared6.delegates import ItemDispalyModes, AutoEnum, Statuses
+from qtshared6.delegates import ItemDispalyModes, AutoEnum, Statuses, BaseItemModel
 from qtshared6.utils import polymorphicItem
 from sequence_path.main import SequencePath as Path
 from strand.client import StrandClient
@@ -22,8 +22,7 @@ from enum import Enum
 
 # -- Module --
 import capture.resources
-from capture.history_view import (CaptureItem, CaptureItemModel,
-                                  HistoryTreeFilter, HistoryTreeView, Types,
+from capture.history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, Types,
                                   scale_icon)
 from capture.io import AudioRecord, ShellCommand, video_to_gif
 from capture.ui.dialog import Ui_ScreenCapture
@@ -231,7 +230,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.onConvertedGif.connect(self.gif_converted)
         self.onConvertedWebp.connect(self.webp_converted)
 
-        self.item_model = CaptureItemModel(0, 3)
+        self.item_model = BaseItemModel(0, 3)
         self.item_model.setHorizontalHeaderLabels(['Name', 'Date', 'Count'])
 
         model_root = self.item_model.invisibleRootItem()
@@ -257,8 +256,10 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         history_tree.setModel(self.proxy_model)
         history_tree.doubleClicked.connect(self.openInViewer)
         history_tree.resizeColumnToContents(0)
+        history_tree.sortByColumn(1, Qt.AscendingOrder)
 
         self.historyGroupBox.layout().addWidget(history_tree)
+
         self.history_tree = history_tree
 
         self.captureItemsFromFolder(OUTPUT_PATH)
@@ -303,7 +304,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         
         self.change_count(operator.add, item_type, 1)
 
-        date_item = QStandardItem(capture.date.strftime('%m/%d/%Y'))
+        date_item = QStandardItem(capture.date.strftime('%m/%d/%Y %H:%M'))
         date_item.setData(capture.date, role=Qt.UserRole)
         #date_item.setData(capture.date.strftime('%m/%d/%Y'), role=Qt.DisplayRole)
 
@@ -314,7 +315,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def change_count(self, operation, item_type, number):
         item_model = item_type.item.model()
         row = item_type.item.row()
-        count_index = item_model.index(row, CaptureItem.Columns.COUNT)
+        count_index = item_model.index(row, CaptureItem.Columns.count)
         count_item = item_model.itemFromIndex(count_index)
 
         total = operation(count_item.data(role=Qt.UserRole), number)
@@ -379,7 +380,10 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         indices = self.history_tree.selectedIndexes()
         if not indices:
             return
-        obj = indices[-1].data(polymorphicItem.Object)
+        for index in reversed(indices):
+            obj = index.data(polymorphicItem.Object)
+            if obj:
+                break
         winpath = str(obj.path).replace('/', '\\')
         cmd = f'explorer /select, "{winpath}"'
         os.system(cmd)

@@ -2,55 +2,31 @@ import re
 import os
 import operator
 from functools import partial
+import markdown
 
-from PySide6.QtCore import Slot, QUrl, Signal
+from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream
 from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor
-from PySide6.QtWidgets import QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit
+from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit, QWidget, QAbstractButton, QDialog
 
-from library.config import peakLoad
+from library.config import peakLoad, RELIC_PREFS
 from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
 
-DESCRIPTION_STYLE = """
-<style type="text/css">
-table {
-    border-color: rgb(64,64,64);
-    border-collapse: collapse;
-}
-h3 {
-    text-align: center;
-    margin-top: 64px;
-    margin-bottom: 64px;
-    color: rgb(215, 215, 215);
-}
-h2 {
-    color: rgb(190, 190, 190);
-}
-h1 {
-    color: rgb(230, 230, 230);
-}
-td {
-  padding: 6px;
-  text-align: center;
-  border: 2px solid rgb(64,64,64);
-  margin-top: 26px;
-}
-thead {
-    color: rgb(200, 175, 125);
-}
-body {
-  padding: 0;
-  margin:auto auto;
-  background-color: rgb(80, 80, 80);
-}
-</style>
-"""
+
+style_file = QFile(':/resources/style/markdown_style.css')
+style_file.open(QFile.ReadOnly | QFile.Text)
+style_sheet = QTextStream(style_file)
+MARKDOWN_STYLE = style_sheet.readAll()
+
+MARKDOWN = markdown.Markdown(
+    extensions = ['codehilite', 'tables'], #, 'meta'
+    output_format="html5"
+    )
 
 image_template = "![Image Url](./{})"
 
-class DescriptionTextEdit(QTextEdit):
-
+class TextEdit(QTextEdit):
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -67,43 +43,39 @@ class DescriptionTextEdit(QTextEdit):
                 if not ok:
                     return
                 out_file = destination_folder / f'{name}.jpg'
+                out_file.createParentFolders()
                 clip_img.save(str(out_file))
                 self.insertImage(out_file.stem)
-
+                return
             elif mime.hasUrls():
                 for url in mime.urls():
                     file_path = Path(url.toLocalFile())
                     out_file = destination_folder / file_path.stem
                     file_path.copyTo(out_file)
                     self.insertImage(out_file.stem)
+                    return
 
-        super(DescriptionTextEdit, self).keyPressEvent(event)
+        super(TextEdit, self).keyPressEvent(event)
 
     def insertImage(self, path):
         text = image_template.format(path)
         self.textCursor().insertText(text)
 
 
-class descriptionTextBrowser(QTextBrowser):
+class TextBrowser(QTextBrowser):
 
     linkToDescription = Signal(str)
     assetClicked = Signal(str)
     matchCountChanged = Signal(str)
 
     def __init__(self, *args, **kwargs):
-        super(descriptionTextBrowser, self).__init__(*args, **kwargs)
+        super(TextBrowser, self).__init__(*args, **kwargs)
         self.movies = {}
         self.anchorClicked.connect(self.handleLink)
-        self.setMinimumSize(795, 942)
         self.search_matches = []
         self.current_match_index = 0
 
-    def setMarkdown(self, markdown_path, text=None):
-        if markdown_path:
-            self.markdown_path = markdown_path
-        if not text:
-            with open(str(markdown_path), 'r') as fp:
-                text = fp.read()
+    def setMarkdown(self, text):
 
         # Find all relative paths.
         matcher = re.findall(URL_REGEX, text)
@@ -111,20 +83,14 @@ class descriptionTextBrowser(QTextBrowser):
         # Update the markdown document source paths.
         image_root = str(self.markdown_path.parent / 'source_images')
         updated_paths = text.replace('(./', f'({image_root}/')
-        updated_paths = updated_paths.replace('\n\n', '\n\n&nbsp;\n')
+        gen_html = MARKDOWN.convert(updated_paths)
 
-        super(QTextBrowser, self).setMarkdown(updated_paths)
-
-        html_from_markdown = self.toHtml()
-        new = html_from_markdown.replace('type="circle"', 'type="disc"')
-        new = new.replace('color:#0000ff;', 'color:rgb(125,130,250);')
         # Set Description Media
         root_append = partial(operator.add, image_root)
         paths = map(root_append, matcher)
         list(map(self.addAnimation, paths))
         # Set the modified markdown using HTML.
-        self.setHtml(DESCRIPTION_STYLE + new)
-        return text
+        self.setHtml(MARKDOWN_STYLE + gen_html)
 
     @Slot(QUrl)
     def handleLink(self, url):
@@ -188,7 +154,7 @@ class descriptionTextBrowser(QTextBrowser):
         movie.start()
 
     def keyPressEvent(self, event):
-        super(descriptionTextBrowser, self).keyPressEvent(event)
+        super(TextBrowser, self).keyPressEvent(event)
         key = event.key()
         mods = event.modifiers()
         if mods == Qt.ControlModifier and key == Qt.Key_C:
@@ -199,6 +165,53 @@ class descriptionTextBrowser(QTextBrowser):
     @Slot(str)
     def onPlainTextEditChanged(self):
         text_edit = self.sender()
-        self.setMarkdown(None, text_edit.toPlainText())
+        markdown_text = text_edit.toPlainText()
+        self.setMarkdown(markdown_text)
         v = text_edit.verticalScrollBar().value()
         self.verticalScrollBar().setValue(v)
+
+from library.ui.description import Ui_DescriptionDialog
+
+class Window(Ui_DescriptionDialog, QDialog):
+    def __init__(self, *args, **kwargs):
+        super(Window, self).__init__(*args, **kwargs)
+        self.setupUi(self)
+
+        self.text_browser.matchCountChanged.connect(self.found_results_label.setText)
+        self.filter_box.textChanged.connect(self.text_browser.searchPage)
+        self.filter_box.returnPressed.connect(self.text_browser.findNextInPage)
+        self.button_box.clicked.connect(self.onDescriptionButtonClicked)
+        self.text_edit.textChanged.connect(self.text_browser.onPlainTextEditChanged)
+
+    def closeEvent(self, event):
+        self.hide()
+        event.ignore()
+
+    @Slot(Path)
+    def showMarkdown(self, path):
+        if not path.exists():
+            return
+        self.editor_frame.setVisible(int(RELIC_PREFS.edit_mode))
+        
+        with open(str(path), 'r') as fp:
+            markdown_text = fp.read()
+            
+        self.text_browser.markdown_path = path
+        self.text_browser.setMarkdown(markdown_text)
+        self.text_edit.markdown_path = path
+        self.text_edit.setPlainText(markdown_text)
+
+        self.show()
+        self.activateWindow()
+
+    @Slot(QAbstractButton)
+    def onDescriptionButtonClicked(self, button):
+        role = self.button_box.buttonRole(button)
+        if role == QDialogButtonBox.ResetRole:
+            self.showMarkdown(self.text_browser.markdown_path)
+        elif role == QDialogButtonBox.AcceptRole:
+            text = self.text_edit.toPlainText()
+            with open(str(self.text_browser.markdown_path), 'w') as fp:
+                fp.write(text)
+        elif role == QDialogButtonBox.HelpRole:
+            pass

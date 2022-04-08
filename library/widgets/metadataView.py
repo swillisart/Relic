@@ -13,9 +13,10 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFrame,
                                QTextBrowser, QWidget)
 
 from library.config import RELIC_PREFS
-from library.objectmodels import (session, allCategories, alusers, polymorphicItem,
+from library.objectmodels import (session, allCategories, alusers,
                                   relationships, subcategory, tags, attachLinkToAsset)
 from library.widgets.util import ListViewFiltered, modifySVG, rasterizeSVG
+from qtshared6.utils import polymorphicItem
 
 from sequence_path.main import SequencePath as Path
 

@@ -2,18 +2,15 @@
 from enum import Enum, IntEnum
 
 # -- Third-party --
-from PySide6.QtCore import QDir, QMargins, QPoint, QRect, QSize, Qt, QUrl, QMimeData, QSortFilterProxyModel, Slot, QItemSelection, QModelIndex
+from PySide6.QtCore import QMargins, QPoint, QRect, Qt, QSortFilterProxyModel, Slot, QItemSelection, QModelIndex
 from PySide6.QtGui import (QColor, QFont, QPainter, QRegion, QPainterPath, QPixmap,
-                           QStandardItemModel, QDrag, QCursor, QAction, QIcon)
+                            QDrag, QCursor, QAction, QIcon)
 from PySide6.QtWidgets import (QHBoxLayout, QListView, QStyle,
                                QStyledItemDelegate, QAbstractItemView, QTreeView, QTreeWidgetItem,
                                QWidget, QStyleOption, QMenu)
 from qtshared6.delegates import (BaseItemDelegate, IconIndicator, NamedEnum, AutoEnum,
-                                 Statuses)
+                                 Statuses, scale_icon)
 from qtshared6.utils import polymorphicItem
-
-def scale_icon(pix: QPixmap):
-    return pix.scaled(16,16, Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
 class Types(IconIndicator):
     Screenshot = {
@@ -68,49 +65,14 @@ class CaptureItem(object):
         self.date = None
         self.thumbnail = None
 
-    class Indicators(NamedEnum):
-        TYPE =       (4, {'data': Types, 'rect': QRect(12, -22, 16, 16)})
-        STATUS =     (3, {'data': Statuses, 'rect': QRect(28, -22, 16, 16)})
+    class Indicators(AutoEnum):
+        type = {'data': Types, 'rect': QRect(12, -22, 16, 16)}
+        status = {'data': Statuses, 'rect': QRect(28, -22, 16, 16)}
 
     class Columns(AutoEnum):
-        NAME = {'data': 0}
-        DATE = {'data': 6}
-        COUNT = {'data': 2}
-
-    def attrFromIndicator(self, indicator):
-        return getattr(self, self.__slots__[indicator])
-
-
-class CaptureItemModel(QStandardItemModel):
-
-    def mimeData(self, indices):
-        paths = []
-        for index in indices:
-            obj = index.data(polymorphicItem.Object)
-            if isinstance(obj, polymorphicItem):
-                paths.append(QUrl.fromLocalFile(str(obj.path)))
-
-        drag = QDrag(self)
-        mimeData = QMimeData()
-        mimeData.setUrls(paths)
-        drag.setMimeData(mimeData)
-
-        # Capture the rendered item and set to mime data's pixmap
-        size = BaseItemDelegate.VIEW_MODE.item_size
-    
-        pixmap = QPixmap(size)
-        pixmap.fill(QColor(68,68,68))
-        painter = QPainter(pixmap)
-        #painter.setRenderHint(QPainter.Antialiasing, True)
-        delegate = BaseItemDelegate()
-        option = QStyleOption()
-        option.state = QStyle.State_MouseOver
-        option.rect = QRect(QPoint(0,0), size)
-        delegate.paint(painter, option, indices[0])
-        painter.end()
-        drag.setPixmap(pixmap)
-        drag.exec(Qt.CopyAction)
-
+        name = {'data': 0}
+        date = {'data': 6}
+        count = {'data': 2}
 
 class HistoryTreeView(QTreeView):
 
@@ -120,8 +82,8 @@ class HistoryTreeView(QTreeView):
         self.setIndentation(16)
         self.setDragEnabled(True)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDefaultDropAction(Qt.CopyAction)
+        self.setDragDropMode(QAbstractItemView.DragOnly)
+        self.setDefaultDropAction(Qt.IgnoreAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.setItemDelegate(BaseItemDelegate(self))

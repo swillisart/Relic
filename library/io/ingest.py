@@ -6,7 +6,7 @@ from functools import partial
 import numpy as np
 import oiio.OpenImageIO as oiio
 from library.abstract_objects import ImageDimensions
-from library.config import (DCC_EXT, MOVIE_EXT, RELIC_PREFS, TOOLS_EXT, RAW_EXT,
+from library.config import (Extension, RELIC_PREFS,
                             getAssetSourceLocation, log, logFunction, INGEST_PATH)
 from library.objectmodels import BaseFields, relic_asset, temp_asset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
@@ -492,7 +492,7 @@ def applyImageModifications(img_path, temp_asset):
         temp_asset.path.copyTo(img_path)
         temp_asset.path = img_path
 
-    is_raw = img_path.ext in RAW_EXT
+    is_raw = img_path.ext in Extension.RAW
     if is_raw:
         raw_path = str(img_path)
         img_data = libraw.decodeRaw(raw_path)
@@ -557,13 +557,14 @@ def blendRawExposures(assets_by_file):
     hdr.blendExposures(assets_by_file.keys(), out_file, align=True)
     primary_asset.path = out_file
     primary_asset.aces = True
-
     raw_meta = getRawInfo(primary_path)
     img_buf = oiio.ImageBuf(str(out_file))
     for key, value in raw_meta.items():
-        img_buf.specmod().attribute(key, value)
+        try:
+            img_buf.specmod().attribute(key, value)
+        except: pass
     [os.remove(str(x)) for x in assets_by_file.keys()]
-
+    return primary_asset
 
 class TaskRunnerSignals(QObject):
     completed = Signal(tuple)
@@ -599,6 +600,15 @@ class IngestionThread(QThread):
         self.ingest_path = INGEST_PATH
         self.stopped = False
         self.queue = []
+        self.file_op = IngestionThread.moveOp
+
+    @staticmethod
+    def copyOp(src, dst):
+        src.copyTo(dst)
+
+    @staticmethod
+    def moveOp(src, dst):
+        src.moveTo(dst)
 
     def load(self, items):
         locker = QMutexLocker(self.mutex)
@@ -656,7 +666,7 @@ class IngestionThread(QThread):
 
                         files_map[Path(extra)] = new_path
 
-                if in_path.ext in DCC_EXT:
+                if in_path.ext in Extension.DCC:
                     formats = [
                         ['', '.mtlx'],
                         ['_icon', '.jpg'],
@@ -668,12 +678,12 @@ class IngestionThread(QThread):
                         if src.exists():
                             dst = out_path.suffixed(suffix, ext)
                             files_map[src] = dst
-                elif in_path.ext in TOOLS_EXT:
+                elif in_path.ext in Extension.TOOLS:
                     in_icon = in_path.suffixed('_icon', ext='.jpg')
                     if in_icon.exists():
                         out_icon = out_path.suffixed('_icon', ext='.jpg')
                         files_map[in_icon] = out_icon
-                elif in_path.sequence_path or in_path.ext in MOVIE_EXT:
+                elif in_path.sequence_path or in_path.ext in Extension.MOVIE:
                     in_proxy = temp_path.suffixed('_proxy', ext='.mp4')
                     in_icon = temp_path.suffixed('_icon', ext='.jpg')
                     out_icon = out_path.suffixed('_icon', ext='.jpg')
@@ -705,11 +715,9 @@ class IngestionThread(QThread):
                             frame = Path(seq_file).frame
                             src.frame = frame
                             dst.frame = frame
-                            #src.moveTo(dst)
-                            src.copyTo(dst)
+                            self.file_op(src, dst) # move or copy
                     else:
-                        #src.moveTo(dst)
-                        src.copyTo(dst)
+                        self.file_op(src, dst) # move or copy
 
                 # Calculate the final hash and size of the asset.
                 item.filehash = out_path.parent.hash

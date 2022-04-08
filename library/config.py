@@ -1,6 +1,7 @@
 import os
 import logging
-
+from extra_types.enums import AutoEnum, ListEnum
+from enum import IntEnum
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
 from sequence_path.main import SequencePath as Path
@@ -8,20 +9,39 @@ from strand.client import StrandClient
 from qtshared6.utils import Preferences
 
 # -- Globals --
-NONE, TEXTURE, MODEL, ANIMATION, SHADER, AREA_LIGHT, IBL, IES, _2D_ELEMENT, _3D_ELEMENT, REFERENCE, TOOL = range(12)
+
+class Classification(IntEnum):
+    NONE = 0
+    IMAGE = 1
+    MODEL = 2
+    ANIMATION = 3
+    SHADER = 4
+    AREA_LIGHT = 5
+    IBL = 6
+    IES = 7
+    ELEMENT_2D = 8
+    ELEMENT_3D = 9
+    REFERENCE = 10
+    TOOL = 11
+    BLENDSHAPE = 12
+    SOFTWARE = 13
+    PLUGIN = 14
+    APPLICATION = 15
+
 
 # Valid Extensions in an exclusive list
-MOVIE_EXT = ['.mov', '.mxf', '.mp4', '.mkv']
-SHADER_EXT = ['.mtlx', '.osl', '.sbsar']
-RAW_EXT = ['.cr2', '.arw', '.dng', '.cr3', '.nef']
-FILM_EXT = ['.r3d', '.arriraw']
-HDR_EXT = ['.exr', '.hdr']
-LDR_EXT = ['.jpg', '.png', '.tif', '.tga', '.jpeg']
-LIGHT_EXT = ['.ies']
-DCC_EXT = ['.ma', '.mb', '.max', '.hip', '.usd']
-TOOLS_EXT = ['.nk', '.mel', '.py', '.hda', '.exe']
-GEO_EXT = ['.abc', '.fbx']
-TEXTURE_EXT = HDR_EXT + LDR_EXT
+class Extension(ListEnum):
+    MOVIE = ['.mov', '.mxf', '.mp4', '.mkv']
+    RAW = ['.cr2', '.arw', '.dng', '.cr3', '.nef']
+    FILM = ['.r3d', '.arriraw']
+    HDR = ['.exr']
+    LDR = ['.jpg', '.png', '.tif', '.jpeg']
+    LIGHT = ['.ies']
+    SHADER = ['.mtlx', '.osl', '.sbsar']
+    DCC = ['.ma', '.mb', '.max', '.hip']
+    TOOLS = ['.nk', '.mel', '.py', '.hda', '.exe']
+    GEO = ['.abc', '.fbx', '.usd']
+    TEXTURE = HDR + LDR
 
 PEAK = StrandClient('peak')
 USERPROFILE = os.getenv('userprofile')
@@ -42,10 +62,10 @@ def getAssetSourceLocation(filepath):
     str
         one of 3 image, cache or misc depending on matching valid extension
     """
-    for extension in TEXTURE_EXT:
+    for extension in Extension.TEXTURE:
         if str(filepath).endswith(extension):
             return 'source_images'
-    for extension in GEO_EXT:
+    for extension in Extension.GEO:
         if str(filepath).endswith(extension):
             return 'source_caches'
 
@@ -59,7 +79,7 @@ def peakLoad(path):
 
 def peakPreview(path):
     path.checkSequence()
-    if path.sequence_path or path.ext in MOVIE_EXT:
+    if path.sequence_path or path.ext in Extension.MOVIE:
         path = path.suffixed('_proxy', '.mp4')
     else:
         path = path.suffixed('_proxy', '.jpg')

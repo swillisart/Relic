@@ -5,9 +5,11 @@ from collections import defaultdict
 # -- Module --
 from library import objectmodels
 from library.config import RELIC_PREFS
-from library.objectmodels import polymorphicItem, relationships, subcategory
+from library.objectmodels import relationships, subcategory
 from library.ui.expandableTabs import Ui_ExpandableTabs
 from library.widgets.util import ListViewFiltered, rasterizeSVG
+
+from qtshared6.utils import polymorphicItem
 # -- Third-party --
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             QPoint, QRegularExpression, QSize,

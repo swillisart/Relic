@@ -3,19 +3,26 @@
 ################################################################################
 ## Form generated from reading UI file 'ingestion.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.1.0
+## Created by: Qt User Interface Compiler version 6.2.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
+    QHBoxLayout, QLabel, QListView, QPlainTextEdit,
+    QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
+    QVBoxLayout, QWidget)
 
-from library.widgets.assets import assetListView
-from library.widgets.util import AssetNameListView
+from library.widgets.assets_alt import AssetListView
 from library.widgets.metadataView import categoryWidget
-
+from library.widgets.util import AssetNameListView
 import resources_rc
 import resources_rc
 
@@ -708,21 +715,35 @@ class Ui_IngestForm(object):
 
         self.horizontalLayout_6.addLayout(self.gridLayout)
 
+        self.line_6 = QFrame(self.collectTab)
+        self.line_6.setObjectName(u"line_6")
+        self.line_6.setFrameShape(QFrame.VLine)
+        self.line_6.setFrameShadow(QFrame.Sunken)
+
+        self.horizontalLayout_6.addWidget(self.line_6)
+
         self.gridLayout_2 = QGridLayout()
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(9, 0, 9, 0)
-        self.texturesReferencesCheckBox_2 = QCheckBox(self.collectTab)
-        self.texturesReferencesCheckBox_2.setObjectName(u"texturesReferencesCheckBox_2")
-        self.texturesReferencesCheckBox_2.setEnabled(False)
+        self.label_7 = QLabel(self.collectTab)
+        self.label_7.setObjectName(u"label_7")
+        self.label_7.setFont(font1)
 
-        self.gridLayout_2.addWidget(self.texturesReferencesCheckBox_2, 2, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.label_7, 0, 0, 1, 1)
 
-        self.line_9 = QFrame(self.collectTab)
-        self.line_9.setObjectName(u"line_9")
-        self.line_9.setFrameShape(QFrame.HLine)
-        self.line_9.setFrameShadow(QFrame.Sunken)
+        self.copyCheckBox = QCheckBox(self.collectTab)
+        self.copyCheckBox.setObjectName(u"copyCheckBox")
 
-        self.gridLayout_2.addWidget(self.line_9, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.copyCheckBox, 3, 1, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.gridLayout_2.addItem(self.verticalSpacer, 4, 0, 1, 1)
+
+        self.copyLabel = QLabel(self.collectTab)
+        self.copyLabel.setObjectName(u"copyLabel")
+
+        self.gridLayout_2.addWidget(self.copyLabel, 3, 0, 1, 1)
 
         self.texturesReferencesLabel_2 = QLabel(self.collectTab)
         self.texturesReferencesLabel_2.setObjectName(u"texturesReferencesLabel_2")
@@ -731,15 +752,18 @@ class Ui_IngestForm(object):
 
         self.gridLayout_2.addWidget(self.texturesReferencesLabel_2, 2, 0, 1, 1)
 
-        self.label_7 = QLabel(self.collectTab)
-        self.label_7.setObjectName(u"label_7")
-        self.label_7.setFont(font1)
+        self.line_9 = QFrame(self.collectTab)
+        self.line_9.setObjectName(u"line_9")
+        self.line_9.setFrameShape(QFrame.HLine)
+        self.line_9.setFrameShadow(QFrame.Sunken)
 
-        self.gridLayout_2.addWidget(self.label_7, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.line_9, 1, 0, 1, 1)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.texturesReferencesCheckBox_2 = QCheckBox(self.collectTab)
+        self.texturesReferencesCheckBox_2.setObjectName(u"texturesReferencesCheckBox_2")
+        self.texturesReferencesCheckBox_2.setEnabled(False)
 
-        self.gridLayout_2.addItem(self.verticalSpacer, 3, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.texturesReferencesCheckBox_2, 2, 1, 1, 1)
 
 
         self.horizontalLayout_6.addLayout(self.gridLayout_2)
@@ -803,7 +827,7 @@ class Ui_IngestForm(object):
 
         self.verticalLayout.addWidget(self.line_2)
 
-        self.collectedListView = assetListView(self.frame)
+        self.collectedListView = AssetListView(self.frame)
         self.collectedListView.setObjectName(u"collectedListView")
         self.collectedListView.setResizeMode(QListView.Adjust)
         self.collectedListView.setUniformItemSizes(True)
@@ -913,7 +937,7 @@ class Ui_IngestForm(object):
 
         self.verticalLayout_6.addWidget(self.line_4)
 
-        self.newAssetListView = assetListView(self.frame_6)
+        self.newAssetListView = AssetListView(self.frame_6)
         self.newAssetListView.setObjectName(u"newAssetListView")
         self.newAssetListView.setResizeMode(QListView.Adjust)
         self.newAssetListView.setUniformItemSizes(True)
@@ -976,7 +1000,7 @@ class Ui_IngestForm(object):
         self.retranslateUi(IngestForm)
         self.cancelButton.clicked.connect(IngestForm.close)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(IngestForm)
@@ -998,9 +1022,11 @@ class Ui_IngestForm(object):
         self.moviesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .mov, .mp4, .mxf ]", None))
         self.rawLabel.setText(QCoreApplication.translate("IngestForm", u"Camera Raw :", None))
         self.rawCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .cr2, .dng, .r3d ]", None))
-        self.texturesReferencesCheckBox_2.setText("")
-        self.texturesReferencesLabel_2.setText(QCoreApplication.translate("IngestForm", u"Categorize Using Parent Folder", None))
         self.label_7.setText(QCoreApplication.translate("IngestForm", u"Advanced", None))
+        self.copyCheckBox.setText("")
+        self.copyLabel.setText(QCoreApplication.translate("IngestForm", u"Copy Assets", None))
+        self.texturesReferencesLabel_2.setText(QCoreApplication.translate("IngestForm", u"Categorize Using Parent Folder", None))
+        self.texturesReferencesCheckBox_2.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.collectTab), QCoreApplication.translate("IngestForm", u"1. Collect", None))
         self.loadingLabel.setText("")
         self.completedLabel.setText("")

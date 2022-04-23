@@ -178,7 +178,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     class TreeActions(AutoEnum):
         view_item = {
             'obj': QAction(QIcon(':resources/icons/app_icon.ico'), 'View'),
-            'key': 'Space'}
+            'key': 'space'}
         open_location = {
             'obj': QAction(QIcon(':resources/icons/folder.svg'), 'Open File Location'),
             'key': 'Ctrl+O'}
@@ -353,16 +353,20 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @Slot()
     def view_item(self, val):
-        pass
+        indices = self.history_tree.selectedIndexes()
+        if not indices:
+            return
+        for index in indices:
+            self.openInViewer(index)
 
     @Slot()
     def rename_item(self, val):
         indices = self.history_tree.selectedIndexes()
         if not indices:
             return
-        item = self.indexToItem(indices[-1])
-        obj = item.data(polymorphicItem.Object)
-        
+        items = [self.indexToItem(x).data(polymorphicItem.Object) for x in indices]
+        filtered = [x for x in items if x]
+        obj = filtered[-1]
         new_name, ok = QInputDialog.getText(self, 'Rename',
                 "New name:", QLineEdit.Normal,
                 obj.path.name)

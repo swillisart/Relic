@@ -198,19 +198,19 @@ def makeFileRead(asset_path):
     c_read['file'].fromUserText(str(asset_path))
     asset_path.checkSequence()
     if asset_path.sequence_path:
-        proxy_path = asset_path.suffixed('_proxy', '.mp4')
-        c_read['proxy'].fromUserText(str(proxy_path))
-        proxy_last = int(c_read['last'].value())
-        first, last = asset_path.getRange()
-        print(first, last)
-        print('proxy', proxy_last)
+        #proxy_path = asset_path.suffixed('_proxy', '.mp4')
+        #c_read['proxy'].fromUserText(str(proxy_path))
+        #proxy_last = int(c_read['last'].value())
+        first, last = asset_path.getFrameRange()
         c_read['frame_mode'].setValue('expression')
         c_read['frame'].setValue(FRAME_EXPR.format(start=first))
-        c_read['first'].setExpression(FIRST_EXPR.format(start=first))
-        c_read['last'].setExpression(LAST_EXPR.format(proxy_last=proxy_last, seq_last=last))
-    else:
-        proxy_path = asset_path.suffixed('_proxy', '.jpg')
-        c_read['proxy'].fromUserText(str(proxy_path))
+        c_read['first'].setValue(first)
+        c_read['last'].setValue(last)
+        #c_read['first'].setExpression(FIRST_EXPR.format(start=first))
+        #c_read['last'].setExpression(LAST_EXPR.format(proxy_last=proxy_last, seq_last=last))
+    #else:
+    #    proxy_path = asset_path.suffixed('_proxy', '.jpg')
+    #    c_read['proxy'].fromUserText(str(proxy_path))
 
     # Set formats
     fmt = c_read['format'].value()
@@ -326,7 +326,7 @@ def setNodeAssetInfo(asset):
     for node in nuke.allNodes(recurseGroups=True):
         count += 1
         for plug in nuke.plugins():
-            if not plug.startswith(nuke_loc.parent) and plug.endswith('.dll'):
+            if not plug.startswith(str(nuke_loc.parent)) and plug.endswith('.dll'):
                 if node.Class() == Path(plug).name:
                     asset.tags.append({'name': node.Class(), 'type': 2})
 

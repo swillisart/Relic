@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1106</width>
-    <height>656</height>
+    <width>945</width>
+    <height>474</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -682,13 +682,13 @@ QToolBox::tab:selected {
      <number>0</number>
     </property>
     <property name="leftMargin">
-     <number>9</number>
+     <number>0</number>
     </property>
     <property name="topMargin">
      <number>0</number>
     </property>
     <property name="rightMargin">
-     <number>9</number>
+     <number>0</number>
     </property>
     <property name="bottomMargin">
      <number>0</number>
@@ -2205,7 +2205,7 @@ QPushButton:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1106</width>
+     <width>945</width>
      <height>22</height>
     </rect>
    </property>
@@ -2291,7 +2291,7 @@ QPushButton:hover {
           <x>0</x>
           <y>0</y>
           <width>54</width>
-          <height>502</height>
+          <height>320</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryLayout">
@@ -2904,7 +2904,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>502</height>
+          <height>320</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">

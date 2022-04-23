@@ -5,7 +5,7 @@ from functools import partial
 
 import numpy as np
 import oiio.OpenImageIO as oiio
-from library.abstract_objects import ImageDimensions
+from extra_types.math import ImageDimensions
 from library.config import (Extension, RELIC_PREFS,
                             getAssetSourceLocation, log, logFunction, INGEST_PATH)
 from library.objectmodels import BaseFields, relic_asset, temp_asset

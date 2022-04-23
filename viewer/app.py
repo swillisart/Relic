@@ -3,6 +3,8 @@ import ctypes
 import os
 import sys
 import json
+import subprocess
+import shutil
 from functools import partial
 from collections import defaultdict
 from operator import itemgetter
@@ -19,8 +21,10 @@ from qtshared6.svg import rasterizeSVG
 from qtshared6.widgets import (CompactTitleBar, HoverTintButton,
                               InteractiveSpinBox)
 # -- First-Party -- 
-from sequence_path.main import SequencePath
+from sequence_path.main import Path
 from strand.server import StrandServer
+from enum import Enum
+
 #import relic_base
 
 # -- Module --
@@ -43,6 +47,11 @@ SHORTCUTS = {
 }
 
 SHORTCUT_MODE = VIEW
+
+class ExportExtension(Enum):
+    edl = 0
+    mp4 = 1
+    piq = 2
 
 class timelineControl(QTimeLine):
 
@@ -607,7 +616,8 @@ class PlayerAppWindow(QMainWindow):
         self.timeline.clearCache.connect(self.clearCache)
         self.actionSetHandles = QAction('Set Handles', self)
         self.actionSetHandles.triggered.connect(self.getHandlesFromInput)
-
+        self.actionSaveEdits = QAction('Save Edits', self)
+        self.actionSaveEdits.triggered.connect(self.saveClipEdits)
         # -- Shortcuts --
         channel_call = self.viewport.setColorChannel
         shuffle_red = partial(channel_call, 'r')
@@ -672,12 +682,22 @@ class PlayerAppWindow(QMainWindow):
 
     def showTimelineContextMenu(self, position):
         context_menu = QMenu(self)
-        selection = self.timeline.graph.selected_clips
-        if selection:
+        if self.timeline.graph.selected_clips:
             context_menu.addAction(self.actionSetHandles)
+            context_menu.addAction(self.actionSaveEdits)
 
         context_menu.exec(position)
 
+    @Slot()
+    def saveClipEdits(self):
+        selection = self.timeline.graph.selected_clips
+        for clip in selection:
+            temp_path = str(clip.path.suffixed('temp'))
+            shutil.copy(str(clip.path), temp_path)
+            self.translateMP4(str(clip.path), [clip], in_file=temp_path)
+            os.remove(temp_path)
+
+    @Slot()
     def getHandlesFromInput(self):
         value, ok = QInputDialog.getInt(self, 'Set Handles', 'Frames:')
         if not ok:
@@ -729,11 +749,42 @@ class PlayerAppWindow(QMainWindow):
 
     @Slot()
     def exportSession(self):
+        exts = ' '.join([f'*.{x.name}' for x in ExportExtension])
+        file_filter = f'Timeline Out ({exts})'
         file_name, ok = QFileDialog.getSaveFileName(
-            self, "Export", QDir.homePath(), "Image Files (*.edl *.piq *.mp4)")
+            self, "Export", QDir.homePath(), file_filter)
         if not ok:
             return
-        out_file = open(file_name, 'a')
+        out_ext = Path(file_name).ext[1:]
+        exporter = ExportExtension[out_ext]
+        if exporter == ExportExtension.edl:
+           self.translateEDL(file_name)
+        elif exporter == ExportExtension.mp4:
+           self.translateMP4(file_name, [x[1] for x in self.timeline.graph.iterateSequences()])
+
+    def translateMP4(self, out_file, clips, in_file=None):
+        for clip in clips:
+            tc_frame = clip.start_timecode * clip.framerate
+            head = ((clip.first + tc_frame) / clip.framerate) * 1000
+            tail = ((clip.last + tc_frame) / clip.framerate) * 1000
+
+            cmd = [
+                'ffmpeg',
+                '-loglevel', 'error',
+                '-i', in_file or str(clip.path),
+                '-y', # Always Overwrite
+                '-ss', f'{int(head)}ms',
+                '-to', f'{int(tail)}ms',
+                out_file,
+            ]
+            subprocess.call(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+            )
+
+    def translateEDL(self, file_name):
+        out_file = open(file_name, 'w')
         out_file.write(io.util.EDL_TITLE)
         index = 0
         for _, clip in self.timeline.graph.iterateSequences():
@@ -744,6 +795,7 @@ class PlayerAppWindow(QMainWindow):
             clip_name = clip.label.replace('_01P', '')
             out_str = io.util.EDL_CLIP.format(index, *a, *b, clip_name)
             out_file.write(out_str)
+        out_file.close()
 
     @Slot()
     def newSession(self):

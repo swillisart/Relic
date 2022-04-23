@@ -17,8 +17,6 @@ from library.io.ingest import ConversionRouter, remakePreview
 from library.io.util import LocalThumbnail
 
 from library.objectmodels import allCategories, subcategory, temp_asset, getCategoryConstructor, Library, Type
-from library.qt_objects import AbstractDoubleClick
-from library.widgets.util import updateWidgetProperty
 from library.widgets.metadataView import (categoryWidget, classWidget,
                                           qualityWidget, subcategoryWidget,
                                           typeWidget)
@@ -32,21 +30,10 @@ from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie
 from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog,
                                QListView, QMenu, QStyle, QStyledItemDelegate,
                                QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
-
-
-def generateBlankImage():
-    blank = QPixmap(':resources/app/checker.png').scaled(
-        288, 192, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-
-    return blank
-
-NO_IMAGE = generateBlankImage()
-
-unimageable_types = {
-    '.r3d': QPixmap(':resources/general/RedLogo.png')
-} 
+#unimageable_types = {
+#    '.r3d': QPixmap(':resources/general/RedLogo.png')
+#} 
 THREAD_POOL = QThreadPool.globalInstance()
-
 
 class AssetItemModel(BaseItemModel):
 
@@ -124,6 +111,7 @@ class AssetListView(BaseView):
     onLinkRemove = Signal(QModelIndex)
     onDeleted = Signal(QModelIndex)
     assetsDeleted = Signal(defaultdict)
+    onExecuted = Signal(QModelIndex)
 
     def __init__(self, *args, **kwargs):
         super(AssetListView, self).__init__(*args, **kwargs)
@@ -166,6 +154,13 @@ class AssetListView(BaseView):
         self.actionGeneratePreview.triggered.connect(self.generatePreview)
         self.additional_actions = []
 
+    def leaveEvent(self, event):
+        super(AssetListView, self).leaveEvent(event)
+        self.lastIndex = None # Essential! last index will be deleted by Qt
+
+    def enterEvent(self, event):
+        super(AssetListView, self).enterEvent(event)
+        self.lastIndex = None # Essential! last index will be deleted by Qt
 
     def setModel(self, model):
         super(AssetListView, self).setModel(model)
@@ -185,6 +180,9 @@ class AssetListView(BaseView):
             self.clipboardPaste()
         elif mods == Qt.ControlModifier and key == Qt.Key_G:
             self.groupSelectedItems()
+        elif key == Qt.Key_Space:
+            if self.lastIndex and self.lastIndex.isValid():
+                self.onExecuted.emit(self.lastIndex)
 
     def clipboardCopy(self, description=None):
         clipboard = QApplication.clipboard()
@@ -261,7 +259,6 @@ class AssetListView(BaseView):
         mouse_pos = event.pos()
         index = self.indexAt(mouse_pos)
         if not index.isValid():
-            self.lastIndex = index
             return
         asset = index.data(polymorphicItem.Object)
 
@@ -282,7 +279,7 @@ class AssetListView(BaseView):
                             ico = linked_asset.network_path.suffixed('_icon', '.jpg')
                             worker = LocalThumbnail(ico, asset.video.append)
                             THREAD_POOL.start(worker)
-        elif BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
+        if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
             rect = self.visualRect(index)
             a = rect.bottomLeft()
             relative_pos = mouse_pos.x() - a.x()

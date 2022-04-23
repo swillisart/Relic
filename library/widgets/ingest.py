@@ -159,7 +159,8 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.categorizeTab.setEnabled(True)
         self.tabWidget.setCurrentIndex(1)
         self.kept_original_name = True
-        
+        self.todo = len(assets)
+        self.updateLabelCounts(len(assets)-1)
         item_model = self.collect_item_model
         for fields in assets:
             asset = temp_asset(**fields)
@@ -168,7 +169,6 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
             item = polymorphicItem(fields=asset)
             item_model.appendRow(item)
-        self.updateLabelCounts(len(assets)-1)
 
     def getSelection(self):
         selection = self.collectedListView.selectedIndexes()

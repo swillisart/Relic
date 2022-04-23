@@ -213,5 +213,6 @@ class Window(Ui_DescriptionDialog, QDialog):
             text = self.text_edit.toPlainText()
             with open(str(self.text_browser.markdown_path), 'w') as fp:
                 fp.write(text)
+            self.close()
         elif role == QDialogButtonBox.HelpRole:
             pass

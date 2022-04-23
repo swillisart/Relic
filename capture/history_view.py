@@ -2,7 +2,7 @@
 from enum import Enum, IntEnum
 
 # -- Third-party --
-from PySide6.QtCore import QMargins, QPoint, QRect, Qt, QSortFilterProxyModel, Slot, QItemSelection, QModelIndex
+from PySide6.QtCore import QMargins, QPoint, QRect, Qt, QSortFilterProxyModel, Slot, QItemSelection, QModelIndex, Signal
 from PySide6.QtGui import (QColor, QFont, QPainter, QRegion, QPainterPath, QPixmap,
                             QDrag, QCursor, QAction, QIcon)
 from PySide6.QtWidgets import (QHBoxLayout, QListView, QStyle,
@@ -76,6 +76,8 @@ class CaptureItem(object):
 
 class HistoryTreeView(QTreeView):
 
+    onExecuted = Signal(QModelIndex)
+
     def __init__(self, *args, **kwargs):
         super(HistoryTreeView, self).__init__(*args, **kwargs)
         self.setMouseTracking(True)
@@ -118,3 +120,8 @@ class HistoryTreeView(QTreeView):
             actions = self.actions()
         [context_menu.addAction(action) for action in actions]
         context_menu.exec(QCursor.pos())
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key == Qt.Key_Space:
+            self.onExecuted.emit(self.lastIndex)

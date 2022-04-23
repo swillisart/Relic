@@ -19,11 +19,6 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget, QLayout, QDialog)
 
-
-def updateWidgetProperty(widget, attribute, value):
-    widget.setProperty(attribute, value)
-    widget.setStyle(widget.style())
-
 def rasterizeSVG(svg_file, size=QSize(28, 28)):
     svgWidget = QSvgWidget()
     svgWidget.load(svg_file)
@@ -83,17 +78,6 @@ class SimpleAsset(object):
     def __init__(self, name, id):
         self.name = name
         self.id = id
-
-class compactLayout(QBoxLayout):
-
-    horizontal = QBoxLayout.LeftToRight
-    vertical = QBoxLayout.TopToBottom
-
-    def __init__(self, *args, **kwargs):
-        super(compactLayout, self).__init__(*args, **kwargs)
-        self.setSpacing(0)
-        self.setContentsMargins(0, 0, 0, 0)
-
 
 class SearchBox(QLineEdit):
 

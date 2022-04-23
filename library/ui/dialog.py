@@ -28,7 +28,7 @@ class Ui_RelicMainWindow(object):
     def setupUi(self, RelicMainWindow):
         if not RelicMainWindow.objectName():
             RelicMainWindow.setObjectName(u"RelicMainWindow")
-        RelicMainWindow.resize(1106, 656)
+        RelicMainWindow.resize(1161, 656)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -734,7 +734,7 @@ class Ui_RelicMainWindow(object):
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setContentsMargins(9, 9, 9, 9)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(9, 0, 9, 0)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.line_5 = QFrame(self.centralwidget)
         self.line_5.setObjectName(u"line_5")
         self.line_5.setFrameShadow(QFrame.Raised)
@@ -1431,7 +1431,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1106, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1161, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)

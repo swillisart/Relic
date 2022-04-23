@@ -8,7 +8,7 @@ from functools import partial
 
 # -- Third-party --
 from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QPoint,
-                            QThreadPool, Slot)
+                            QThreadPool, Slot, QTimer)
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap, Qt, QKeySequence, QShortcut 
 from PySide6.QtWidgets import (QApplication,
                             QMainWindow, QSizePolicy,
@@ -29,7 +29,6 @@ from library.objectmodels import (Library, alusers, attachLinkToAsset,
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
 from library.widgets.assets_alt import AssetItemModel, AssetListView
-from library.widgets.ingest import IngestForm
 
 from library.widgets.metadataView import metadataFormView
 from library.widgets.relationshipView import LinkViewWidget
@@ -105,8 +104,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         self.assets_view.selectionModel().selectionChanged.connect(self.loadAssetData)
         self.assets_view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
+        self.assets_view.onExecuted.connect(self.open_file)
+
         for view in self.links_view.all_views:
             view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
+            view.onExecuted.connect(self.open_file)
 
         self.backButton.clicked.connect(self.assetViewing)
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
@@ -134,28 +136,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.selected_assets_by_link = {} # Used for dependency linking
         self.asset_startup_path = None
         self._ingester = None
-        QShortcut(QKeySequence('space'), self, self.open_file)
 
-
-    def open_file(self):
-        views = [view for view in self.links_view.all_views]
-        views.insert(0, self.assets_view)
-
-        for view in views:
-            if not view.lastIndex or not view.lastIndex.isValid():
-                continue
-            asset = view.lastIndex.data(polymorphicItem.Object)
-            if asset:
-                filepath = asset.network_path
-                ext = filepath.ext.lower()
-                if ext == '.exe':
-                    # Launch software executable
-                    with open(str(filepath), 'r') as fp:
-                        subprocess.Popen('"{}"'.format(fp.read()))
-                    return
-                else:
-                    peakPreview(filepath)
-
+    @Slot(QModelIndex)
+    def open_file(self, index):
+        asset = index.data(polymorphicItem.Object)
+        if asset:
+            filepath = asset.network_path
+            ext = filepath.ext.lower()
+            if ext == '.exe':
+                # Launch software executable
+                with open(str(filepath), 'r') as fp:
+                    subprocess.Popen('"{}"'.format(fp.read()))
+                return
+            else:
+                peakPreview(filepath)
 
     @Slot(bytes)
     def setVideo(self, data):
@@ -280,8 +274,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.links_view.model.endResetModel()
         RELIC_PREFS.view_scale = value
 
-
-
     def closeOverlay(self):
         if self.overlay:
             self.assets_view.show()
@@ -291,6 +283,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @property
     def ingest_form(self):
         if self._ingester is None:
+            from library.widgets.ingest import IngestForm
             ingester = IngestForm()
             ingester.beforeClose.connect(self.onIngestClosed)
             collect_finish_msg = lambda x: self.tray.showMessage(
@@ -312,7 +305,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot()
     def beginIngest(self):
-        BaseItemDelegate.VIEW_MODE = ItemDispalyModes.COMPACT
+        self.scaleView(1)
         self.assets_view.hide()
         self.attributeDock.hide()
         self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.Minimum) 
@@ -322,8 +315,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot()
     def externalPluginCommand(self, asset_data):
+        self.toggleVisibility(QSystemTrayIcon.ActivationReason.Trigger, force=True)
         self.beginIngest()
-        self.ingest_form.collectAssetsFromPlugin(asset_data)
+        delay_call = lambda : self._ingester.collectAssetsFromPlugin(asset_data)
+        self.delay_call = QTimer.singleShot(0.5*1000, delay_call)
 
     @Slot()
     def browseTo(self, path):
@@ -383,23 +378,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def recursiveSubcategories(self, state):
         RELIC_PREFS.recurse_subcategories = int(state)
-
-    @Slot()
-    def updateIcons(self, data):
-        img, id = data
-        models = [self.links_view.model, self.assets_view.model]
-        for model in models:
-            for i in range(model.rowCount()):
-                index = model.index(i, 0)
-                item = model.itemFromIndex(index)
-                if item.id == id:
-                    item.icon = img
-                    item.emitDataChanged()
-                elif item.upstream:
-                    for x in item.upstream:
-                        linked_asset = x.data(polymorphicItem.Object)
-                        if linked_asset.id == id:
-                            linked_asset.icon = img
 
     @Slot()
     def assetViewing(self):
@@ -489,12 +467,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
             #if icons and asset.path:
             #    asset.fetchIcon()
+            item = polymorphicItem(fields=asset)
             if load_icons:
                 on_complete = partial(setattr, asset, 'icon')
                 icon_path = asset.network_path.suffixed('_icon', '.jpg')
-                worker = LocalThumbnail(icon_path, on_complete)
+                worker = LocalThumbnail(icon_path, on_complete, item)
                 self.pool.start(worker)
-            item = polymorphicItem(fields=asset)
             item_model.appendRow(item)
             link_ids.append(asset.links)
 
@@ -560,7 +538,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.metatdata_view.loadAssets(assets)
 
         if self.previewCheckBox.isChecked():
-            path = asset.network_path
+            path = assets[-1].network_path
             peakPreview(path)
 
         assets_by_link = {}
@@ -702,11 +680,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         if not self.linksDock.isVisible():
             self.linksDock.show()
 
-    @Slot()
-    def toggleVisibility(self, reason):
+    @Slot(QSystemTrayIcon.ActivationReason)
+    def toggleVisibility(self, reason, force=False):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.grab()
-            self.setVisible(not self.isVisible())
+            self.setVisible(force if force else not self.isVisible())
             self.activateWindow()
             self.raise_()
 

@@ -4,7 +4,6 @@ import re
 import sys
 
 # -- Third-Party --
-import cv2
 from PySide6.QtCore import (QObject, QUrl, Signal, Slot)
 from PySide6.QtWebSockets import QWebSocket
 from PySide6.QtWidgets import QApplication

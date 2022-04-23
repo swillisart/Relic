@@ -413,35 +413,6 @@ class relationships(BaseFields):
     def removeAll(relations):
         session.removerelationships.execute(relations)
 
-class details:
-    """
-    Details / Info:
-        name (In BOLD)
-        description
-        type
-        class
-        quality
-        rating
-        resolution
-        filesize
-
-    Structure:
-        category + subcategory + path + name (combo of widgets)
-        dependencies
-        links
-        tags
-        users
-
-    System:
-        id
-        datecreated
-        datemodified
-        filehash
-        status
-        proxy
-        icon
-        video
-    """
 
 class relic_asset:
     base = [

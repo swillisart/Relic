@@ -1,36 +1,41 @@
-# -- Built-in --
 import ctypes
 import os
 import subprocess
 import sys
 from datetime import datetime
-from functools import partial
 import operator
 import qtshared6.resources
+from enum import IntEnum
 # -- First-party --
-from imagine.exif import EXIFTOOL
+from exif import EXIFTOOL
 # -- Third-party --
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from qtshared6.delegates import ItemDispalyModes, AutoEnum, Statuses, BaseItemModel
-from qtshared6.utils import polymorphicItem
+from qtshared6.expandable_group import ExpandableGroup
 from sequence_path.main import SequencePath as Path
 from strand.client import StrandClient
 from strand.server import StrandServer
 from enum import Enum
 
 # -- Module --
-import capture.resources
-from capture.history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, Types,
-                                  scale_icon)
-from capture.io import AudioRecord, ShellCommand, video_to_gif
-from capture.ui.dialog import Ui_ScreenCapture
+import resources
+from history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, Types,
+                            scale_icon)
+from file_io import AudioRecord, ShellCommand, video_to_gif
+from ui.dialog import Ui_ScreenCapture
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
 
 NO_WINDOW = subprocess.CREATE_NO_WINDOW
+
+class Delay(IntEnum):
+    NONE = 0
+    ONE = 1
+    THREE = 2
+    FIVE = 3
 
 def get_preview_path(path):
     preview = (path.parent / 'previews' / path.stem)
@@ -54,15 +59,17 @@ def makeThumbnail(pixmap):
 
 class ScreenOverlay(QDialog):
 
-    clipped = Signal(QRect, QPixmap)
+    clipped = Signal(QRect, QPixmap, QScreen)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, screen):
         """A transparent tool dialog for selecting an area (QRect) on the screen.
         """
-        super(ScreenOverlay, self).__init__(*args, **kwargs)
+        super(ScreenOverlay, self).__init__()
         self.setMouseTracking(True)
         self.setCursor(Qt.CrossCursor)
-        self.setGeometry(self.getScreensRect())
+        self.setScreen(screen)
+        rect = screen.geometry()
+        self.setGeometry(rect)
         self.setWindowFlags(
             Qt.FramelessWindowHint
             | Qt.WindowStaysOnTopHint
@@ -74,7 +81,9 @@ class ScreenOverlay(QDialog):
         self.active_pos = QPoint(0,0)
         self.selection_rect = QRect()
         self.pad_point = QPoint(2, 2)
-        self.screens_snapshot = screencap_region(self.getScreensRect())
+        self.screens_snapshot = screen.grabWindow(
+            0, 0, 0, rect.width(), rect.height()
+        )
 
     def paintEvent(self, event):
         """Draw frozen snapshot image over all screens / displays.
@@ -100,13 +109,18 @@ class ScreenOverlay(QDialog):
 
     def mouseReleaseEvent(self, event):
         rect = self.selection_rect.normalized()
-        divisible_width = int(rect.width()) - (int(rect.width()) % 16)
-        divisible_height = int(rect.height()) - (int(rect.height()) % 16)
+        scale = self.screen().devicePixelRatio()
+        width = rect.width() * scale
+        height = rect.height() * scale
+        rect.setTopLeft(rect.topLeft() * scale)
+        divisible_width = int(width) - (int(width) % 16)
+        divisible_height = int(height) - (int(height) % 16)
         rect.setWidth(divisible_width)
         rect.setHeight(divisible_height)
+
         cropped = self.screens_snapshot.copy(rect)
         self.hide()
-        self.clipped.emit(rect, cropped)
+        self.clipped.emit(rect, cropped, self.screen())
         self.close()
 
     def drawCrosshairs(self, painter, rect, pen):
@@ -143,10 +157,10 @@ class ScreenOverlay(QDialog):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.origin_pos = event.globalPosition().toPoint()
+            self.origin_pos = self.mapFromGlobal(event.globalPosition().toPoint())
 
     def mouseMoveEvent(self, event):
-        self.active_pos = event.globalPosition().toPoint()
+        self.active_pos = self.mapFromGlobal(event.globalPosition().toPoint())
         pos_compare = self.active_pos - self.origin_pos
         if all([event.buttons() == Qt.LeftButton,
             pos_compare.manhattanLength() >= 16
@@ -156,18 +170,6 @@ class ScreenOverlay(QDialog):
                 (self.active_pos - self.pad_point)
             )
         self.repaint()
-
-    @staticmethod
-    def getScreensRect():
-        """Gets the combined QRect of all active screens from the desktop.
-
-        Returns
-        -------
-        QRect
-            unified screen geometry rectangle
-        """
-        screen = QGuiApplication.primaryScreen()
-        return screen.virtualGeometry()
 
 class CaptureWindow(QWidget, Ui_ScreenCapture):
 
@@ -192,11 +194,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             'key': 'ctrl+c'}
 
     class TrayActions(AutoEnum):
-        _close = {
-            'obj': QAction('Exit')}
+        taskbar_pin = {'obj': QAction('Taskbar Pin Toggle')}
+        separator = {'obj': None}
+        _close = {'obj': QAction('Exit')}
 
     def __init__(self, *args, **kwargs):
         super(CaptureWindow, self).__init__(*args, **kwargs)
+        self.pinned = False
         self.setupUi(self)
         self.recording = False
         self.delay = 1000/30
@@ -214,7 +218,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         # -- Actions, Signals & Slots --
         for action in self.TrayActions:
-            self.defineAction(tray_menu, action)
+            if isinstance(action.obj, QAction):
+                self.defineAction(action)
+                tray_menu.addAction(action.obj)
+            else:
+                tray_menu.addSeparator()
+
 
         gif_action = QAction('Convert To GIF')
         gif_action.triggered.connect(self.convert_to_gif)
@@ -223,44 +232,53 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         Types.Video.actions.extend([gif_action, webp_action])
 
-        self.expandButton.clicked.connect(self.adjustSize)
+        self.expandButton.clicked.connect(self.adjustSizes)
         self.captureButton.clicked.connect(self.delay_screenshot)
         self.recordButton.clicked.connect(self.perform_recording)
         self.onConvertedVideo.connect(self.item_processed)
         self.onConvertedGif.connect(self.gif_converted)
         self.onConvertedWebp.connect(self.webp_converted)
 
-        self.item_model = BaseItemModel(0, 3)
-        self.item_model.setHorizontalHeaderLabels(['Name', 'Date', 'Count'])
+        self.item_model = BaseItemModel(0, 2)
+        self.item_model.setHorizontalHeaderLabels(['Item', 'Date'])
 
-        model_root = self.item_model.invisibleRootItem()
-        for item_type in Types:
-            item = QStandardItem(QIcon(item_type.data), item_type.name)
-            counter = QStandardItem()
-            counter.setData('0', role=Qt.DisplayRole)
-            counter.setData(0, role=Qt.UserRole)
-            model_root.appendRow([item, QStandardItem(''), counter])
-            item_type.item = item
-
-        self.proxy_model = HistoryTreeFilter()
-        self.proxy_model.setDynamicSortFilter(True)
-        self.proxy_model.setSourceModel(self.item_model)
         self.searchLine.textChanged.connect(self.searchChanged)
 
-        history_tree = HistoryTreeView(self)
+        model_root = self.item_model.invisibleRootItem()
+        history_layout = self.historyGroupBox.layout()
 
+        # Shared Tree actions
         for action in self.TreeActions:
-            self.defineAction(history_tree, action)
+            self.defineAction(action)
 
-        history_tree.ACTIONS = self.TreeActions
-        history_tree.setModel(self.proxy_model)
-        history_tree.doubleClicked.connect(self.openInViewer)
-        history_tree.resizeColumnToContents(0)
-        history_tree.sortByColumn(1, Qt.AscendingOrder)
+        for item_type in Types:
+            tree = HistoryTreeView(self)
+            proxy_model = HistoryTreeFilter(item_type)
+            proxy_model.setDynamicSortFilter(True)
+            proxy_model.setSourceModel(self.item_model)
+            tree.setModel(proxy_model)
+            
+            for action in self.TreeActions:
+                tree.addAction(action.obj)
 
-        self.historyGroupBox.layout().addWidget(history_tree)
+            tree.doubleClicked.connect(self.openInViewer)
+            tree.resizeColumnToContents(0)
+            tree.sortByColumn(1, Qt.AscendingOrder)
 
-        self.history_tree = history_tree
+            group = ExpandableGroup(tree, self.historyGroupBox)
+            group.collapseExpand.connect(self.onGroupCollapse)
+            group.iconButton.setIconSize(QSize(16,16))
+            ExpandableGroup.BAR_HEIGHT -= 1
+            group.styledLine.hide()
+            group.styledLine_1.hide()
+            group.iconButton.setIcon(QIcon(item_type.data))
+            group.nameLabel.setText(item_type.name)
+
+            history_layout.insertWidget(-2, group)
+            header = tree.header()
+            header.resizeSection(0, 200)
+            header.resizeSection(1, 80)
+            item_type.group = group
 
         self.captureItemsFromFolder(OUTPUT_PATH)
 
@@ -269,17 +287,60 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.cursor_pix = scale_icon(QPixmap(':/resources/icons/cursor.png'))
         self.strand_client = StrandClient('peak')
 
-        header = history_tree.header()
-        header.resizeSection(0, 250)
-        header.resizeSection(1, 80)
+    def taskbar_pin(self):
+        if self.pinned:
+            self.setWindowFlags(self.windowFlags() & ~Qt.FramelessWindowHint)
+            self.show()
+        else:
+            self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
+        self.pinned = not self.pinned
 
-    def defineAction(self, widget, action):
+    def changeEvent(self, event):
+        if self.pinned:
+            if event.type() == QEvent.ActivationChange:
+                if not self.isActiveWindow():
+                    self.hide()
+        return super(CaptureWindow, self).changeEvent(event)
+
+    @Slot()
+    def adjustSizes(self, val):
+        window = self.window()
+        old_size = self.size()
+        self.historyGroupBox.setVisible(val)
+        self.adjustSize()
+        new_size = self.size()
+        diff = old_size - new_size
+        diff_point = QPoint(diff.width(), diff.height())
+        window.move(window.pos() + diff_point)
+
+    @Slot()
+    def onGroupCollapse(self, state):
+        group = self.sender()
+        if not state:
+            self.historyGroupBox.hide()
+            self.historyGroupBox.show()
+        new_size = self.size() - QSize(0, group.height_store)
+        self.resize(new_size)
+        self.adjustSize()
+        window = self.window()
+        minus_bar = group.height_store - ExpandableGroup.BAR_HEIGHT
+        if state:
+            window.move(window.pos() - QPoint(0, minus_bar))
+        else:
+            window.move(window.pos() + QPoint(0, minus_bar))
+
+    def getActiveSelectionModel(self):
+        for item_type in Types:
+            tree = item_type.group.content
+            if tree.hasFocus():
+                return item_type, tree.selectionModel()
+            
+    def defineAction(self, action):
         callback = getattr(self, action.name)
         action.obj.triggered.connect(callback)
         try:
             action.obj.setShortcut(QKeySequence(action.key))
         except: pass # no shortcut defined
-        widget.addAction(action.obj)
 
     def captureItemsFromFolder(self, root):
         for in_file in Path(root):
@@ -287,40 +348,34 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             for item_type in Types:
                 if ext in item_type.ext:
                     mtime = datetime.fromtimestamp(in_file.datemodified)
-                    if (datetime.now() - mtime).days >= 90:
+                    if (datetime.now() - mtime).days >= 30:
                         archive = in_file.parent / 'old' / in_file.stem
                         in_file.moveTo(archive)
                     else:
                         self.appendItem(item_type, in_file)
 
     def appendItem(self, item_type, in_file):
+        model_root = self.item_model.invisibleRootItem()
         mtime = datetime.fromtimestamp(in_file.datemodified)
         image = QPixmap(str(get_preview_path(in_file)))
         capture = CaptureItem(in_file)
         capture.date = mtime
         capture.thumbnail = image
-        capture.type = item_type.value
-        item = polymorphicItem(fields=capture)
-        
+        capture.type = item_type
+        item = QStandardItem(capture.name)
+        item.setData(capture, role=Qt.UserRole)
         self.change_count(operator.add, item_type, 1)
-
-        date_item = QStandardItem(capture.date.strftime('%m/%d/%Y %H:%M'))
+        date_item = QStandardItem(capture.date.strftime('%m/%d/%y %H:%M'))
         date_item.setData(capture.date, role=Qt.UserRole)
-        #date_item.setData(capture.date.strftime('%m/%d/%Y'), role=Qt.DisplayRole)
-
-        item_type.item.appendRow([item, date_item])
+        model_root.appendRow([item, date_item])
         return item
 
-
     def change_count(self, operation, item_type, number):
-        item_model = item_type.item.model()
-        row = item_type.item.row()
-        count_index = item_model.index(row, CaptureItem.Columns.count)
-        count_item = item_model.itemFromIndex(count_index)
+        group = item_type.group
+        count = group.countSpinBox.value()
 
-        total = operation(count_item.data(role=Qt.UserRole), number)
-        count_item.setData(str(total), role=Qt.DisplayRole)
-        count_item.setData(total, role=Qt.UserRole)
+        total = operation(count, number)
+        group.countSpinBox.setValue(total)
 
     def closeEvent(self, event):
         self.hide()
@@ -333,12 +388,14 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     def searchChanged(self, text):
         regex = QRegularExpression(text, QRegularExpression.CaseInsensitiveOption)
-        self.proxy_model.setFilterRegularExpression(regex)
+        for item_type in Types:
+            view_proxy_model = item_type.group.content.model()
+            view_proxy_model.setFilterRegularExpression(regex)
 
     @Slot()
     def openInViewer(self, index):
-        capture_obj = index.data(polymorphicItem.Object)
-        if capture_obj:
+        capture_obj = index.data(Qt.UserRole)
+        if isinstance(capture_obj, CaptureItem):
             self.strand_client.sendPayload(str(capture_obj.path))
             if self.strand_client.errored:
                 cmd = f'start peak://{capture_obj.path}'
@@ -353,7 +410,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @Slot()
     def view_item(self, val):
-        indices = self.history_tree.selectedIndexes()
+        item_type, selection_model = self.getActiveSelectionModel()
+        indices = selection_model.selectedIndexes()
         if not indices:
             return
         for index in indices:
@@ -361,12 +419,14 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @Slot()
     def rename_item(self, val):
-        indices = self.history_tree.selectedIndexes()
+        item_type, selection_model = self.getActiveSelectionModel()
+        indices = selection_model.selectedIndexes()
         if not indices:
             return
-        items = [self.indexToItem(x).data(polymorphicItem.Object) for x in indices]
-        filtered = [x for x in items if x]
+        items = [self.item_model.indexToItem(x).data(Qt.UserRole) for x in indices]
+        filtered = [x for x in items if isinstance(x, CaptureItem)]
         obj = filtered[-1]
+        self.pinned = not self.pinned # prevent popup focus from hiding pin
         new_name, ok = QInputDialog.getText(self, 'Rename',
                 "New name:", QLineEdit.Normal,
                 obj.path.name)
@@ -378,53 +438,53 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.renameFile(old_path, new_name)
             preview_path = get_preview_path(obj.path)
             self.renameFile(old_preview_path, new_name)
+        self.pinned = not self.pinned
 
     @Slot()
     def open_location(self, val):
-        indices = self.history_tree.selectedIndexes()
+        item_type, selection_model = self.getActiveSelectionModel()
+        indices = selection_model.selectedIndexes()
         if not indices:
             return
         for index in reversed(indices):
-            obj = index.data(polymorphicItem.Object)
-            if obj:
+            obj = index.data(Qt.UserRole)
+            if isinstance(obj, CaptureItem):
                 break
         winpath = str(obj.path).replace('/', '\\')
         cmd = f'explorer /select, "{winpath}"'
         os.system(cmd)
 
-    def indexToItem(self, index):
-        remapped_index = self.proxy_model.mapToSource(index)
-        item = self.item_model.itemFromIndex(remapped_index)
-        return item
-
     @Slot()
     def remove_item(self, val):
-        indices = self.history_tree.selectedIndexes()
-        if not indices:
+        item_type, selection_model = self.getActiveSelectionModel()
+
+        if not selection_model.hasSelection():
             return
-        message = QMessageBox(QMessageBox.Warning,
+        count = len(selection_model.selectedRows())
+        self.pinned = not self.pinned # prevent popup focus from hiding pin
+
+        message = QMessageBox.question(self,
                 'Confirm', 'Are you sure?',
-                QMessageBox.NoButton, self)
-        message.addButton('Yes', QMessageBox.AcceptRole)
-        message.addButton('No', QMessageBox.RejectRole)
+                buttons=QMessageBox.Yes | QMessageBox.No
+                )
 
-        if message.exec() == QMessageBox.RejectRole:
+        if message == QMessageBox.RejectRole:
             return
 
-        selection_model = self.history_tree.selectionModel()
-        while selection_model.selectedIndexes():
-            index = selection_model.selectedIndexes()[0]
-            obj = index.data(polymorphicItem.Object)
-            if not obj:
+        while indices := selection_model.selectedIndexes():
+            index = indices[0]
+            obj = index.data(Qt.UserRole)
+            if not isinstance(obj, CaptureItem):
                 selection_model.select(index, QItemSelectionModel.Deselect)
                 continue
 
-            item = self.indexToItem(index)
+            item = self.item_model.indexToItem(index)
+            item_parent = item.parent()
+            if item_parent:
+                item_parent.removeRow(item.index().row())
+            else:
+                self.item_model.removeRow(item.index().row())
 
-            self.change_count(operator.sub, Types(item.type), 1)
-
-            item.parent().removeRow(item.index().row())
-    
             preview_path = get_preview_path(obj.path)
             # Don't delete animated icons. (they may still have a video)
             if obj.type != int(Types.Animated) and preview_path.exists():
@@ -432,13 +492,23 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             if obj.path.exists():
                 os.remove(str(obj.path))
 
+        self.change_count(operator.sub, item_type, count)
+        self.pinned = not self.pinned
+
     def updateMovie(self, item, movie, val):
         item.setIcon(QIcon(movie.currentPixmap()))
 
     @Slot()
     def convert_to_webp(self, item):
-        for index in self.history_tree.index_selection:
-            obj = index.data(polymorphicItem.Object)
+        item_type, selection_model = self.getActiveSelectionModel()
+
+        if not selection_model.hasSelection():
+            return
+
+        for index in selection_model.selectedIndexes():
+            obj = index.data(Qt.UserRole)
+            if not isinstance(obj, CaptureItem):
+                continue
             out_path = obj.path.suffixed('', '.webp')
             cmd = [
                 'ffmpeg',
@@ -455,11 +525,18 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @Slot()
     def convert_to_gif(self, item):
-        for index in self.history_tree.index_selection:
-            obj = index.data(polymorphicItem.Object)
+        item_type, selection_model = self.getActiveSelectionModel()
+
+        if not selection_model.hasSelection():
+            return
+
+        for index in selection_model.selectedIndexes():
+            obj = index.data(Qt.UserRole)
+            if not isinstance(obj, CaptureItem):
+                continue
             item = self.appendItem(Types.Animated, obj.path)
             item.status = int(Statuses.Syncing)
-            callback = lambda x: video_to_gif(x.path)
+            callback = lambda x: video_to_gif(x.data(Qt.UserRole).path)
             worker = ShellCommand(
                 'echo .', item, signal=self.onConvertedGif, callback=callback)
             self.pool.start(worker)
@@ -467,23 +544,25 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     @Slot()
     def delay_screenshot(self):
         msg = 'Delaying the capture for {} seconds. /n/nSingle-Click to exit.'
-        delay = int(self.delayComboBox.currentText().replace('s', ''))
-        self.deferred_snap = QTimer.singleShot(delay*1000, self.perform_screenshot)
+        index = self.delayComboBox.currentIndex()
+        seconds = Delay(index)
+        self.deferred_snap = QTimer.singleShot(seconds*1000, self.perform_screenshot)
 
-    def perform_screenshot(self):
+    def perform_screenshot(self, record=False):
+        slot = self.startRecording if record else self.saveScreenshot
         self.hide()
-        screen_overlay = ScreenOverlay()
-        screen_overlay.clipped.connect(self.saveScreenshot)
-        screen_overlay.exec()
+        self.screens = []
+        for screen in reversed(QGuiApplication.screens()):
+            screen_overlay = ScreenOverlay(screen)
+            screen_overlay.clipped.connect(slot)
+            screen_overlay.show()
+            self.screens.append(screen_overlay)
 
     @Slot()
     def perform_recording(self, state):
         if state:
             self.recording = True
-            self.hide()
-            screen_overlay = ScreenOverlay()
-            screen_overlay.clipped.connect(self.startRecording)
-            screen_overlay.exec()
+            self.perform_screenshot(record=True)
         else:
             self.recording = False
             self.ffproc.stdin.close()
@@ -495,7 +574,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 f'taskkill /F /T /PID {pid}',
                 creationflags=NO_WINDOW)
             # Combine audio with video and remove old files.
-            self.out_file = self.out_video.suffixed('_capture', ext='.mp4')
+            self.out_file = self.out_video.suffixed('_c', ext='.mp4')
 
             audio_duration = EXIFTOOL.getFields(str(self.out_audio), ['-Duration#'], float)
             video_duration = EXIFTOOL.getFields(str(self.out_video), ['-Duration#'], float)
@@ -522,21 +601,23 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 os.rename(get_preview_path(self.out_video), get_preview_path(self.out_file))
                 os.remove(str(self.out_audio))
 
-
     @Slot(object)
     def gif_converted(self, item):
-        item.status = int(Statuses.Local)
-        item.path = item.path.suffixed('', ext='.gif')
-        item.name = item.path.name
+        capture_item = item.data(Qt.UserRole)
+        capture_item.status = int(Statuses.Local)
+        capture_item.path = capture_item.path.suffixed('', ext='.gif')
+        capture_item.name = capture_item.path.name
 
     @Slot(object)
     def webp_converted(self, item):
-        item.status = int(Statuses.Local)
-        item.path = item.path.suffixed('', ext='.webp')
-        item.name = item.path.name
+        capture_item = item.data(Qt.UserRole)
+        capture_item.status = int(Statuses.Local)
+        capture_item.path = capture_item.path.suffixed('', ext='.webp')
+        capture_item.name = capture_item.path.name
 
     @Slot(object)
     def item_processed(self, item):
+        item = item.data(Qt.UserRole)
         item.status = int(Statuses.Local)
         item.path = self.out_file
         item.name = self.out_file.name
@@ -547,13 +628,16 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         os.remove(str(self.out_video))
         self.processing_item = False
 
-    def startRecording(self, rect, pixmap):
+    def startRecording(self, rect, pixmap, screen):
+        self.finishCapture()
         self.show()
-        self.rect = rect
-        self.x = rect.x()
-        self.y = rect.y()
-        self.w = rect.width()
-        self.h = rect.height()
+        self.screen = screen
+        scale = screen.devicePixelRatio()
+        self.x = rect.x() / scale
+        self.y = rect.y() / scale
+        self.w = rect.width() / scale
+        self.h = rect.height() / scale
+        self.rect = QRect(self.x, self.y, self.w, self.h)
         self.out_video = new_capture_file(out_format='mp4')
         self.out_audio = self.out_video.parent / (self.out_video.name + '.wav')
         out_preview = get_preview_path(self.out_video)
@@ -561,7 +645,6 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         out_img = makeThumbnail(pixmap)
         out_img.save(str(out_preview))
         self.audio_recorder = AudioRecord(self.out_audio)
-        divisible_width = int(rect.width()) - (int(rect.width()) % 16)
         cmd = [
             'ffmpeg',
             #'-loglevel', 'error',
@@ -569,7 +652,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             '-f', 'rawvideo',
             '-vcodec', 'rawvideo',
             '-pix_fmt', 'rgb24',
-            '-s', '{}x{}'.format(divisible_width, self.h),
+            '-s', '{}x{}'.format(rect.width(), rect.height()),
             '-i', '-',
             '-r', '30', # FPS
             '-pix_fmt', 'yuv420p',
@@ -597,20 +680,25 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         if not self.recording:
             self.capsnap.stop()
             return
-        self.worker = CapScreen(self.rect, self.ffproc, self.cursor_pix)
+        self.worker = CapScreen(self.rect, self.screen, self.ffproc, self.cursor_pix)
         self.pool.start(self.worker, priority=1)
 
     @Slot()
-    def saveScreenshot(self, rect, pixmap):
+    def saveScreenshot(self, rect, pixmap, screen):
         path = new_capture_file()
         pixmap.save(str(path))
         icon_pixmap = makeThumbnail(pixmap)
         icon_pixmap.save(str(get_preview_path(path)))
         self.imageToClipboard(pixmap.toImage())
+        self.finishCapture()
         item = self.appendItem(Types.Screenshot, path)
         index = self.item_model.indexFromItem(item)
         #self.openInViewer(index)
         self.show()
+
+    def finishCapture(self):
+        """cleans up widgets and resets state for new capture"""
+        [x.close() for x in self.screens]
 
     @Slot()
     def toggleVisibility(self, reason):
@@ -619,6 +707,9 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.setVisible(not self.isVisible())
             self.activateWindow()
             self.raise_()
+        elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.setVisible(False)
+            self.perform_screenshot()
 
     @staticmethod
     def imageToClipboard(image):
@@ -633,31 +724,32 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     def copy_to_clipboard(self):
         text_types = [int(Types.Animated), int(Types.Video)]
-        if indices := self.history_tree.selectedIndexes():
-            obj = indices[0].data(polymorphicItem.Object)
+        item_type, selection_model = self.getActiveSelectionModel()
+        if indices := selection_model.selectedIndexes():
+            obj = indices[0].data(Qt.UserRole)
             if obj.type in text_types:
                 self.textToClipboard(str(obj.path))
             else:
                 img = QImage(str(obj.path))
                 self.imageToClipboard(img)
 
-
 class CapScreen(QRunnable):
 
-    def __init__(self, rect, ffproc, cursor_pix):
+    def __init__(self, rect, screen, ffproc, cursor_pix):
         super(CapScreen, self).__init__(None)
         self.ffproc = ffproc
         self.rect = rect
+        self.screen = screen
         self.cursor_pixmap = cursor_pix
         self.cursor_pos = QCursor.pos()
 
     def run(self):
         rect = self.rect
+        screen = self.screen
         x = rect.x()
         y = rect.y()
         w = rect.width()
         h = rect.height()
-        screen = QGuiApplication.primaryScreen()
         pixmap = screen.grabWindow(0, x, y, w, h)
         # Draw cursor into our capture
         painter = QPainter(pixmap)
@@ -678,15 +770,6 @@ def new_capture_file(out_format='png'):
     ))
     return result
 
-def screencap_region(rect):
-    """Performs a screen capture on the specified rectangle.
-    """
-    divisible_width = int(rect.width()) - (int(rect.width()) % 16)
-    screen = QGuiApplication.primaryScreen()
-    return screen.grabWindow(
-        0, rect.x(), rect.y(), divisible_width, rect.height()
-    )
-
 def main(args):
     app = qApp or QApplication(sys.argv)
     window = CaptureWindow()
@@ -700,4 +783,18 @@ def main(args):
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    main(sys.argv)
+    import argparse
+    parser = argparse.ArgumentParser(description='Capture the screen')
+    parser.add_argument('--screenshot', nargs='?', metavar='')
+    parser.add_argument('--record', nargs='?', metavar='')
+    args = parser.parse_args()
+
+    # Define our Environment
+    os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
+    os.environ['PATH'] = os.environ['PATH'] + ';P:/Code/Relic'
+    from strand.client import StrandClient
+    client = StrandClient('capture')
+    client.sendPayload('')
+    if client.errored:
+        import capture
+        capture.app.main(sys.argv)

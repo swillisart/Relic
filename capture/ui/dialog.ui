@@ -6,9 +6,24 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>492</width>
-    <height>311</height>
+    <width>341</width>
+    <height>133</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::CustomContextMenu</enum>
   </property>
   <property name="windowTitle">
    <string>Screen Capture</string>
@@ -291,7 +306,9 @@ QHeaderView::section {
 }
 QHeaderView::section:vertical,
 QHeaderView::section:horizontal {
-	padding-left: 4px;
+	padding-left: 6px;
+    margin-top: -3px;
+    margin-left: -3px;
 }
 QListView,
 QTreeView,
@@ -346,6 +363,15 @@ QComboBox {
     padding-left: 4px;
     padding-right: 4px;
     min-width: 75px;
+}
+QComboBox[styling_mode=&quot;1&quot;]{
+    margin: 1px;
+    background-color: transparent;
+    border-radius: 3px;
+}
+QComboBox[styling_mode=&quot;1&quot;]:hover {
+    background-color: rgb(108, 108, 108);
+    color: rgb(250, 250, 250);
 }
 QComboBox::drop-down {
     subcontrol-origin: padding;
@@ -635,6 +661,23 @@ QToolButton::down-arrow:on {
     image: url(:/resources/checkbox_checked.svg);
 }
 
+/*
+QToolButton::menu-indicator {
+    top: -7px; left: -2px;
+    background-color: rgb(168, 68, 68);
+}
+*/
+QToolButton::menu-button {
+    border: none;
+    /*
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    width: 16px;
+    */
+    image: url(:/resources/icons/expander.png);
+    subcontrol-position: right bottom;
+    subcontrol-origin: padding;
+}
 QAbstractSpinBox {
     padding: 1px;
     padding-left: 4px;
@@ -660,7 +703,13 @@ QToolBox::tab:selected {
     background-color:rgb(108,108,108);
 }</string>
   </property>
+  <property name="styling_mode" stdset="0">
+   <string>1</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="sizeConstraint">
+    <enum>QLayout::SetMinimumSize</enum>
+   </property>
    <property name="leftMargin">
     <number>6</number>
    </property>
@@ -674,204 +723,34 @@ QToolBox::tab:selected {
     <number>6</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QToolButton" name="captureButton">
-       <property name="toolTip">
-        <string>Capture a single snapshot of a region.</string>
-       </property>
-       <property name="text">
-        <string>Capture</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources.qrc">
-         <normaloff>:/resources/icons/screenshot_20.png</normaloff>:/resources/icons/screenshot_20.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>24</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonTextUnderIcon</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="recordButton">
-       <property name="toolTip">
-        <string>Captures a continuous recording of a defined region in the screen.
-
- Click again to stop.</string>
-       </property>
-       <property name="text">
-        <string>Record</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources.qrc">
-         <normaloff>:/resources/icons/rec.png</normaloff>
-         <activeon>:/resources/icons/stop.png</activeon>:/resources/icons/rec.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>24</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonTextUnderIcon</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="delayComboBox">
-       <property name="toolTip">
-        <string>Time Delay in seconds for snapshot or recording actions.</string>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-       <item>
-        <property name="text">
-         <string>0s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>1s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>3s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>5s</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../resources.qrc">
-          <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="expandButton">
-       <property name="toolTip">
-        <string>Toggle list of capture history for viewing.</string>
-       </property>
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources.qrc">
-         <normaloff>:/resources/icons/narrowLeft.png</normaloff>
-         <activeon>:/resources/icons/narrowDown.png</activeon>:/resources/icons/narrowLeft.png</iconset>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonIconOnly</enum>
-       </property>
-       <property name="arrowType">
-        <enum>Qt::NoArrow</enum>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
     <widget class="QGroupBox" name="historyGroupBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="styleSheet">
-      <string notr="true">QTreeView {
-    border: none;
-	alternate-background-color: rgb(75,75,75);
-    background-color: rgb(48, 48, 48);
-    padding-top: 1px;
-}
-QTreeView::item {
-    border-top: none;
-    padding-right: 8px; /*DO NOT CHANGE*/
-    padding-left: 3px;
-    margin-top: 1px;
-    margin-bottom: 1px;
-}
-QTreeView::item:has-children {
-    background-color: rgb(93, 93, 93);
-}
-QTreeView::branch {
-    padding: 4px; /*DO NOT CHANGE*/
-    margin-top: 1px;
-    margin-bottom: 1px;
-    margin-left: 1px;
-    margin-right: -3px;
-    border-left: 2px solid rgb(43,43,43);
-	border-radius: 3px 3px 0px 0px;
-}
-QTreeView::branch:has-siblings:!adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:has-siblings:adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:has-children:!has-siblings:closed,
-QTreeView::branch:closed:has-children:has-siblings {
-    background-color: rgb(93, 93, 93);
-    image: url(:/resources/style/stylesheet-branch-closed.png);
-    border-left: 3px solid rgb(93, 93, 93);
-    border-radius: 0px 0px 3px 0px;
-}
-QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    background-color: rgb(93, 93, 93);
-    border-left: 2px solid rgb(93, 93, 93);
-    border-radius: 0px 0px 3px 0px;
-    image: url(:/resources/style/stylesheet-branch-open.png);
-}</string>
+      <string notr="true"/>
      </property>
      <property name="title">
       <string>History</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <property name="spacing">
-       <number>6</number>
+       <number>2</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMinimumSize</enum>
       </property>
       <property name="leftMargin">
-       <number>6</number>
+       <number>4</number>
       </property>
       <property name="topMargin">
        <number>6</number>
       </property>
       <property name="rightMargin">
-       <number>6</number>
+       <number>4</number>
       </property>
       <property name="bottomMargin">
        <number>6</number>
@@ -880,6 +759,9 @@ QTreeView::branch:open:has-children:has-siblings  {
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <property name="spacing">
          <number>0</number>
+        </property>
+        <property name="sizeConstraint">
+         <enum>QLayout::SetMinimumSize</enum>
         </property>
         <property name="leftMargin">
          <number>2</number>
@@ -970,7 +852,7 @@ QPushButton::hover {
              </property>
              <property name="minimumSize">
               <size>
-               <width>256</width>
+               <width>280</width>
                <height>26</height>
               </size>
              </property>
@@ -1002,30 +884,237 @@ QTextEdit:focus {
         </item>
        </layout>
       </item>
+      <item>
+       <widget class="Line" name="line_3">
+        <property name="styleSheet">
+         <string notr="true">margin: -0px 32px -0px 32px;</string>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Minimum</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="buttonFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <property name="spacing">
+       <number>6</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QToolButton" name="captureButton">
+        <property name="toolTip">
+         <string>Capture a single snapshot of a region.</string>
+        </property>
+        <property name="text">
+         <string>Capture</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../resources.qrc">
+          <normaloff>:/resources/icons/screenshot_20.png</normaloff>:/resources/icons/screenshot_20.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonTextUnderIcon</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="recordButton">
+        <property name="toolTip">
+         <string>Captures a continuous recording of a defined region in the screen.
+
+ Click again to stop.</string>
+        </property>
+        <property name="text">
+         <string>Record</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../resources.qrc">
+          <normaloff>:/resources/icons/rec.png</normaloff>
+          <activeon>:/resources/icons/stop.png</activeon>:/resources/icons/rec.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonTextUnderIcon</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="delayComboBox">
+        <property name="toolTip">
+         <string>Time Delay in seconds for snapshot or recording actions.</string>
+        </property>
+        <property name="currentText">
+         <string>Delay 0s         </string>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="styling_mode" stdset="0">
+         <string>1</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>Delay 0s         </string>
+         </property>
+         <property name="icon">
+          <iconset resource="../resources.qrc">
+           <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Delay 1s</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../resources.qrc">
+           <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Delay 3s</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../resources.qrc">
+           <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Delay 5s</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../resources.qrc">
+           <normaloff>:/resources/icons/timer.png</normaloff>:/resources/icons/timer.png</iconset>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="expandButton">
+        <property name="toolTip">
+         <string>Toggle list of capture history for viewing.</string>
+        </property>
+        <property name="text">
+         <string>History</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../resources.qrc">
+          <normaloff>:/resources/icons/narrowLeft.png</normaloff>
+          <activeon>:/resources/icons/narrowDown.png</activeon>:/resources/icons/narrowLeft.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonTextUnderIcon</enum>
+        </property>
+        <property name="arrowType">
+         <enum>Qt::NoArrow</enum>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
   </layout>
+  <action name="actionTaskbar_Pin">
+   <property name="text">
+    <string>Taskbar Pin</string>
+   </property>
+   <property name="toolTip">
+    <string>Frameless focusless mode on taskbar activation.</string>
+   </property>
+  </action>
  </widget>
  <resources>
   <include location="../resources.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>expandButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>historyGroupBox</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>209</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>117</x>
-     <y>223</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

@@ -10,27 +10,88 @@ from PySide6.QtWidgets import (QHBoxLayout, QListView, QStyle,
                                QWidget, QStyleOption, QMenu)
 from qtshared6.delegates import (BaseItemDelegate, IconIndicator, NamedEnum, AutoEnum,
                                  Statuses, scale_icon)
-from qtshared6.utils import polymorphicItem
+TREE_GROUP_STYLE = """
+QTreeView {
+    border: none;
+	alternate-background-color: rgb(75,75,75);
+    background-color: rgb(48, 48, 48);
+    padding-top: 0px;
+}
+QTreeView::item {
+    border-top: none;
+    padding-right: 8px;
+    padding-left: 3px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+}
+QTreeView::item:has-children {
+    background-color: rgb(93, 93, 93);
+}
+QTreeView::branch {
+    padding: 4px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+    margin-left: 1px;
+    margin-right: -3px;
+    border-left: 2px solid rgb(43,43,43);
+	border-radius: 3px 3px 0px 0px;
+}
+QTreeView::branch:has-siblings:!adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:has-siblings:adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+    background-color: rgb(93, 93, 93);
+    border-left: 3px solid rgb(93, 93, 93);
+    border-radius: 0px 0px 3px 0px;
+}
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+    background-color: rgb(93, 93, 93);
+    border-left: 2px solid rgb(93, 93, 93);
+    border-radius: 0px 0px 3px 0px;
+}
+"""
 
 class Types(IconIndicator):
     Screenshot = {
         'data': scale_icon(QPixmap(':type/screenshot.png')),
-        'item': None,
+        'group': None,
         'ext': ['.png'],
         'actions': []}
     Video = {
         'data': scale_icon(QPixmap(':type/video.png')),
-        'item': None,
+        'group': None,
         'ext': ['.mp4'],
         'actions': []}
     Animated = {
         'data': scale_icon(QPixmap(':type/gif.png')),
-        'item': None,
+        'group': None,
         'ext': ['.webp', '.gif'],
         'actions': []}
-
+    """
+    Maya = {
+        'data': scale_icon(QPixmap(':type/gif.png')),
+        'group': None,
+        'ext': ['.ma'],
+        'actions': []}
+    Nuke = {
+        'data': scale_icon(QPixmap(':type/gif.png')),
+        'group': None,
+        'ext': ['.nk'],
+        'actions': []}
+    """
 
 class HistoryTreeFilter(QSortFilterProxyModel):
+    def __init__(self, filter_id):
+        super(HistoryTreeFilter, self).__init__()
+        self.filter_id = filter_id
 
     def lessThan(self, left, right):
         leftData = self.sourceModel().data(left)
@@ -41,14 +102,14 @@ class HistoryTreeFilter(QSortFilterProxyModel):
         index = self.sourceModel().index(sourceRow, 0, sourceParent)
 
         if index.isValid():
-            obj = index.data(polymorphicItem.Object)
-            if not obj: # Top level items are not polymorphic so keep them
+            obj = index.data(Qt.UserRole)
+            if not obj: # Top level items are not filterable so keep them
                 return True
             else:
-                match = self.filterRegularExpression().match(obj.name)
-                if match.hasMatch():
-                    return True
-
+                if obj.type == self.filter_id:
+                    match = self.filterRegularExpression().match(obj.name)
+                    if match.hasMatch():
+                        return True
         return False
 
 
@@ -72,7 +133,7 @@ class CaptureItem(object):
     class Columns(AutoEnum):
         name = {'data': 0}
         date = {'data': 6}
-        count = {'data': 2}
+
 
 class HistoryTreeView(QTreeView):
 
@@ -81,25 +142,20 @@ class HistoryTreeView(QTreeView):
     def __init__(self, *args, **kwargs):
         super(HistoryTreeView, self).__init__(*args, **kwargs)
         self.setMouseTracking(True)
-        self.setIndentation(16)
+        self.setIndentation(3)
         self.setDragEnabled(True)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setDefaultDropAction(Qt.IgnoreAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        #self.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.setItemDelegate(BaseItemDelegate(self))
         self.customContextMenuRequested.connect(self.customContextMenu)
         self.clicked.connect(self.expand_index)
         self.setSortingEnabled(True)
-
-    @property
-    def index_selection(self):
-        indices = self.selectedIndexes()
-        if not indices:
-            return
-        for index in indices:
-            yield index
+        self.setStyleSheet(TREE_GROUP_STYLE)
 
     @Slot(QModelIndex)
     def expand_index(self, index):
@@ -112,9 +168,9 @@ class HistoryTreeView(QTreeView):
         if not index:
             return # Selection was empty.
         context_menu = QMenu(self)
-        obj = index.data(polymorphicItem.Object)
-        if obj:
-            obj_type = Types(obj.type)
+        obj = index.data(Qt.UserRole)
+        if isinstance(obj, CaptureItem):
+            obj_type = obj.type
             actions = self.actions() + obj_type.actions
         else:
             actions = self.actions()

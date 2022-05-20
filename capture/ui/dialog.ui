@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>341</width>
+    <width>360</width>
     <height>133</height>
    </rect>
   </property>
@@ -22,9 +22,6 @@
     <height>0</height>
    </size>
   </property>
-  <property name="contextMenuPolicy">
-   <enum>Qt::CustomContextMenu</enum>
-  </property>
   <property name="windowTitle">
    <string>Screen Capture</string>
   </property>
@@ -32,8 +29,20 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/resources/icons/capture.svg</normaloff>:/resources/icons/capture.svg</iconset>
   </property>
+  <property name="windowOpacity">
+   <double>1.000000000000000</double>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
   <property name="styleSheet">
-   <string notr="true">QWidget {
+   <string notr="true">QWidget#ScreenCapture[pinned='0'] {
+	background-color: rgb(68, 68, 68);
+}
+QWidget#ScreenCapture[pinned='1'] {
+	background-color: rgb(150, 68, 68);
+}
+QWidget {
 	background-color: rgb(68, 68, 68);
     color: rgb(220, 220, 220);
     selection-background-color: rgb(126, 126, 126);
@@ -706,21 +715,27 @@ QToolBox::tab:selected {
   <property name="styling_mode" stdset="0">
    <string>1</string>
   </property>
+  <property name="pinned" stdset="0">
+   <string>0</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
    <property name="sizeConstraint">
     <enum>QLayout::SetMinimumSize</enum>
    </property>
    <property name="leftMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <property name="topMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <property name="rightMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <property name="bottomMargin">
-    <number>6</number>
+    <number>2</number>
    </property>
    <item>
     <widget class="QGroupBox" name="historyGroupBox">
@@ -744,13 +759,13 @@ QToolBox::tab:selected {
        <enum>QLayout::SetMinimumSize</enum>
       </property>
       <property name="leftMargin">
-       <number>4</number>
+       <number>6</number>
       </property>
       <property name="topMargin">
        <number>6</number>
       </property>
       <property name="rightMargin">
-       <number>4</number>
+       <number>6</number>
       </property>
       <property name="bottomMargin">
        <number>6</number>
@@ -921,6 +936,13 @@ QTextEdit:focus {
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame#buttonFrame {
+border: 1px solid rgb(43, 43, 43);
+border-radius: 2px;
+padding: 1px;
+}</string>
+     </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -932,16 +954,16 @@ QTextEdit:focus {
        <number>6</number>
       </property>
       <property name="leftMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="topMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="rightMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="bottomMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <item>
        <widget class="QToolButton" name="captureButton">

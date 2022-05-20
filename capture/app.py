@@ -290,9 +290,14 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def taskbar_pin(self):
         if self.pinned:
             self.setWindowFlags(self.windowFlags() & ~Qt.FramelessWindowHint)
+            self.setProperty('pinned', '0')
             self.show()
         else:
             self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
+            self.setProperty('pinned', '1')
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
         self.pinned = not self.pinned
 
     def changeEvent(self, event):
@@ -426,7 +431,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         items = [self.item_model.indexToItem(x).data(Qt.UserRole) for x in indices]
         filtered = [x for x in items if isinstance(x, CaptureItem)]
         obj = filtered[-1]
-        self.pinned = not self.pinned # prevent popup focus from hiding pin
+        pin_state = self.pinned
+        self.pinned = False # prevent popup focus from hiding pin
         new_name, ok = QInputDialog.getText(self, 'Rename',
                 "New name:", QLineEdit.Normal,
                 obj.path.name)
@@ -438,7 +444,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.renameFile(old_path, new_name)
             preview_path = get_preview_path(obj.path)
             self.renameFile(old_preview_path, new_name)
-        self.pinned = not self.pinned
+        self.pinned = pin_state
 
     @Slot()
     def open_location(self, val):
@@ -461,8 +467,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         if not selection_model.hasSelection():
             return
         count = len(selection_model.selectedRows())
-        self.pinned = not self.pinned # prevent popup focus from hiding pin
-
+        pin_state = self.pinned # prevent popup focus from hiding pin
+        self.pinned = False
         message = QMessageBox.question(self,
                 'Confirm', 'Are you sure?',
                 buttons=QMessageBox.Yes | QMessageBox.No
@@ -493,7 +499,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 os.remove(str(obj.path))
 
         self.change_count(operator.sub, item_type, count)
-        self.pinned = not self.pinned
+        self.pinned = pin_state
 
     def updateMovie(self, item, movie, val):
         item.setIcon(QIcon(movie.currentPixmap()))

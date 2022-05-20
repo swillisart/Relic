@@ -26,18 +26,25 @@ class Ui_ScreenCapture(object):
     def setupUi(self, ScreenCapture):
         if not ScreenCapture.objectName():
             ScreenCapture.setObjectName(u"ScreenCapture")
-        ScreenCapture.resize(341, 133)
+        ScreenCapture.resize(360, 133)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(ScreenCapture.sizePolicy().hasHeightForWidth())
         ScreenCapture.setSizePolicy(sizePolicy)
         ScreenCapture.setMinimumSize(QSize(0, 0))
-        ScreenCapture.setContextMenuPolicy(Qt.CustomContextMenu)
         icon = QIcon()
         icon.addFile(u":/resources/icons/capture.svg", QSize(), QIcon.Normal, QIcon.Off)
         ScreenCapture.setWindowIcon(icon)
-        ScreenCapture.setStyleSheet(u"QWidget {\n"
+        ScreenCapture.setWindowOpacity(1.000000000000000)
+        ScreenCapture.setAutoFillBackground(False)
+        ScreenCapture.setStyleSheet(u"QWidget#ScreenCapture[pinned='0'] {\n"
+"	background-color: rgb(68, 68, 68);\n"
+"}\n"
+"QWidget#ScreenCapture[pinned='1'] {\n"
+"	background-color: rgb(150, 68, 68);\n"
+"}\n"
+"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "    color: rgb(220, 220, 220);\n"
 "    selection-background-color: rgb(126, 126, 126);\n"
@@ -67,15 +74,15 @@ class Ui_ScreenCapture(object):
 "  margin: 8px;\n"
 "}\n"
 "QMainWindow::separator:hover {\n"
-"  border-right: 1px solid rgb(150, 146, 137);\n"
+"  border-right: 1px sol"
+                        "id rgb(150, 146, 137);\n"
 "  border-bottom: 1px solid rgb(150, 146, 137);\n"
 "}\n"
 "QPushButton {\n"
 "    outline: none;\n"
 "    padding: 3px;\n"
 "	padding-left: 18px;\n"
-"	"
-                        "padding-right: 18px;\n"
+"	padding-right: 18px;\n"
 "	border: none;\n"
 "    background-color: rgb(92, 92, 92);\n"
 "}\n"
@@ -108,7 +115,8 @@ class Ui_ScreenCapture(object):
 "    padding-right: 16px;\n"
 "    background-color: rgb(68, 68, 68);\n"
 "}\n"
-"QMenu::indicator {\n"
+"QMenu::"
+                        "indicator {\n"
 "    padding: 6px;\n"
 "    margin: -1px;\n"
 "	width: 13px;\n"
@@ -116,8 +124,7 @@ class Ui_ScreenCapture(object):
 "    background-color: rgb(57, 57, 57);\n"
 "}\n"
 "QMenu::icon {\n"
-"    paddi"
-                        "ng: 4px;\n"
+"    padding: 4px;\n"
 "    margin: 0px;\n"
 "	width: 18px;\n"
 "	height: 18px;\n"
@@ -151,15 +158,15 @@ class Ui_ScreenCapture(object):
 "    border: 1px solid rgb(43, 43, 43);\n"
 "\n"
 "}\n"
-"QTextEdit:disabled,\n"
+"QTextEdit:di"
+                        "sabled,\n"
 "QAbstractSpinBox:disabled,\n"
 "QLineEdit:disabled {\n"
 "    background-color: rgb(43, 43, 43);\n"
 "    color: #787878;\n"
 "}\n"
 "\n"
-"/* QSlider ----------------"
-                        "------------------------------------------------ */\n"
+"/* QSlider ---------------------------------------------------------------- */\n"
 "QSlider::add-page:horizontal, \n"
 "QSlider::sub-page:horizontal,\n"
 "QSlider::add-page:vertical, \n"
@@ -190,14 +197,14 @@ class Ui_ScreenCapture(object):
 "    margin: -8px 0;\n"
 "	width: 6px;\n"
 "	height: 8px;\n"
-"    border-radius: 4px;\n"
+""
+                        "    border-radius: 4px;\n"
 "}\n"
 "QSlider::groove {\n"
 "    background: rgb(43, 43, 43);\n"
 "    border: 1px solid rgb(68, 68, 68);\n"
 "    border-radius: 4px;\n"
-"    mar"
-                        "gin: 0px;\n"
+"    margin: 0px;\n"
 "}\n"
 "QSlider::groove:horizontal {\n"
 "    height: 4px;\n"
@@ -228,12 +235,12 @@ class Ui_ScreenCapture(object):
 "QScrollBar::add-line:horizontal:hover,\n"
 "QScrollBar::add-line:horizontal:on,\n"
 "QScrollBar::add-line:horizontal {\n"
-"    margin: 0px 3px 0px 0px;\n"
+"    "
+                        "margin: 0px 3px 0px 0px;\n"
 "    border-image: url(:/resources/style/stylesheet-branch-closed.png);\n"
 "    height: 10px;\n"
 "    width: 6px;\n"
-"    subcontrol-position: "
-                        "right;\n"
+"    subcontrol-position: right;\n"
 "    subcontrol-origin: margin;\n"
 "}\n"
 "QScrollBar::sub-line:horizontal:hover,\n"
@@ -261,12 +268,12 @@ class Ui_ScreenCapture(object):
 "}\n"
 "QScrollBar::sub-line:vertical {\n"
 "    margin: 3px 0px 0px 0px;\n"
-"    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
+"    borde"
+                        "r-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
 "    height: 6px;\n"
 "    width: 10px;\n"
 "    subcontrol-position: top;\n"
-"    subcontrol-origin: margin"
-                        ";\n"
+"    subcontrol-origin: margin;\n"
 "}\n"
 "QScrollBar::add-line:vertical {\n"
 "    margin: 0px 0px 3px 0px;\n"
@@ -292,15 +299,15 @@ class Ui_ScreenCapture(object):
 "QScrollBar::down-arrow:vertical,\n"
 "QScrollBar::add-page:vertical,\n"
 "QScrollBar::sub-page:vertical  {\n"
-"    background: none;\n"
+"    backgroun"
+                        "d: none;\n"
 "}\n"
 "QTableCornerButton::section {\n"
 "    background-color: rgb(92, 92, 92);\n"
 "	border: 1px rgb(43,43,43);\n"
 "	border-radius: 0px;\n"
 "}\n"
-"QHeaderView "
-                        "{\n"
+"QHeaderView {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "	border: 0px transparent rgb(68,68,68);\n"
 "    padding: 0px;\n"
@@ -334,14 +341,14 @@ class Ui_ScreenCapture(object):
 "QColumnView::item {\n"
 "    border-top: none;\n"
 "    padding-right: 8px;\n"
-"    padding-left: 1px;\n"
+"    pad"
+                        "ding-left: 1px;\n"
 "    margin-top: 1px;\n"
 "    margin-bottom: 1px;\n"
 "    margin-left: 1px;\n"
 "}\n"
 "QTreeView::branch {\n"
-"    border-top: 0px solid rgb(43, 43, 43);"
-                        "\n"
+"    border-top: 0px solid rgb(43, 43, 43);\n"
 "    border-bottom: 0px solid rgb(43, 43, 43);\n"
 "    padding: 4px;\n"
 "    margin-top: 2px;\n"
@@ -362,14 +369,14 @@ class Ui_ScreenCapture(object):
 "}\n"
 "QTreeView::branch:open:has-children:!has-siblings,\n"
 "QTreeView::branch:open:has-children:has-siblings  {\n"
-"    image: url(:/resources/style/treeCollapse.svg);\n"
+"    image: url(:/resources/style/tree"
+                        "Collapse.svg);\n"
 "}\n"
 "\n"
 "/* QCombobox -------------------------------------------------------------- */\n"
 "QComboBox {\n"
 "    border: 0px;\n"
-"    border-radius: 3p"
-                        "x;\n"
+"    border-radius: 3px;\n"
 "    background-color: rgb(92, 92, 92);\n"
 "    padding-top: 2px;     /* This fix  #103, #111*/\n"
 "    padding-bottom: 1px;  /* This fix  #103, #111*/\n"
@@ -396,14 +403,14 @@ class Ui_ScreenCapture(object):
 "    border-top-right-radius: 0px;\n"
 "    border-bottom-right-radius: 0px;\n"
 "    padding-right: 3px;\n"
-"    margin-left: 6px;\n"
+"    mar"
+                        "gin-left: 6px;\n"
 "}\n"
 "QComboBox::down-arrow,\n"
 "QComboBox::down-arrow:on,\n"
 "QComboBox::down-arrow:hover,\n"
 "QComboBox::down-arrow:focus {\n"
-"    image: url(:/resou"
-                        "rces/style/stylesheet-branch-open.png);\n"
+"    image: url(:/resources/style/stylesheet-branch-open.png);\n"
 "}\n"
 "\n"
 "\n"
@@ -431,14 +438,14 @@ class Ui_ScreenCapture(object):
 "}\n"
 "\n"
 "QCheckBox::indicator:checked:hover,\n"
-"QTreeView::indicator:checked:hover,\n"
+"QTreeView::indicator:checke"
+                        "d:hover,\n"
 "QListView::indicator:checked:hover {\n"
 "    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
 "}\n"
 "\n"
 "QCheckBox::indicator:unchecked,\n"
-"QTre"
-                        "eView::indicator:unchecked,\n"
+"QTreeView::indicator:unchecked,\n"
 "QListView::indicator:unchecked {\n"
 "    color: rgb(43, 43, 43);\n"
 "    image: url(:/resources/style/checkbox.svg);\n"
@@ -493,7 +500,8 @@ class Ui_ScreenCapture(object):
 "    padding: 4px;\n"
 "    padding-left: 16px;\n"
 "    padding-right: 16px;\n"
-"    selection-background-color: rgb(68, 68, 68);\n"
+"    selection-backgroun"
+                        "d-color: rgb(68, 68, 68);\n"
 "    border: 0;\n"
 "}\n"
 "QTabWidget::tab-bar {\n"
@@ -501,8 +509,7 @@ class Ui_ScreenCapture(object):
 "}\n"
 "QTabWidget::pane {\n"
 "    border: none;\n"
-"    margin: "
-                        "0px;\n"
+"    margin: 0px;\n"
 "}\n"
 "QTabWidget::pane:selected {\n"
 "    background-color: rgb(68, 68, 68);\n"
@@ -534,13 +541,13 @@ class Ui_ScreenCapture(object):
 "    background-color: rgb(68, 68, 68);\n"
 "}\n"
 "QTabBar::tab:bottom:selected:disabled {\n"
-"    border-top: 3px solid #14506E;\n"
+"    border-top: 3"
+                        "px solid #14506E;\n"
 "    color: #787878;\n"
 "    background-color: rgb(68, 68, 68);\n"
 "}\n"
 "QTabBar::tab:left:selected:disabled {\n"
-"    border-left: 3px solid #14506E"
-                        ";\n"
+"    border-left: 3px solid #14506E;\n"
 "    color: #787878;\n"
 "    background-color: rgb(68, 68, 68);\n"
 "}\n"
@@ -569,13 +576,13 @@ class Ui_ScreenCapture(object):
 "    border-top-right-radius: 3px;\n"
 "    font-weight: normal;\n"
 "    border-bottom: 3px solid rgb(68, 68, 68);\n"
-"    border-right: 1px solid rgb(68, 68, 68);\n"
+"    border"
+                        "-right: 1px solid rgb(68, 68, 68);\n"
 "    border-left: 1px solid rgb(68, 68, 68);\n"
 "    border-top: 1px solid rgb(68, 68, 68);\n"
 "    color: rgb(100, 100, 100);\n"
 "}\n"
-""
-                        "QTabBar::tab:bottom:!selected:disabled {\n"
+"QTabBar::tab:bottom:!selected:disabled {\n"
 "    border-top: 3px solid rgb(43, 43, 43);\n"
 "    color: #787878;\n"
 "    background-color: rgb(43, 43, 43);\n"
@@ -601,14 +608,14 @@ class Ui_ScreenCapture(object):
 "    margin-bottom: 1px;\n"
 "    padding-left: 18px; \n"
 "    padding-right: 18px;\n"
-"    padding-top: 4px;\n"
+"    pad"
+                        "ding-top: 4px;\n"
 "    padding-bottom: 4px;\n"
 "    min-width: 4px;\n"
 "    border-top-left-radius: 3px;\n"
 "    border-top-right-radius: 3px;\n"
 "    font-weight: normal;\n"
-""
-                        "    border-bottom: 3px solid rgb(43, 43, 43);\n"
+"    border-bottom: 3px solid rgb(43, 43, 43);\n"
 "    border-right: 1px solid rgb(43, 43, 43);\n"
 "    border-left: 1px solid rgb(43, 43, 43);\n"
 "    border-top: 1px solid rgb(43, 43, 43);\n"
@@ -631,12 +638,12 @@ class Ui_ScreenCapture(object):
 "    border-radius:          6px;\n"
 "}\n"
 "QRadioButton::indicator:checked {\n"
-"    background-color:       gray;\n"
+""
+                        "    background-color:       gray;\n"
 "    border:                 2px solid rgb(43,43,43);\n"
 "}\n"
 "QRadioButton::indicator:unchecked {\n"
-"    background-color:       rgb"
-                        "(43,43,43);\n"
+"    background-color:       rgb(43,43,43);\n"
 "    border:                 2px solid rgb(43,43,43);\n"
 "}\n"
 "QRadioButton:indicator:hover {\n"
@@ -667,15 +674,15 @@ class Ui_ScreenCapture(object):
 "QToolButton::left-arrow:on {\n"
 "    border: 1px solid rgb(43, 43, 43);\n"
 "    background-color: rgb(68, 68, 68);\n"
-"    padding: 1px;\n"
+""
+                        "    padding: 1px;\n"
 "    margin: 2px;\n"
 "    image: url(:/resources/checkbox.svg);\n"
 "}\n"
 "\n"
 "QToolButton::down-arrow,\n"
 "QToolButton::down-arrow:on {\n"
-"    border"
-                        ": 1px solid rgb(150, 146, 137);\n"
+"    border: 1px solid rgb(150, 146, 137);\n"
 "    background-color: rgb(68, 68, 68);\n"
 "    padding: 0px;\n"
 "    margin: 2px;\n"
@@ -709,14 +716,14 @@ class Ui_ScreenCapture(object):
 "	font-size: 11px;\n"
 "	border: 0px;\n"
 "	border-radius: 3px;\n"
-"    border: 1px solid rgb(43,43,43);\n"
+"   "
+                        " border: 1px solid rgb(43,43,43);\n"
 "}\n"
 "\n"
 "QToolBox::tab {\n"
 "    border: 0px solid rgb(108, 108, 108);\n"
 "    border-radius: 3px;\n"
-"    background-color:rgb(92, "
-                        "92, 92);\n"
+"    background-color:rgb(92, 92, 92);\n"
 "    margin: 0px;\n"
 "    padding: 0px;\n"
 "}\n"
@@ -727,9 +734,10 @@ class Ui_ScreenCapture(object):
         self.actionTaskbar_Pin = QAction(ScreenCapture)
         self.actionTaskbar_Pin.setObjectName(u"actionTaskbar_Pin")
         self.verticalLayout = QVBoxLayout(ScreenCapture)
+        self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setSizeConstraint(QLayout.SetMinimumSize)
-        self.verticalLayout.setContentsMargins(6, 6, 6, 6)
+        self.verticalLayout.setContentsMargins(2, 2, 2, 2)
         self.historyGroupBox = QGroupBox(ScreenCapture)
         self.historyGroupBox.setObjectName(u"historyGroupBox")
         sizePolicy.setHeightForWidth(self.historyGroupBox.sizePolicy().hasHeightForWidth())
@@ -739,7 +747,7 @@ class Ui_ScreenCapture(object):
         self.verticalLayout_5.setSpacing(2)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setSizeConstraint(QLayout.SetMinimumSize)
-        self.verticalLayout_5.setContentsMargins(4, 6, 4, 6)
+        self.verticalLayout_5.setContentsMargins(6, 6, 6, 6)
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setSpacing(0)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -829,12 +837,17 @@ class Ui_ScreenCapture(object):
         self.buttonFrame.setObjectName(u"buttonFrame")
         sizePolicy1.setHeightForWidth(self.buttonFrame.sizePolicy().hasHeightForWidth())
         self.buttonFrame.setSizePolicy(sizePolicy1)
+        self.buttonFrame.setStyleSheet(u"QFrame#buttonFrame {\n"
+"border: 1px solid rgb(43, 43, 43);\n"
+"border-radius: 2px;\n"
+"padding: 1px;\n"
+"}")
         self.buttonFrame.setFrameShape(QFrame.StyledPanel)
         self.buttonFrame.setFrameShadow(QFrame.Raised)
         self.horizontalLayout_2 = QHBoxLayout(self.buttonFrame)
         self.horizontalLayout_2.setSpacing(6)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_2.setContentsMargins(3, 3, 3, 3)
         self.captureButton = QToolButton(self.buttonFrame)
         self.captureButton.setObjectName(u"captureButton")
         icon2 = QIcon()
@@ -910,6 +923,7 @@ class Ui_ScreenCapture(object):
     def retranslateUi(self, ScreenCapture):
         ScreenCapture.setWindowTitle(QCoreApplication.translate("ScreenCapture", u"Screen Capture", None))
         ScreenCapture.setProperty("styling_mode", QCoreApplication.translate("ScreenCapture", u"1", None))
+        ScreenCapture.setProperty("pinned", QCoreApplication.translate("ScreenCapture", u"0", None))
         self.actionTaskbar_Pin.setText(QCoreApplication.translate("ScreenCapture", u"Taskbar Pin", None))
 #if QT_CONFIG(tooltip)
         self.actionTaskbar_Pin.setToolTip(QCoreApplication.translate("ScreenCapture", u"Frameless focusless mode on taskbar activation.", None))

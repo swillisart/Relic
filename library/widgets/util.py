@@ -426,8 +426,11 @@ class DialogOverlay(QDialog):
 
     def mousePressEvent(self, event):
         if self.isModal() and not self.widget.underMouse():
-            self.parent().removeEventFilter(self)
             self.close()
+
+    def closeEvent(self, event):
+        self.parent().removeEventFilter(self)
+        super(DialogOverlay, self).closeEvent(event)
 
     def paintEvent(self, event):
         painter = QPainter(self)

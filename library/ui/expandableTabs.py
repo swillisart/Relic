@@ -24,7 +24,7 @@ class Ui_ExpandableTabs(object):
     def setupUi(self, ExpandableTabs):
         if not ExpandableTabs.objectName():
             ExpandableTabs.setObjectName(u"ExpandableTabs")
-        ExpandableTabs.resize(275, 377)
+        ExpandableTabs.resize(268, 353)
         ExpandableTabs.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"
@@ -162,7 +162,7 @@ class Ui_ExpandableTabs(object):
         self.verticalLayout = QVBoxLayout(ExpandableTabs)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout.setContentsMargins(1, 1, 1, 1)
         self.HeaderFrame = QFrame(ExpandableTabs)
         self.HeaderFrame.setObjectName(u"HeaderFrame")
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -171,20 +171,11 @@ class Ui_ExpandableTabs(object):
         sizePolicy.setHeightForWidth(self.HeaderFrame.sizePolicy().hasHeightForWidth())
         self.HeaderFrame.setSizePolicy(sizePolicy)
         self.HeaderFrame.setFocusPolicy(Qt.ClickFocus)
-        self.HeaderFrame.setAutoFillBackground(False)
         self.HeaderFrame.setStyleSheet(u"QFrame{\n"
 "    background-color: rgb(57, 57, 57);\n"
-"   /* background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));*/\n"
-"\n"
 "    border: 1px solid rgb(43,43,43);\n"
 "    border-top: 1px solid rgb(92,92,92);\n"
-"	border-radius: 2px;\n"
-"    /* border: 2px solid rgb(57,57,57);*/\n"
-"	/*border: none;*/\n"
-"	padding: 1px;\n"
 "}")
-        self.HeaderFrame.setFrameShape(QFrame.StyledPanel)
-        self.HeaderFrame.setFrameShadow(QFrame.Raised)
         self.horizontalLayout_5 = QHBoxLayout(self.HeaderFrame)
         self.horizontalLayout_5.setSpacing(0)
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
@@ -210,6 +201,7 @@ class Ui_ExpandableTabs(object):
         self.styledLine_1.setStyleSheet(u"QFrame {\n"
 "    background-color: rgb(150, 146, 137);\n"
 "	border: none;\n"
+"    border-radius: 1px;\n"
 "}")
         self.styledLine_1.setFrameShadow(QFrame.Plain)
         self.styledLine_1.setLineWidth(0)
@@ -218,32 +210,17 @@ class Ui_ExpandableTabs(object):
 
         self.horizontalLayout.addWidget(self.styledLine_1)
 
-        self.styledLine_2 = QFrame(self.HeaderFrame)
-        self.styledLine_2.setObjectName(u"styledLine_2")
-        self.styledLine_2.setMinimumSize(QSize(2, 0))
-        self.styledLine_2.setMaximumSize(QSize(2, 16777215))
-        self.styledLine_2.setStyleSheet(u"QFrame {\n"
-"    background-color: rgb(150, 146, 137);\n"
-"	border: none;\n"
-"}")
-        self.styledLine_2.setFrameShadow(QFrame.Plain)
-        self.styledLine_2.setLineWidth(0)
-        self.styledLine_2.setMidLineWidth(0)
-        self.styledLine_2.setFrameShape(QFrame.VLine)
-
-        self.horizontalLayout.addWidget(self.styledLine_2)
-
         self.iconButton = QToolButton(self.HeaderFrame)
         self.iconButton.setObjectName(u"iconButton")
         self.iconButton.setFocusPolicy(Qt.NoFocus)
-        self.iconButton.setStyleSheet(u"padding: -2px;\n"
-"margin-right: 4px;\n"
+        self.iconButton.setStyleSheet(u"padding: 0px;\n"
+"margin-right: 0px;\n"
 "border: none;\n"
 "background-color: rgb(57, 57, 57);")
         icon = QIcon()
         icon.addFile(u":/resources/asset_types/reference.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.iconButton.setIcon(icon)
-        self.iconButton.setIconSize(QSize(24, 24))
+        self.iconButton.setIconSize(QSize(22, 22))
 
         self.horizontalLayout.addWidget(self.iconButton)
 
@@ -322,7 +299,7 @@ class Ui_ExpandableTabs(object):
         self.horizontalLayout_3 = QHBoxLayout(self.ContentFrame)
         self.horizontalLayout_3.setSpacing(0)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalLayout_3.setContentsMargins(10, 0, 0, 0)
+        self.horizontalLayout_3.setContentsMargins(2, 0, 0, 0)
         self.styledLine = QFrame(self.ContentFrame)
         self.styledLine.setObjectName(u"styledLine")
         self.styledLine.setMinimumSize(QSize(2, 0))
@@ -345,8 +322,6 @@ class Ui_ExpandableTabs(object):
         self.frame.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(48, 48, 48);\n"
 "}")
-        self.frame.setFrameShape(QFrame.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame)
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -383,7 +358,6 @@ class Ui_ExpandableTabs(object):
 "}\n"
 "")
         self.verticalControl.setFrameShape(QFrame.Box)
-        self.verticalControl.setFrameShadow(QFrame.Plain)
         self.horizontalLayout_4 = QHBoxLayout(self.verticalControl)
         self.horizontalLayout_4.setSpacing(12)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")

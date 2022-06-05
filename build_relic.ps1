@@ -5,6 +5,7 @@
 .\Scripts\pyside6-uic.exe .\library\ui\asset_delegate.ui -o .\library\ui\asset_delegate.py
 .\Scripts\pyside6-uic.exe .\library\ui\list_view_filtered.ui -o .\library\ui\list_view_filtered.py
 .\Scripts\pyside6-uic.exe .\library\ui\ingestion.ui -o .\library\ui\ingestion.py
+.\Scripts\pyside6-uic.exe .\library\ui\preferences_form.ui -o .\library\ui\preferences_form.py
 .\Scripts\pyside6-uic.exe .\library\ui\description.ui -o .\library\ui\description.py
 .\Scripts\pyside6-uic.exe .\library\ui\compact_delegate.ui -o .\library\ui\compact_delegate.py
 C:\Users\Resartist\AppData\Local\Programs\Python\Python37\Scripts\pyside2-uic.exe .\library\plugins\Lib\relic_base\ui\title_bar.ui -o .\library\plugins\Lib\relic_base\ui\title_bar.py

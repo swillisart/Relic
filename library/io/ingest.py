@@ -598,6 +598,7 @@ class IngestionThread(QThread):
         self.mutex = QMutex()
         self.condition = QWaitCondition()
         self.ingest_path = INGEST_PATH
+        self.ingest_path.mkdir(parents=True, exist_ok=True)
         self.stopped = False
         self.queue = []
         self.file_op = IngestionThread.moveOp

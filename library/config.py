@@ -2,74 +2,18 @@ import os
 import logging
 from extra_types.enums import AutoEnum, ListEnum
 from enum import IntEnum
+
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
 from sequence_path.main import SequencePath as Path
 from strand.client import StrandClient
-from qtshared6.utils import Preferences
+from qtshared6.settings import Preferences
 
-# -- Globals --
-
-class Classification(IntEnum):
-    NONE = 0
-    IMAGE = 1
-    MODEL = 2
-    ANIMATION = 3
-    SHADER = 4
-    AREA_LIGHT = 5
-    IBL = 6
-    IES = 7
-    ELEMENT_2D = 8
-    ELEMENT_3D = 9
-    REFERENCE = 10
-    TOOL = 11
-    BLENDSHAPE = 12
-    SOFTWARE = 13
-    PLUGIN = 14
-    APPLICATION = 15
-
-
-# Valid Extensions in an exclusive list
-class Extension(ListEnum):
-    MOVIE = ['.mov', '.mxf', '.mp4', '.mkv']
-    RAW = ['.cr2', '.arw', '.dng', '.cr3', '.nef']
-    FILM = ['.r3d', '.arriraw']
-    HDR = ['.exr']
-    LDR = ['.jpg', '.png', '.tif', '.jpeg']
-    LIGHT = ['.ies']
-    SHADER = ['.mtlx', '.osl', '.sbsar']
-    DCC = ['.ma', '.mb', '.max', '.hip']
-    TOOLS = ['.nk', '.mel', '.py', '.hda', '.exe']
-    GEO = ['.abc', '.fbx', '.usd']
-    TEXTURE = HDR + LDR
+from relic.scheme import Classification
+from relic.local import Extension, INGEST_PATH, getAssetSourceLocation
 
 PEAK = StrandClient('peak')
 USERPROFILE = os.getenv('userprofile')
-INGEST_PATH = Path(USERPROFILE) / '.relic/ingest'
-
-INGEST_PATH.path.mkdir(parents=True, exist_ok=True)
-
-def getAssetSourceLocation(filepath):
-    """Given a filepath this deterimines the relative subfolder location of the 
-    unique dependency for this asset.
-
-    Parameters
-    ----------
-    filepath : str
-
-    Returns
-    -------
-    str
-        one of 3 image, cache or misc depending on matching valid extension
-    """
-    for extension in Extension.TEXTURE:
-        if str(filepath).endswith(extension):
-            return 'source_images'
-    for extension in Extension.GEO:
-        if str(filepath).endswith(extension):
-            return 'source_caches'
-
-    return 'source_misc'
 
 def peakLoad(path):
     PEAK.sendPayload(str(path))

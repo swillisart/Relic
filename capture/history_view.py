@@ -146,7 +146,7 @@ class HistoryTreeView(QTreeView):
         self.setDragEnabled(True)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setDragDropMode(QAbstractItemView.DragOnly)
-        self.setDefaultDropAction(Qt.CopyAction)
+        self.setDefaultDropAction(Qt.IgnoreAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         #self.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
@@ -181,7 +181,3 @@ class HistoryTreeView(QTreeView):
         key = event.key()
         if key == Qt.Key_Space:
             self.onExecuted.emit(self.lastIndex)
-
-    def startDrag(self, actions):
-        actions = Qt.CopyAction
-        return super(HistoryTreeView, self).startDrag(actions)

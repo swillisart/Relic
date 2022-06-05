@@ -5,7 +5,7 @@ from collections import defaultdict
 # -- Module --
 from library import objectmodels
 from library.config import RELIC_PREFS
-from library.objectmodels import relationships, subcategory
+from library.objectmodels import relationships, subcategory, CategoryColor
 from library.ui.expandableTabs import Ui_ExpandableTabs
 from library.widgets.util import ListViewFiltered, rasterizeSVG
 
@@ -720,12 +720,16 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
         self.iconButton.setIcon(icon)
         self.nameLabel.setText(category.name)
         self.countSpinBox.setValue(category.count)
-        for widget in (self.styledLine, self.styledLine_1, self.styledLine_2):
-            color = getattr(RELIC_PREFS, category.name.lower() + '_color')
+        
+        for widget in (self.styledLine, self.styledLine_1):
+            color = CategoryColor(category.id).data
             widget.setStyleSheet(
-                'QFrame {{background-color: rgb({});border: none}}'.format(
-                    color))
-
+                'QFrame {{background-color: rgb({}, {}, {});border: none;border-radius: 1px;}}'.format(
+                    color.red(),
+                    color.green(),
+                    color.blue(),
+                    )
+            )
         for x in [self.pushButton, self.pushButton_2, self.countSpinBox, self.checkButton, self.iconButton]:
             x.setAttribute(Qt.WA_TransparentForMouseEvents)
 

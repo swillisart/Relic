@@ -7,12 +7,12 @@ from collections import defaultdict
 from functools import partial
 
 # -- Third-party --
-from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QPoint,
+from PySide6.QtCore import (QItemSelectionModel, QModelIndex,
                             QThreadPool, Slot, QTimer)
-from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap, Qt, QKeySequence, QShortcut 
+from PySide6.QtGui import QIcon, Qt, QPixmap
 from PySide6.QtWidgets import (QApplication,
                             QMainWindow, QSizePolicy,
-                               QSystemTrayIcon, QWidget)
+                               QSystemTrayIcon, QWidget, QToolButton )
 # -- First-party --
 import qtshared6.resources
 from qtshared6.utils import polymorphicItem
@@ -20,7 +20,7 @@ from qtshared6.delegates import ItemDispalyModes, BaseItemDelegate
 from sequence_path.main import SequencePath as Path
 from strand import server
 
-from library.config import RELIC_PREFS, peakPreview, INGEST_PATH
+from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
 from library.objectmodels import (Library, alusers, attachLinkToAsset,
                                   getCategoryConstructor,
@@ -29,8 +29,8 @@ from library.objectmodels import (Library, alusers, attachLinkToAsset,
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
 from library.widgets.assets_alt import AssetItemModel, AssetListView
-
 from library.widgets.metadataView import metadataFormView
+from library.widgets.preference_view import PreferencesDialog
 from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.subcategoriesViews import CategoryManager, ExpandableTab
 from library.widgets.util import DialogOverlay
@@ -43,6 +43,15 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def __init__(self, *args, **kwargs):
         super(RelicMainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
+        
+        self.edit_icon  = QIcon(':status/editing.png')
+        self.edit_status = QToolButton(self)
+        self.edit_status.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.edit_status.setText('Admin Mode')
+        self.edit_status.setIcon(self.edit_icon)
+
+        self.statusbar.addPermanentWidget(self.edit_status, 0)
+
         self.description_window = description.Window(self)
         self.app_icon = QIcon(':/resources/app/app_icon.svg')
         self.tray = QSystemTrayIcon(self.app_icon, self)
@@ -96,6 +105,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.actionRecurseSubcategory.setChecked(int(RELIC_PREFS.recurse_subcategories))
         self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
         self.actionIngest.triggered.connect(self.beginIngest)
+        self.actionPreferences.triggered.connect(self.showPreferences)
         self.actionDocumentation.triggered.connect(self.browseDocumentation)
         self.actionReconnect.triggered.connect(session.rebind)
 
@@ -117,6 +127,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.viewScaleSlider.setValue(int(RELIC_PREFS.view_scale))
         self.scaleView(int(RELIC_PREFS.view_scale))
         self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
+        self.edit_status.setVisible(int(RELIC_PREFS.edit_mode))
 
         self.clearSearchButton.clicked.connect(self.clearSearch)
         self.clearSubcategoryButton.clicked.connect(self.clearSubcategorySelection)
@@ -136,6 +147,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.selected_assets_by_link = {} # Used for dependency linking
         self.asset_startup_path = None
         self._ingester = None
+        self.preferences_dialog = None
 
     @Slot(QModelIndex)
     def open_file(self, index):
@@ -286,6 +298,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             from library.widgets.ingest import IngestForm
             ingester = IngestForm()
             ingester.beforeClose.connect(self.onIngestClosed)
+            #TODO: make notifications a preference
             collect_finish_msg = lambda x: self.tray.showMessage(
                 'Finished Collecting',
                 'Relic has completed collection of queued Assets.\nReady to be processed.',
@@ -302,6 +315,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             ingester.finishedProcessing.connect(process_finish_msg)
             self._ingester = ingester
         return self._ingester
+
+    @Slot()
+    def showPreferences(self):
+        if self.preferences_dialog is None:
+            self.preferences_dialog = PreferencesDialog()
+        DialogOverlay(self, self.preferences_dialog, modal=True)
 
     @Slot()
     def beginIngest(self):
@@ -692,6 +711,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def toggleAdminMode(self, toggle):
         #TODO: query the databse for permissions level
         RELIC_PREFS.edit_mode = int(toggle)
+        self.edit_status.setVisible(toggle)
 
     @Slot()
     def browseDocumentation(self):

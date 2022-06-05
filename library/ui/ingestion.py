@@ -24,13 +24,12 @@ from library.widgets.assets_alt import AssetListView
 from library.widgets.metadataView import categoryWidget
 from library.widgets.util import AssetNameListView
 import resources_rc
-import resources_rc
 
 class Ui_IngestForm(object):
     def setupUi(self, IngestForm):
         if not IngestForm.objectName():
             IngestForm.setObjectName(u"IngestForm")
-        IngestForm.resize(857, 517)
+        IngestForm.resize(866, 478)
         IngestForm.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"

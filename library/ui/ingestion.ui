@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>857</width>
-    <height>517</height>
+    <width>866</width>
+    <height>478</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1320,7 +1320,6 @@ QToolTip {
  </customwidgets>
  <resources>
   <include location="../../resources.qrc"/>
-  <include location="C:/Users/Resartist/resources.qrc"/>
  </resources>
  <connections>
   <connection>

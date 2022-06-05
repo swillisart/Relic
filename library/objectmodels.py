@@ -11,7 +11,7 @@ from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtCore import Qt, QSettings, QObject, Slot, QRect
 
 from library.io.networking import RelicClientSession
-from library.config import RELIC_PREFS, Classification
+from library.config import RELIC_PREFS
 
 session = RelicClientSession(RelicClientSession.URI)
 
@@ -31,12 +31,12 @@ class Type(IconIndicator):
 class CategoryColor(ColorIndicator):
     references = {'data': QColor(168, 58, 58)}
     modeling = {'data': QColor(156, 156, 156)}
-    elements = {'data': QColor(198, 178, 148)}
-    lighting = {'data': QColor(188, 178, 98)}
-    shading = {'data': QColor(168, 58, 198)}
-    software = {'data': QColor(168, 168, 198)}
-    mayatools = {'data': QColor(66, 118, 150)}
-    nuketools = {'data': QColor(168, 168, 198)}
+    elements = {'data': QColor(185, 120, 50)}
+    lighting = {'data': QColor(220, 215, 180)}
+    shading = {'data': QColor(148, 68, 158)}
+    software = {'data': QColor(28, 28, 28)}
+    mayatools = {'data': QColor(72, 167, 204)}
+    nuketools = {'data': QColor(205, 170, 60)}
 
 
 class BaseFields(object):

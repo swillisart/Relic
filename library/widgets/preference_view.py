@@ -12,9 +12,9 @@ from library.ui.preferences_form import Ui_PreferenceForm
 
 
 class ViewScale(ComboField, DataAutoEnum):
-    Tree = QIcon('resources/app/tagIcon.svg')
-    Compact = QIcon(':/resources/app/user.png')
-    Icon = QIcon('resources/app/star.svg')
+    Tree = QIcon()
+    Compact = QIcon()
+    Icon = QIcon()
 
     @staticmethod
     def widget(parent):

@@ -377,7 +377,6 @@ QWidget:item:hover {
 QWidget:item:selected {
     background-color: rgb(140, 136, 127);
     color: rgb(43, 43, 43);
-    font-weight: bold;
 }
 QWidget:disabled {
     background-color: rgb(43, 43, 43);
@@ -2409,8 +2408,8 @@ QTreeView::branch:open:has-children:has-siblings  {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>127</width>
-          <height>314</height>
+          <width>124</width>
+          <height>311</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryDockLayout">

@@ -7,26 +7,27 @@ from PySide6.QtWidgets import *
 from library.config import RELIC_PREFS
 from library.widgets.fields import (
     ComboField, IntField, CheckField, VerticalTreeModel, TextField,
-    FieldDelegate)
+    FieldDelegate, ObjectField)
 from library.ui.preferences_form import Ui_PreferenceForm
 
 
-class ViewScale(ComboField):
-    #TREE_TABLE = 0
-    COMPACT = 0
-    ICON = 1
-    NONE = 2
+class ViewScale(ComboField, DataAutoEnum):
+    Tree = QIcon('resources/app/tagIcon.svg')
+    Compact = QIcon(':/resources/app/user.png')
+    Icon = QIcon('resources/app/star.svg')
 
     @staticmethod
     def widget(parent):
         widget = QComboBox(parent)
-        [widget.addItem(x.name) for x in ViewScale]
+        [widget.addItem(x.data, x.name) for x in ViewScale]
         return widget
+
 
 class Group(DataAutoEnum):
     GENERAL = QStandardItem('General')
     INGEST = QStandardItem('Ingest')
     SITE = QStandardItem('Site')
+
 
 class Subgroup(AutoEnum):
     USER = {'data': QStandardItem('User'), 'parent': Group.GENERAL}
@@ -56,7 +57,10 @@ class UserPrefs(object):
             value = user_settings.value(key)
             if isinstance(value, str) and value.isnumeric():
                 value = int(value)
-            pref_value = UserPrefs.Fields[key].data(value)
+            try:
+                pref_value = UserPrefs.Fields[key].data(value)
+            except:
+                pref_value = UserPrefs.Fields[key].data[value]
 
             setattr(self, key, pref_value)
 
@@ -76,6 +80,7 @@ class PreferencesView(QWidget):
     def __init__(self, *args, **kwargs):
         super(PreferencesView, self).__init__(*args, **kwargs)
         self.view = QTreeView(self)
+        self.view.setWordWrap(True)
 
         layout = QFormLayout(self)
         self.setLayout(layout)
@@ -83,6 +88,7 @@ class PreferencesView(QWidget):
         user_prefs = UserPrefs()
 
         model = VerticalTreeModel()
+        model.dataChanged.connect(self.onDataChanged)
 
         self.data_mapper = QDataWidgetMapper(self)
         self.data_mapper.setItemDelegate(FieldDelegate(self))
@@ -96,7 +102,6 @@ class PreferencesView(QWidget):
             parent_item.appendRow(sub.data)
 
         for field in user_prefs.Fields:
-
             widget = field.data.widget(self.view)
             widget._type = field.data
             widget.hide()
@@ -112,23 +117,28 @@ class PreferencesView(QWidget):
         self.view.setHeaderHidden(True)
         self.view.setIndentation(16)
         self.view.setModel(model)
-        self.view.setEditTriggers(QAbstractItemView.CurrentChanged | QAbstractItemView.SelectedClicked)
+        #self.view.setEditTriggers(QAbstractItemView.CurrentChanged | QAbstractItemView.SelectedClicked)
+        self.view.setEditTriggers(QAbstractItemView.AllEditTriggers)
         self.view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.view.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.view.setItemDelegate(FieldDelegate(self))
         self.view.selectionModel().selectionChanged.connect(self.onSelection)
 
-        #self.view.verticalHeader().show()
-
         layout.addWidget(self.view)
         selection_model = self.view.selectionModel()
         selection_model.currentRowChanged.connect(self.data_mapper.setCurrentModelIndex)
+
+    @Slot()
+    def onDataChanged(self, top_left, bot_right, roles):
+        new_index = top_left.sibling(top_left.row(), 0)
+        label = new_index.data(role=Qt.DisplayRole)
+        value = top_left.data()
+        setattr(RELIC_PREFS, label, value)
 
     def resizeEvent(self, event):
         header = self.view.header()
         column_width = (self.view.width() / 2)
         header.resizeSection(0, column_width)
-
         return super(PreferencesView, self).resizeEvent(event)
 
     @Slot(QItemSelection)

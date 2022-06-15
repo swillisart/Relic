@@ -30,14 +30,13 @@ from library.objectmodels import (Library, alusers, attachLinkToAsset,
 from library.ui.dialog import Ui_RelicMainWindow
 from library.widgets.assets_alt import AssetItemModel, AssetListView
 from library.widgets.metadataView import metadataFormView
-from library.widgets.preference_view import PreferencesDialog
+from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.subcategoriesViews import CategoryManager, ExpandableTab
 from library.widgets.util import DialogOverlay
 from library.widgets import description
 
 CATEGORIES = []
-PAGE_LIMIT = int(RELIC_PREFS.assets_per_page or 30)
 
 class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -124,8 +123,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
         self.description_window.text_browser.assetClicked.connect(self.browseTo) 
         self.viewScaleSlider.valueChanged.connect(self.scaleView)
-        self.viewScaleSlider.setValue(int(RELIC_PREFS.view_scale))
-        self.scaleView(int(RELIC_PREFS.view_scale))
+        self.viewScaleSlider.setValue(ViewScale[RELIC_PREFS.view_scale])
+        self.scaleView(ViewScale[RELIC_PREFS.view_scale])
         self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
         self.edit_status.setVisible(int(RELIC_PREFS.edit_mode))
 
@@ -284,7 +283,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             BaseItemDelegate.VIEW_MODE = ItemDispalyModes.THUMBNAIL
         self.asset_item_model.endResetModel()
         self.links_view.model.endResetModel()
-        RELIC_PREFS.view_scale = value
+        RELIC_PREFS.view_scale = ViewScale(value).name
 
     def closeOverlay(self):
         if self.overlay:
@@ -500,7 +499,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     
     def filterAssets(self):
         categories = self.category_manager.selected_subcategories.copy()
-        limit = PAGE_LIMIT
+        limit = int(RELIC_PREFS.assets_per_page)
         page = self.pageSpinBox.value()
         offset = int(((page * limit) - limit)) if page else 0
 
@@ -537,7 +536,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             self.noSearchResultsPage.hide()
             self.assets_view.show()
 
-        page_count = math.ceil(asset_total / PAGE_LIMIT) or 1
+        page_count = math.ceil(asset_total / int(RELIC_PREFS.assets_per_page)) or 1
         self.pageSpinBox.setSuffix('/' + str(page_count))
         self.pageSpinBox.setMaximum(page_count)
         msg = 'Search results: {} Assets...'.format(asset_total)

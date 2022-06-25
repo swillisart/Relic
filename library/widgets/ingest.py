@@ -12,7 +12,7 @@ from library.objectmodels import (Type, alusers, getCategoryConstructor,
                                   relationships, session, tags, temp_asset)
 from library.ui.ingestion import Ui_IngestForm
 from library.widgets.assets_alt import AssetItemModel
-from library.widgets.util import ListViewFiltered, SimpleAsset
+from library.widgets.util import SimpleAsset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,
                             QRect, QRegularExpression, QSize,

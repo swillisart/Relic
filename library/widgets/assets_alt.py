@@ -17,9 +17,7 @@ from library.io.ingest import ConversionRouter, remakePreview
 from library.io.util import LocalThumbnail
 
 from library.objectmodels import allCategories, subcategory, temp_asset, getCategoryConstructor, Library, Type
-from library.widgets.metadataView import (categoryWidget, classWidget,
-                                          qualityWidget, subcategoryWidget,
-                                          typeWidget)
+
 # -- Third-party --
 from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPool,
                             QMimeData, QModelIndex, QObject, QPoint,

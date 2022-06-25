@@ -244,7 +244,6 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
             #  for i in self.listView.selectedIndexes()]
             # index = self.listView.selectedIndexes()[0]
 
-
     @Slot()
     def onViewFill(self):
         try:
@@ -282,7 +281,6 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
             index = self.listView.selectedIndexes()[0]
         except Exception:
             index = self.proxyModel.index(0, 0)
-
         if index.data():
             asset = index.data(polymorphicItem.Object)
             if not asset.id:
@@ -313,13 +311,6 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         super(ListViewFocus, self).show()
 
 
-class ListViewFiltered(ListViewFocus):
-
-    def __init__(self, *args, **kwargs):
-        super(ListViewFiltered, self).__init__(*args, **kwargs)
-        self.setWindowFlags(Qt.Popup|Qt.WindowStaysOnTopHint|Qt.FramelessWindowHint)
-
-
 class AssetNameListView(ListViewFocus):
 
 
@@ -347,6 +338,7 @@ class AssetNameListView(ListViewFocus):
         else:
             self.newItem.emit(str(self.searchBox.text()))
         self.searchBox.clear()
+
 
 class FocusListView(QListView):
 

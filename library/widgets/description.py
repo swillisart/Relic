@@ -4,7 +4,7 @@ import operator
 from functools import partial
 import markdown
 
-from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream
+from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream, QEvent
 from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor
 from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit, QWidget, QAbstractButton, QDialog
 
@@ -183,6 +183,13 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.button_box.clicked.connect(self.onDescriptionButtonClicked)
         self.text_edit.textChanged.connect(self.text_browser.onPlainTextEditChanged)
 
+    @Slot(Path)
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+            return
+        super(Window, self).keyPressEvent(event)
+
+    @Slot(QEvent)
     def closeEvent(self, event):
         self.hide()
         event.ignore()

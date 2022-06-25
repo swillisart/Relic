@@ -1,4 +1,6 @@
 from extra_types.enums import DataAutoEnum, AutoEnum
+from enum import IntEnum
+
 #import resources
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -11,17 +13,20 @@ from library.widgets.fields import (
 from library.ui.preferences_form import Ui_PreferenceForm
 
 
-class ViewScale(ComboField, DataAutoEnum):
-    Tree = QIcon()
-    Compact = QIcon()
-    Icon = QIcon()
+class ViewScale(ComboField, IntEnum):
+    Tree = 0
+    Compact = 1
+    Icon = 2
 
     @staticmethod
     def widget(parent):
         widget = QComboBox(parent)
-        [widget.addItem(x.data, x.name) for x in ViewScale]
+        [widget.addItem(x.name, x.name) for x in ViewScale]
         return widget
 
+    @property
+    def icon(self):
+        return QPixmap()
 
 class Group(DataAutoEnum):
     GENERAL = QStandardItem('General')

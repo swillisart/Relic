@@ -1,5 +1,5 @@
 import sys
-
+from collections import Sequence
 from enum import IntEnum
 from extra_types.enums import AutoEnum
 from qtshared6.delegates import Statuses, TextIndicator, ColorIndicator, IconIndicator, scale_icon
@@ -17,7 +17,6 @@ session = RelicClientSession(RelicClientSession.URI)
 
 LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
 NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
-serializable_types = [str, int, tuple]
 
 class Type(IconIndicator):
     NONE = {}
@@ -37,7 +36,6 @@ class CategoryColor(ColorIndicator):
     software = {'data': QColor(28, 28, 28)}
     mayatools = {'data': QColor(72, 167, 204)}
     nuketools = {'data': QColor(205, 170, 60)}
-
 
 class BaseFields(object):
     __slots__ = ()
@@ -172,15 +170,18 @@ class BaseFields(object):
         for i, x in enumerate(self.__slots__):
             attr = getattr(self, x)
 
-            # Convert to id if morphic a object.
-            if isinstance(attr, Path):
-                attr = str(attr)
-
+            # Convert to id if morphic object.
             # Only allow json serializable data.
-            is_serial = [type(attr) is t for t in serializable_types]
+            if isinstance(attr, (str, Path)):
+                attr = str(attr)
+            elif isinstance(attr, int):
+                attr = int(attr)
+            elif isinstance(attr, tuple): # Sequence
+                pass #attr = tuple(attr)
+            else:
+                continue
 
-            if attr is not None and any(is_serial):
-                indexed_attributes[i] = attr
+            indexed_attributes[i] = attr
 
         return indexed_attributes
 

@@ -1,40 +1,39 @@
 import ctypes
 import math
 import os
-import sys
 import subprocess
+import sys
 from collections import defaultdict
 from functools import partial
 
-# -- Third-party --
-from PySide6.QtCore import (QItemSelectionModel, QModelIndex,
-                            QThreadPool, Slot, QTimer)
-from PySide6.QtGui import QIcon, Qt, QPixmap
-from PySide6.QtWidgets import (QApplication,
-                            QMainWindow, QSizePolicy,
-                               QSystemTrayIcon, QWidget, QToolButton )
 # -- First-party --
 import qtshared6.resources
+# -- Third-party --
+from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QThreadPool,
+                            QTimer, Slot)
+from PySide6.QtGui import QIcon, QPixmap, Qt
+from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
+                               QSystemTrayIcon, QToolButton, QWidget)
+from qtshared6.delegates import BaseItemDelegate, ItemDispalyModes
 from qtshared6.utils import polymorphicItem
-from qtshared6.delegates import ItemDispalyModes, BaseItemDelegate
+from relic.local import Relational
 from sequence_path.main import SequencePath as Path
 from strand import server
 
 from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
-from library.objectmodels import (Library, alusers, attachLinkToAsset,
-                                  getCategoryConstructor,
-                                  session, subcategory, relationships, Type, Category)
-
+from library.objectmodels import (Category, Library, Type, alusers,
+                                  attachLinkToAsset, getCategoryConstructor,
+                                  relationships, session, subcategory)
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
+from library.widgets import description
 from library.widgets.assets_alt import AssetItemModel, AssetListView
-from library.widgets.metadataView import metadataFormView
+from library.widgets.metadata_view import MetadataView
 from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.subcategoriesViews import CategoryManager, ExpandableTab
 from library.widgets.util import DialogOverlay
-from library.widgets import description
 
 CATEGORIES = []
 
@@ -92,9 +91,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         self.noSearchResultsPage.hide()
         self.links_view = LinkViewWidget(self)
-        self.metatdata_view = metadataFormView(self)
-        self.metatdata_view.openDescription.connect(self.description_window.showMarkdown)
-        self.attributesLayout.addWidget(self.metatdata_view)
+        self.metadata_view = MetadataView(self)
+        self.metadata_view.openDescription.connect(self.loadCurrentAssetsDescription)
+        self.metadata_view.fieldChanged.connect(self.updateAssetFromField)
+        self.attributesLayout.addWidget(self.metadata_view)
         self.linksDock.setWidget(self.links_view)
 
         # Signals / Slots
@@ -122,9 +122,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.backButton.clicked.connect(self.assetViewing)
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
         self.description_window.text_browser.assetClicked.connect(self.browseTo) 
+        self.scaleView(int(ViewScale[RELIC_PREFS.view_scale]))
         self.viewScaleSlider.valueChanged.connect(self.scaleView)
-        self.viewScaleSlider.setValue(ViewScale[RELIC_PREFS.view_scale])
-        self.scaleView(ViewScale[RELIC_PREFS.view_scale])
+        self.viewScaleSlider.setValue(int(ViewScale[RELIC_PREFS.view_scale]))
         self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
         self.edit_status.setVisible(int(RELIC_PREFS.edit_mode))
 
@@ -141,12 +141,44 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         session.moveassets.callback.connect(self.category_manager.receiveNewCounts)
         session.updatesubcategorycounts.callback.connect(self.category_manager.receiveNewCounts)
         session.linksubcategories.callback.connect(subcategory.onRelink)
-        session.createuser.callback.connect(self.onUserCreate)
+        #session.createuser.callback.connect(self.onUserCreate)
         session.onVideoReceived.connect(self.setVideo)
+        session.createtag.callback.connect(self.onRelationCreate)
+        session.createuser.callback.connect(self.onRelationCreate)
         self.selected_assets_by_link = {} # Used for dependency linking
+        self.selected_assets = [] # Used for dependency linking
+
         self.asset_startup_path = None
         self._ingester = None
         self.preferences_dialog = None
+        self.block_search = False
+
+    @Slot(str, object)
+    def updateAssetFromField(self, name, value):
+        
+        if name in Relational.__members__.keys():
+            attach = attachLinkToAsset
+            # Update asset relationship mappings
+            for item in value:
+                relation_asset = item.data(polymorphicItem.Object)
+                if relation_asset.id is None: # CREATE relation asset
+                    id_mapping = []
+                    for asset in self.selected_assets: 
+                        id_mapping.append([relation_asset.relationMap, asset.links])
+                        relation_asset.createNew(id_mapping)
+                else: # LINK existing relation asset
+                    relations = []
+                    for asset in self.selected_assets: 
+                        relation = [relation_asset.relationMap, relation_asset.id, asset.links]
+                        relations.append(relation)
+                        attachLinkToAsset(asset, item)
+                    session.createrelationships.execute(relations)
+    
+        else: # Update the asset field
+            for asset in self.selected_assets:
+                setattr(asset, name.lower(), value)
+                asset.update(fields=[name])
+
 
     @Slot(QModelIndex)
     def open_file(self, index):
@@ -263,6 +295,21 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 new_user = alusers(**fields)
                 RELIC_PREFS.user_id = new_user.id
 
+    @Slot(dict)
+    def onRelationCreate(self, data):
+        for category_name, assets in data.items():
+            for fields in assets:
+                constructor = getCategoryConstructor(category_name)
+                asset = constructor(**fields)
+                item = polymorphicItem(fields=asset)
+                for downstream in self.selected_assets:
+                    attr = getattr(downstream, category_name)
+                    if not attr:
+                        setattr(downstream, category_name, [item])
+                    else:
+                        attr.append(item)
+
+
     def clearSearch(self):
         self.searchBox.clear()
         self.updateAssetView()
@@ -376,9 +423,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         #self.onFilterResults(filtered)
         if '#' in name:
             name, description = name.split('#')
-            description_path = asset.network_path.suffixed('_description', '.md')
-            self.description_window.showMarkdown(description_path)
+            self.loadCurrentAssetsDescription(asset)
 
+    @Slot()
+    def loadCurrentAssetsDescription(self, asset=None):
+        if not asset:
+            if not self.selected_assets:
+                return
+            asset = self.selected_assets[-1]
+        description_path = asset.network_path.suffixed('_description', '.md')
+        if not description_path.exists():
+            description_path.touch()
+
+        self.description_window.showMarkdown(description_path)
+        
     @Slot()
     def onIngestClosed(self, dock):
         self.assets_view.show()
@@ -410,10 +468,16 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         # Re-apply asset filtering.
         self.filterAssets()
 
+    @Slot()
     def searchLibrary(self):
         """
         Re-queries the database if the searchbox or categories have changed
         """
+        if self.block_search:
+            return
+        else:
+            self.block_search = True
+        self.assetViewing()
         subcategories = self.category_manager.selected_subcategories.copy()
         search_filter = self.library.validateCategories(subcategories)
         # Define the search class mode. 
@@ -427,6 +491,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             session.searchkeywords.execute(search_filter)
         else:
             session.searchcategories.execute(search_filter)
+            
+        unblocker = lambda : setattr(self, 'block_search', False)
+        QTimer.singleShot(1000, unblocker)
 
     @Slot(dict)
     def onSearchResults(self, search_results):
@@ -496,7 +563,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         session.retrievelinks.execute(link_ids)
         self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
-    
+        self.block_search = False
+
     def filterAssets(self):
         categories = self.category_manager.selected_subcategories.copy()
         limit = int(RELIC_PREFS.assets_per_page)
@@ -553,7 +621,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         assets = [index.data(polymorphicItem.Object) for index in selection.indexes()]        
         if not assets:
             return
-        self.metatdata_view.loadAssets(assets)
+        self.selected_assets = assets
+        self.metadata_view.setAssets(assets)
 
         if self.previewCheckBox.isChecked():
             path = assets[-1].network_path
@@ -590,7 +659,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     
         # Map the views by link and attach to the selected primary assets
         selection = self.selected_assets_by_link
-        attatch = attachLinkToAsset
+        attach = attachLinkToAsset
 
         for level, mapping in enumerate(link_map):
             for link, values, in mapping.items():
@@ -603,7 +672,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     _id = ids[index]
                     upstream = [x for x in assets if x.id == _id]
                     for asset in upstream:
-                        attatch(primary_asset, asset)
+                        attach(primary_asset, asset)
 
     @Slot(dict)
     def onAssetsLoaded(self, data):
@@ -633,13 +702,13 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 if link_item_asset.id == _id and link_item_asset.relationMap == _map:
                     link_map.append(link_item)
 
-        attatch = attachLinkToAsset
+        attach = attachLinkToAsset
         for i in range(model.rowCount()):
             asset = model.index(i, 0).data(polymorphicItem.Object)
             for index, link in enumerate(links):
                 if asset.links == link:
                     link_item = link_map[index]
-                    attatch(asset, link_item)
+                    attach(asset, link_item)
             assets.append(asset)
 
         if not assets:
@@ -650,7 +719,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 icon_path = asset.network_path.suffixed('_icon', '.jpg')
                 if not icon_path.exists():
                     copyRelatedIcon(asset)
-        self.metatdata_view.loadAssets(assets)
+        self.metadata_view.setAssets(assets)
 
     @Slot(QModelIndex)
     def unlinkAsset(self, index):

@@ -1,4 +1,33 @@
 <RCC>
+  <qresource prefix="AssetType/">
+    <file alias="COMPONENT">resources/asset_types/component.svg</file>
+    <file alias="ASSET">resources/asset_types/asset.svg</file>
+    <file alias="COLLECTION">resources/asset_types/collection.svg</file>
+    <file alias="MOTION">resources/asset_types/motion.svg</file>
+    <file alias="VARIANT">resources/asset_types/variant.svg</file>
+    <file alias="REFERENCE">resources/asset_types/reference.svg</file>
+    <file alias="EXTENSION">resources/asset_types/reference.svg</file>
+  </qresource>
+  <qresource prefix="Category/">
+    <file alias="REFERENCES">resources/categories/references.svg</file>
+    <file alias="MODELING">resources/categories/modeling.svg</file>
+    <file alias="ELEMENTS">resources/categories/elements.svg</file>
+    <file alias="LIGHTING">resources/categories/lighting.svg</file>
+    <file alias="SHADING">resources/categories/shading.svg</file>
+    <file alias="SOFTWARE">resources/categories/software.svg</file>
+    <file alias="MAYATOOLS">resources/categories/mayatools.svg</file>
+    <file alias="NUKETOOLS">resources/categories/nuketools.svg</file>
+  </qresource>
+  <qresource prefix="TagType/">
+    <file alias="DEFAULT">resources/app/tag.svg</file>
+    <file alias="APP">resources/app/tag_app.svg</file>
+    <file alias="PLUGIN">resources/app/plugin.svg</file>
+  </qresource>
+  <qresource prefix="UserType/">
+    <file alias="DEFAULT">resources/app/user2.png</file>
+    <file alias="ORGANIZATION">resources/app/organization.png</file>
+    <file alias="ADMIN">resources/app/admin.png</file>
+  </qresource>
   <qresource>
     <file>resources/asset_types/component.svg</file>
     <file>resources/asset_types/asset.svg</file>
@@ -16,12 +45,12 @@
     <file>resources/categories/software.svg</file>
     <file>resources/app/checker.png</file>
     <file>resources/app/heart.svg</file>
+    <file>resources/app/heart_disabled.svg</file>
     <file>resources/app/noicon.jpg</file>
     <file>resources/app/app_icon.svg</file>
     <file>resources/app/proxyIcon.svg</file>
     <file>resources/app/star.svg</file>
-    <file>resources/app/tagIcon.svg</file>
-    <file>resources/app/starDisabled.svg</file>
+    <file>resources/app/star_disabled.svg</file>
     <file>resources/app/plugin.svg</file>
     <file>resources/app/user.png</file>
     <file>resources/app/kohai.svg</file>
@@ -87,5 +116,3 @@
     <file>resources/subcategories/Views.png</file>
   </qresource>
 </RCC>
-
-

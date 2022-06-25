@@ -1,6 +1,3 @@
-# -- Built-in --
-from enum import Enum, IntEnum
-
 # -- Third-party --
 from PySide6.QtCore import QMargins, QPoint, QRect, Qt, QSortFilterProxyModel, Slot, QItemSelection, QModelIndex, Signal
 from PySide6.QtGui import (QColor, QFont, QPainter, QRegion, QPainterPath, QPixmap,
@@ -10,6 +7,7 @@ from PySide6.QtWidgets import (QHBoxLayout, QListView, QStyle,
                                QWidget, QStyleOption, QMenu)
 from qtshared6.delegates import (BaseItemDelegate, IconIndicator, NamedEnum, AutoEnum,
                                  Statuses, scale_icon)
+
 TREE_GROUP_STYLE = """
 QTreeView {
     border: none;

@@ -4,7 +4,7 @@ from PySide6.QtCore import QThreadPool, Signal, Slot, QRect, Qt, QSize, QPoint, 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QVBoxLayout, QLayout, QSizePolicy, QWidget
 
-from library.widgets.metadataView import typeWidget
+from relic import scheme
 from qtshared6.utils import polymorphicItem
 from qtshared6.widgets import FlowLayout
 from library.widgets.assets_alt import AssetItemModel, AssetListView
@@ -86,7 +86,8 @@ class LinkViewWidget(QWidget):
         self.pool = QThreadPool.globalInstance()
 
     def createGroups(self):
-        for index, asset_type in enumerate(typeWidget.LABELS):
+        labels = [x.name.capitalize() for x in scheme.AssetType if x.value]
+        for index, asset_type in enumerate(labels):
             view = AssetListView(self)
             proxyModel = assetTypeFilter(index+1)
             proxyModel.setDynamicSortFilter(True)

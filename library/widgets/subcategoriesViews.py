@@ -7,7 +7,7 @@ from library import objectmodels
 from library.config import RELIC_PREFS
 from library.objectmodels import relationships, subcategory, CategoryColor
 from library.ui.expandableTabs import Ui_ExpandableTabs
-from library.widgets.util import ListViewFiltered, rasterizeSVG
+from library.widgets.util import ListViewFocus
 
 from qtshared6.utils import polymorphicItem
 # -- Third-party --
@@ -113,7 +113,8 @@ class subcategoryTreeView(QTreeView):
         self.proxyModel.setSortRole(Qt.DisplayRole)
         self.proxyModel.setSourceModel(self.model)
         self.setModel(self.proxyModel)
-        self.subcategoryListView = ListViewFiltered(self)
+        self.subcategoryListView = ListViewFocus(self)
+        self.subcategoryListView.setWindowFlags(Qt.Popup | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.subcategoryListView.newItem.connect(self.newSubcategory)
         self.subcategoryListView.renameItem.connect(self.renameSubcategory)
         self.subcategoryListView.hide()

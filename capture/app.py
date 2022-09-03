@@ -18,6 +18,7 @@ from sequence_path.main import SequencePath as Path
 from strand.client import StrandClient
 from strand.server import StrandServer
 from enum import Enum
+from d3dshot.d3dshot import D3DShot
 
 # -- Module --
 import resources
@@ -110,9 +111,15 @@ class ScreenOverlay(QDialog):
     def mouseReleaseEvent(self, event):
         rect = self.selection_rect.normalized()
         scale = self.screen().devicePixelRatio()
-        width = rect.width() * scale
-        height = rect.height() * scale
-        rect.setTopLeft(rect.topLeft() * scale)
+        if rect.width() < 8 and rect.height() < 8:
+            rect = self.screen().geometry().normalized()
+            width = (rect.width() - 1)
+            height = (rect.height() - 1)
+            rect.setTopLeft(QPoint(1,1))
+        else:
+            width = rect.width() * scale
+            height = rect.height() * scale
+            rect.setTopLeft(rect.topLeft() * scale)
         divisible_width = int(width) - (int(width) % 16)
         divisible_height = int(height) - (int(height) % 16)
         rect.setWidth(divisible_width)
@@ -203,10 +210,11 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.pinned = False
         self.setupUi(self)
         self.recording = False
-        self.delay = 1000/30
+        self.delay = 1000/24
         self.ffproc = None
         self.processing_item = False
         self.pool = QThreadPool.globalInstance()
+        self.d3d = D3DShot()
 
         # -- System Tray --
         app_icon = QIcon(':/resources/icons/capture.svg')
@@ -638,12 +646,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.finishCapture()
         self.show()
         self.screen = screen
-        scale = screen.devicePixelRatio()
-        self.x = rect.x() / scale
-        self.y = rect.y() / scale
-        self.w = rect.width() / scale
-        self.h = rect.height() / scale
-        self.rect = QRect(self.x, self.y, self.w, self.h)
+
+        self.rect = QRect(rect.x(), rect.y(), rect.width(), rect.height())
+        # set the direct 3d display from our chosen screen
+        for i, screen in enumerate(reversed(self.screens)):
+            if self.screen == screen.screen():
+                self.d3d.display = self.d3d.displays[i]
+
         self.out_video = new_capture_file(out_format='mp4')
         self.out_audio = self.out_video.parent / (self.out_video.name + '.wav')
         out_preview = get_preview_path(self.out_video)
@@ -660,7 +669,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             '-pix_fmt', 'rgb24',
             '-s', '{}x{}'.format(rect.width(), rect.height()),
             '-i', '-',
-            '-r', '30', # FPS
+            '-r', '24', # FPS
             '-pix_fmt', 'yuv420p',
             '-preset', 'ultrafast',
             '-crf', '32',
@@ -686,7 +695,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         if not self.recording:
             self.capsnap.stop()
             return
-        self.worker = CapScreen(self.rect, self.screen, self.ffproc, self.cursor_pix)
+
+        self.worker = CapScreen(self.rect, self.screen, self.ffproc, self.d3d)
         self.pool.start(self.worker, priority=1)
 
     @Slot()
@@ -741,29 +751,22 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
 class CapScreen(QRunnable):
 
-    def __init__(self, rect, screen, ffproc, cursor_pix):
+    def __init__(self, rect, screen, ffproc, d3d):
         super(CapScreen, self).__init__(None)
         self.ffproc = ffproc
         self.rect = rect
         self.screen = screen
-        self.cursor_pixmap = cursor_pix
+        self.d3d = d3d
         self.cursor_pos = QCursor.pos()
 
     def run(self):
         rect = self.rect
         screen = self.screen
-        x = rect.x()
-        y = rect.y()
-        w = rect.width()
-        h = rect.height()
-        pixmap = screen.grabWindow(0, x, y, w, h)
-        # Draw cursor into our capture
-        painter = QPainter(pixmap)
-        painter.drawPixmap(self.cursor_pos.x()-x, self.cursor_pos.y()-y, self.cursor_pixmap)
-        painter.end()
-        image = pixmap.toImage().convertToFormat(QImage.Format_RGB888)
+        br = rect.bottomRight()
+        tl = rect.topLeft()
+        frame = self.d3d.screenshot(region=(tl.x(), tl.y(), br.x(), br.y()))
         try:
-            self.ffproc.stdin.write(image.constBits())
+            self.ffproc.stdin.write(frame.tobytes())
         except ValueError:
             pass # write to closed file
 

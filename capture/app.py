@@ -1,17 +1,24 @@
 import ctypes
 import os
-import subprocess
 import sys
-from datetime import datetime
 import operator
-import qtshared6.resources
+import timeit
+
+from datetime import datetime
+from functools import partial
 from enum import IntEnum
-# -- First-party --
-from exif import EXIFTOOL
+import av
+from av.filter import Graph
+from av import AudioFrame, VideoFrame
+import numpy as np
+from fractions import Fraction
+
+import qtshared6.resources
 # -- Third-party --
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
+from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
 from qtshared6.delegates import ItemDispalyModes, AutoEnum, Statuses, BaseItemModel
 from qtshared6.expandable_group import ExpandableGroup
 from sequence_path.main import SequencePath as Path
@@ -24,19 +31,176 @@ from d3dshot.d3dshot import D3DShot
 import resources
 from history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, Types,
                             scale_icon)
-from file_io import AudioRecord, ShellCommand, video_to_gif
 from ui.dialog import Ui_ScreenCapture
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
 
-NO_WINDOW = subprocess.CREATE_NO_WINDOW
+def video_to_gif(path):
+    out_path = path.suffixed('', ext='.gif')
+    in_container = av.open(str(path))
+    in_stream = in_container.streams.video[0]
+    in_stream.thread_type = "AUTO"
+
+    out_container = av.open(str(out_path), "w")
+    out_stream = out_container.add_stream('gif', rate=24)
+    out_stream.pix_fmt = 'rgb8'
+    out_stream.width = in_stream.width
+    out_stream.height = in_stream.height
+
+    for frame in in_container.decode(video=0):
+        frame.pts = None
+        out_packet = out_stream.encode(frame)
+        out_container.mux(out_packet)
+
+    in_container.close()
+    out_container.close()
+    return out_path
+
 
 class Delay(IntEnum):
     NONE = 0
     ONE = 1
     THREE = 2
     FIVE = 3
+
+class Recorder(QObject):
+
+    def __init__(self, parent=None):
+        super(Recorder, self).__init__(parent)
+        self.d3d = D3DShot()
+        self.input_device = QMediaDevices.defaultAudioInput()
+        audio_format = QAudioFormat()
+        audio_format.setSampleRate(48000)
+        audio_format.setChannelCount(1) # 1 mono, 2 stereo
+        audio_format.setSampleFormat(QAudioFormat.Int16)
+
+
+        if not self.input_device.isNull():
+            self._audio_input = QAudioSource(self.input_device, audio_format, self)
+
+        self.time_base = Fraction(1, 1000)
+        self.stopped = True
+
+    def createContainer(self, out_path):
+        # PyAv container and streams
+        container = av.open(out_path, "w")
+        #time_base = Fraction(1, 24)
+        args = {'tune': 'zerolatency', 'bitrate': '4000',  'bufsize': '166', 'maxrate': '4000', 'crf': '32'}
+        # Video
+        video_stream = container.add_stream('libx264', rate=24, options=args)
+        video_stream.pix_fmt = 'yuv420p'
+        video_stream.width = self.rect.width()
+        video_stream.height = self.rect.height()
+        video_stream.thread_type = 'NONE'
+        video_stream.codec_context.time_base = self.time_base
+        # Audio
+        audio_stream = container.add_stream(codec_name='mp3', rate=48000, layout='mono', format='s16')
+        audio_stream.thread_type = 'NONE'
+        audio_stream.codec_context.time_base = Fraction(1, 48000) #self.time_base
+        return container
+
+    def createGraph(self):
+        graph = Graph()
+        screen_width = self.screen.geometry().width()
+        screen_height = self.screen.geometry().height()
+        input_buffer = graph.add_buffer(
+            width=screen_width, height=screen_height, format='bgra'
+        )
+        pos = self.rect.topLeft()
+        crop_filter = graph.add("crop", 'w={}:h={}:x={}:y={}'.format(
+            self.rect.width(), self.rect.height(), pos.x(), pos.y())
+        )
+        last = graph.add('buffersink')
+        input_buffer.link_to(crop_filter)
+        crop_filter.link_to(last)
+        graph.configure()
+        return graph
+
+    def start(self, out_path, rect, screen):
+        self.rect = rect
+        self.screen = screen
+        self.out_path = out_path
+        br = rect.bottomRight()
+        tl = rect.topLeft()
+        self.capture_func = partial(self.d3d.screenshot, region=(tl.x(), tl.y(), br.x(), br.y()))
+        self.container = self.createContainer(out_path)
+
+        self.graph = self.createGraph()
+
+        if self.input_device.isNull():
+            return
+        self.container.start_encoding()
+        self.stopped = False
+
+        # audio timer
+        self._io_device = self._audio_input.start()
+        self._io_device.readyRead.connect(self.onFrameReady)
+
+        self.reference_time = QElapsedTimer()
+        self.reference_time.start()
+
+    def stop(self):
+        self.stopped = True
+        if not self.input_device.isNull(): 
+            self._audio_input.stop()
+
+        container = self.container
+        # Flush streams
+        try:
+            while packet := container.streams.video[0].encode(None):
+                container.mux(packet)
+        except:
+            pass
+        try:
+            while packet := container.streams.audio[0].encode(None):
+                container.mux(packet)
+        except:
+            pass
+        container.close()
+
+    @Slot()
+    def onFrameReady(self):
+        pts = self.reference_time.elapsed()
+        if self.stopped:
+            return
+        data = self._io_device.readAll()
+        audio_data = data.data()
+        container = self.container
+
+        # video
+        video_stream = container.streams.video[0]
+        img_data = self.capture_func()
+        screen = self.screen.screen()
+
+        width = screen.geometry().width()
+        height = screen.geometry().height()
+        image = np.reshape(img_data, (height, width, 4))
+        video_frame = VideoFrame.from_ndarray(image, format='bgra')
+
+        self.graph.push(video_frame)
+        filtered_frame = self.graph.pull()
+        filtered_frame.pts = pts
+        # muxing
+        video_packet = video_stream.encode(filtered_frame)
+        container.mux(video_packet)
+
+        # audio
+        audio_stream = container.streams.audio[0]
+
+        if data.size() == 0:
+            return
+
+        raw_signal = np.frombuffer(audio_data, np.int16)
+        bf = raw_signal.reshape(1, raw_signal.shape[0])
+
+        audio_frame = AudioFrame.from_ndarray(bf, format='s16', layout='mono')
+        audio_frame.sample_rate = 48000
+        filtered_frame.pts = pts
+
+        audio_packet = audio_stream.encode(audio_frame)
+        container.mux(audio_packet)
+
 
 def get_preview_path(path):
     preview = (path.parent / 'previews' / path.stem)
@@ -180,9 +344,7 @@ class ScreenOverlay(QDialog):
 
 class CaptureWindow(QWidget, Ui_ScreenCapture):
 
-    onConvertedVideo = Signal(object)
     onConvertedGif = Signal(object)
-    onConvertedWebp = Signal(object)
 
     class TreeActions(AutoEnum):
         view_item = {
@@ -209,12 +371,6 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         super(CaptureWindow, self).__init__(*args, **kwargs)
         self.pinned = False
         self.setupUi(self)
-        self.recording = False
-        self.delay = 1000/24
-        self.ffproc = None
-        self.processing_item = False
-        self.pool = QThreadPool.globalInstance()
-        self.d3d = D3DShot()
 
         # -- System Tray --
         app_icon = QIcon(':/resources/icons/capture.svg')
@@ -234,18 +390,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
 
         gif_action = QAction('Convert To GIF')
-        gif_action.triggered.connect(self.convert_to_gif)
-        webp_action = QAction('Convert To WEBP')
-        webp_action.triggered.connect(self.convert_to_webp)
+        gif_action.triggered.connect(self.convert_to_animated)
 
-        Types.Video.actions.extend([gif_action, webp_action])
+        Types.Video.actions.extend([gif_action])
 
         self.expandButton.clicked.connect(self.adjustSizes)
         self.captureButton.clicked.connect(self.delay_screenshot)
         self.recordButton.clicked.connect(self.perform_recording)
-        self.onConvertedVideo.connect(self.item_processed)
-        self.onConvertedGif.connect(self.gif_converted)
-        self.onConvertedWebp.connect(self.webp_converted)
 
         self.item_model = BaseItemModel(0, 2)
         self.item_model.setHorizontalHeaderLabels(['Item', 'Date'])
@@ -294,6 +445,10 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         except: pass
         self.cursor_pix = scale_icon(QPixmap(':/resources/icons/cursor.png'))
         self.strand_client = StrandClient('peak')
+        self.recorder = Recorder()
+        self.recording_thread = QThread(self)
+        self.recorder.moveToThread(self.recording_thread)
+        self.recording_thread.start()
 
     def taskbar_pin(self):
         if self.pinned:
@@ -347,7 +502,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             tree = item_type.group.content
             if tree.hasFocus():
                 return item_type, tree.selectionModel()
-            
+
     def defineAction(self, action):
         callback = getattr(self, action.name)
         action.obj.triggered.connect(callback)
@@ -395,8 +550,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         event.ignore()
 
     def _close(self):
-        global EXIFTOOL
-        del EXIFTOOL
+        self.recording_thread.exit()
         sys.exit()
 
     def searchChanged(self, text):
@@ -513,7 +667,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         item.setIcon(QIcon(movie.currentPixmap()))
 
     @Slot()
-    def convert_to_webp(self, item):
+    def convert_to_animated(self):
         item_type, selection_model = self.getActiveSelectionModel()
 
         if not selection_model.hasSelection():
@@ -523,37 +677,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             obj = index.data(Qt.UserRole)
             if not isinstance(obj, CaptureItem):
                 continue
-            out_path = obj.path.suffixed('', '.webp')
-            cmd = [
-                'ffmpeg',
-                '-loglevel', 'error',
-                '-i', str(obj.path),
-                '-loop', '65535',
-                str(out_path),
-            ]
-            item = self.appendItem(Types.Animated, obj.path)
-            item.status = int(Statuses.Syncing)
-            worker = ShellCommand(
-                cmd, item, signal=self.onConvertedWebp)
-            self.pool.start(worker)
-
-    @Slot()
-    def convert_to_gif(self, item):
-        item_type, selection_model = self.getActiveSelectionModel()
-
-        if not selection_model.hasSelection():
-            return
-
-        for index in selection_model.selectedIndexes():
-            obj = index.data(Qt.UserRole)
-            if not isinstance(obj, CaptureItem):
-                continue
-            item = self.appendItem(Types.Animated, obj.path)
-            item.status = int(Statuses.Syncing)
-            callback = lambda x: video_to_gif(x.data(Qt.UserRole).path)
-            worker = ShellCommand(
-                'echo .', item, signal=self.onConvertedGif, callback=callback)
-            self.pool.start(worker)
+            new_path = video_to_gif(obj.path)
+            item = self.appendItem(Types.Animated, new_path)
 
     @Slot()
     def delay_screenshot(self):
@@ -575,129 +700,31 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     @Slot()
     def perform_recording(self, state):
         if state:
-            self.recording = True
             self.perform_screenshot(record=True)
         else:
-            self.recording = False
-            self.ffproc.stdin.close()
-            if self.ffproc.wait() != 0:
-                print('FFmpeg had errors')
-            self.audio_recorder.stop()
-            pid = self.ffproc.pid
-            subprocess.call(
-                f'taskkill /F /T /PID {pid}',
-                creationflags=NO_WINDOW)
-            # Combine audio with video and remove old files.
-            self.out_file = self.out_video.suffixed('_c', ext='.mp4')
-
-            audio_duration = EXIFTOOL.getFields(str(self.out_audio), ['-Duration#'], float)
-            video_duration = EXIFTOOL.getFields(str(self.out_video), ['-Duration#'], float)
-
-            post_cmd = [
-                'ffmpeg',
-                '-loglevel', 'error',
-                '-y', # Always Overwrite
-                '-i', f'{self.out_audio}',
-                '-i', f'{self.out_video}',
-                '-filter:v', 'setpts=PTS*{}'.format(audio_duration / video_duration),
-                '-r', '24', # FPS
-                str(self.out_file),
-            ]
+            self.recorder.stop()
             item = self.appendItem(Types.Video, self.out_video)
-            if not self.audio_recorder.input_device.isNull():
-                item.status = int(Statuses.Syncing)
-                self.processing_item = True
-                worker = ShellCommand(
-                    post_cmd, item, signal=self.onConvertedVideo)
-                self.pool.start(worker)
-            else:
-                os.rename(str(self.out_video), self.out_file)
-                os.rename(get_preview_path(self.out_video), get_preview_path(self.out_file))
-                os.remove(str(self.out_audio))
 
-    @Slot(object)
-    def gif_converted(self, item):
-        capture_item = item.data(Qt.UserRole)
-        capture_item.status = int(Statuses.Local)
-        capture_item.path = capture_item.path.suffixed('', ext='.gif')
-        capture_item.name = capture_item.path.name
-
-    @Slot(object)
-    def webp_converted(self, item):
-        capture_item = item.data(Qt.UserRole)
-        capture_item.status = int(Statuses.Local)
-        capture_item.path = capture_item.path.suffixed('', ext='.webp')
-        capture_item.name = capture_item.path.name
-
-    @Slot(object)
-    def item_processed(self, item):
-        item = item.data(Qt.UserRole)
-        item.status = int(Statuses.Local)
-        item.path = self.out_file
-        item.name = self.out_file.name
-        op = get_preview_path(self.out_video)
-        np =  get_preview_path(self.out_file)
-        os.rename(str(op), str(np))
-        os.remove(str(self.out_audio))
-        os.remove(str(self.out_video))
-        self.processing_item = False
 
     def startRecording(self, rect, pixmap, screen):
         self.finishCapture()
         self.show()
         self.screen = screen
+        self.rect = rect
 
-        self.rect = QRect(rect.x(), rect.y(), rect.width(), rect.height())
         # set the direct 3d display from our chosen screen
         for i, screen in enumerate(reversed(self.screens)):
             if self.screen == screen.screen():
-                self.d3d.display = self.d3d.displays[i]
+                self.recorder.d3d.display = self.recorder.d3d.displays[i]
 
         self.out_video = new_capture_file(out_format='mp4')
-        self.out_audio = self.out_video.parent / (self.out_video.name + '.wav')
+        self.recorder.start(str(self.out_video), rect, screen)
+
         out_preview = get_preview_path(self.out_video)
         size = ItemDispalyModes.COMPACT.thumb_size
         out_img = makeThumbnail(pixmap)
         out_img.save(str(out_preview))
-        self.audio_recorder = AudioRecord(self.out_audio)
-        cmd = [
-            'ffmpeg',
-            #'-loglevel', 'error',
-            '-y', # Always Overwrite
-            '-f', 'rawvideo',
-            '-vcodec', 'rawvideo',
-            '-pix_fmt', 'rgb24',
-            '-s', '{}x{}'.format(rect.width(), rect.height()),
-            '-i', '-',
-            '-r', '24', # FPS
-            '-pix_fmt', 'yuv420p',
-            '-preset', 'ultrafast',
-            '-crf', '32',
-            #'-vcodec', 'h264',
-            #'-tune', 'zerolatency',
-            str(self.out_video),
-        ]
 
-        self.ffproc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            #stdout=subprocess.DEVNULL,
-            creationflags=NO_WINDOW,
-        )
-        self.capsnap = QTimer()
-        self.capsnap.setInterval(self.delay)
-        self.capsnap.setTimerType(Qt.PreciseTimer)
-        self.capsnap.timeout.connect(self.execute)
-        self.capsnap.start()
-
-    @Slot()
-    def execute(self):
-        if not self.recording:
-            self.capsnap.stop()
-            return
-
-        self.worker = CapScreen(self.rect, self.screen, self.ffproc, self.d3d)
-        self.pool.start(self.worker, priority=1)
 
     @Slot()
     def saveScreenshot(self, rect, pixmap, screen):
@@ -739,7 +766,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         clipboard.setMimeData(mime_data)
 
     def copy_to_clipboard(self):
-        text_types = [int(Types.Animated), int(Types.Video)]
+        text_types = [Types.Animated, Types.Video]
         item_type, selection_model = self.getActiveSelectionModel()
         if indices := selection_model.selectedIndexes():
             obj = indices[0].data(Qt.UserRole)
@@ -748,27 +775,6 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             else:
                 img = QImage(str(obj.path))
                 self.imageToClipboard(img)
-
-class CapScreen(QRunnable):
-
-    def __init__(self, rect, screen, ffproc, d3d):
-        super(CapScreen, self).__init__(None)
-        self.ffproc = ffproc
-        self.rect = rect
-        self.screen = screen
-        self.d3d = d3d
-        self.cursor_pos = QCursor.pos()
-
-    def run(self):
-        rect = self.rect
-        screen = self.screen
-        br = rect.bottomRight()
-        tl = rect.topLeft()
-        frame = self.d3d.screenshot(region=(tl.x(), tl.y(), br.x(), br.y()))
-        try:
-            self.ffproc.stdin.write(frame.tobytes())
-        except ValueError:
-            pass # write to closed file
 
 def new_capture_file(out_format='png'):
     date = datetime.utcnow()

@@ -17,6 +17,6 @@ Lib
 Scripts
 resources.py
 resources_rc.py
-library/plugins/Lib39
-library/plugins/Lib37
-library/plugins/Lib27
+plugins/Lib39
+plugins/Lib37
+plugins/Lib27

@@ -1,6 +1,6 @@
 killapp maya
-$env:MAYA_MODULE_PATH="P:/Code/Relic/library/plugins"
-#$plugin_root = "P:/Code/Relic/library/plugins"
+$env:MAYA_MODULE_PATH="P:/Code/Relic/plugins"
+#$plugin_root = "P:/Code/Relic/plugins"
 #$env:MAYA_PLUGIN_PATH="$plugin_root/relicMaya/plug-ins"
 #$env:XBMLANGPATH="$plugin_root/relicMaya/icons"
 #$env:PYTHONPATH="$plugin_root/relicMaya/scripts;$plugin_root/Lib39"

@@ -13,7 +13,7 @@ from PySide6.QtCore import (QSignalBlocker, QItemSelection, QItemSelectionModel,
                             QRect, QSignalBlocker, QSize, Signal, Slot, QEvent)
 from PySide6.QtGui import (QCursor, QFont, QIcon, QPainter, QStandardItem,
                            QStandardItemModel, Qt, QTextDocument, QPixmap)
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDataWidgetMapper,
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox,
                                QFrame, QGridLayout, QLabel, QListView, QMenu,
                                QSizePolicy, QSpacerItem, QSpinBox,
                                QStyledItemDelegate, QStyleOptionViewItem,
@@ -95,6 +95,7 @@ class MetadataTree(QTreeView):
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.setItemDelegate(FieldDelegate(parent))
+        self._label_width = 0
 
     def mouseMoveEvent(self, event):
         super(MetadataTree, self).mouseMoveEvent(event)
@@ -110,6 +111,22 @@ class MetadataTree(QTreeView):
         else:    
             self.setCursor(Qt.ArrowCursor)
 
+    @property
+    def label_width(self):
+        return self._label_width
+    
+    @label_width.setter
+    def label_width(self, value):
+        width = self.fontMetrics().horizontalAdvance(value)
+        if width > self._label_width:
+            self._label_width = width
+
+    def resizeEvent(self, event):
+        header = self.header()
+        column_width = (self.width() / 2) # center
+        header.resizeSection(0, self.label_width + 32)
+        return super(MetadataTree, self).resizeEvent(event)
+
 
 class MetadataView(QFrame):
 
@@ -118,7 +135,6 @@ class MetadataView(QFrame):
 
     def __init__(self, *args, **kwargs):
         super(MetadataView, self).__init__(*args, **kwargs)
-        self._label_width = 0
         self.view = MetadataTree(self)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -127,21 +143,15 @@ class MetadataView(QFrame):
         model = VerticalTreeModel()
         self.view.setModel(model)
 
-        self.data_mapper = QDataWidgetMapper(self)
-        self.data_mapper.setItemDelegate(FieldDelegate(self))
-        self.data_mapper.setModel(model)
-
         for grp in Group:
             model.appendRow(grp.data)
             if grp != Group.SYSTEM:
                 self.view.setExpanded(grp.data.index(), True)
 
         for field in Fields:
-            self.label_width = field.name
+            self.view.label_width = field.name
             widget = field.data.widget(self.view)
-            widget._type = field.data
             widget.hide()
-            self.data_mapper.addMapping(widget, field.value)
             parent_item = field.parent.data
             label_item = QStandardItem(field.name.capitalize())
             value_item = QStandardItem()
@@ -151,7 +161,6 @@ class MetadataView(QFrame):
 
         layout.addWidget(self.view)
         selection_model = self.view.selectionModel()
-        selection_model.currentRowChanged.connect(self.data_mapper.setCurrentModelIndex)
         self.view.selectionModel().selectionChanged.connect(self.onSelection)
         model.dataChanged.connect(self.onDataChanged)
         self._block_update = True
@@ -186,22 +195,6 @@ class MetadataView(QFrame):
         # Only change if the field is editable and the app is in edit mode.
         if field in EDITABLE_FIELDS and int(RELIC_PREFS.edit_mode):
             self.fieldChanged.emit(field.name, value)
-
-    @property
-    def label_width(self):
-        return self._label_width
-    
-    @label_width.setter
-    def label_width(self, value):
-        width = self.fontMetrics().horizontalAdvance(value)
-        if width > self._label_width:
-            self._label_width = width
-
-    def resizeEvent(self, event):
-        header = self.view.header()
-        column_width = (self.view.width() / 2) # center
-        header.resizeSection(0, self.label_width + 32)
-        return super(MetadataView, self).resizeEvent(event)
 
     @Slot(QItemSelection)
     def onSelection(self, item):

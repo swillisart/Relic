@@ -28,6 +28,7 @@ class ViewScale(ComboField, IntEnum):
     def icon(self):
         return QPixmap()
 
+
 class Group(DataAutoEnum):
     GENERAL = QStandardItem('General')
     INGEST = QStandardItem('Ingest')

@@ -158,32 +158,19 @@ class FieldDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         if index.column() != 1:
             return
-        my_parent = self.parent()
         model = index.model() 
         item = model.itemFromIndex(index)
 
         field_obj = item.data(role=VerticalTreeModel.FieldRole)
         if not field_obj:
             return
-        if my_parent:
-            widget = my_parent.data_mapper.mappedWidgetAt(field_obj.value)
 
         value = item.data(role=Qt.EditRole)
-        if value is None:
-            return
-        new = value.widget(parent)
-        new._type = widget._type
-        new._field = field_obj
-        return new
 
-    def setEditorData(self, editor, index):
-        if index.column() != 1:
-            return
-        model = index.model() 
-        item = model.itemFromIndex(index)
+        editor = value.widget(parent)
+        editor._field = field_obj
 
-        value = item.data(role=Qt.EditRole)
-        field_obj = item.data(role=VerticalTreeModel.FieldRole)
+        # setEditorData is more convenient here.
         if value is not None:
             # Qt Needs this cause it interprets 'str' instances special.
             if field_obj.data in [TextField, LinkField]:
@@ -191,9 +178,12 @@ class FieldDelegate(QStyledItemDelegate):
             else:
                 editor._set(value)
 
+        return editor
+
+
     def setModelData(self, editor, model, index):
         value = editor._get()
-        converted = editor._type(value)
+        converted = editor._field.data(value)
         model.setData(index, converted, Qt.EditRole)
     
     def paint(self, painter, option, index):
@@ -225,9 +215,6 @@ class FieldDelegate(QStyledItemDelegate):
             branch.state = option.state
             style = widget.style()
             style.drawPrimitive(QStyle.PE_IndicatorBranch, branch, painter, widget)
-
-    #def destroyEditor(self, editor, index):
-    #    pass
 
     def sizeHint(self, option, index):
         if index.column() == 1:
@@ -304,6 +291,7 @@ class RatingField(int):
         widget_style.drawControl(QStyle.CE_ItemViewItem, option, painter, widget)
 
         RatingField.widget.paint(painter, sub_rect, value)
+
 
 class QualityField(RatingField):
     icon = scale_icon(QPixmap(':resources/app/star.svg'))

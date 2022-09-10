@@ -141,7 +141,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         session.moveassets.callback.connect(self.category_manager.receiveNewCounts)
         session.updatesubcategorycounts.callback.connect(self.category_manager.receiveNewCounts)
         session.linksubcategories.callback.connect(subcategory.onRelink)
-        #session.createuser.callback.connect(self.onUserCreate)
+        session.createuser.callback.connect(self.onUserCreate)
         session.onVideoReceived.connect(self.setVideo)
         session.createtag.callback.connect(self.onRelationCreate)
         session.createuser.callback.connect(self.onRelationCreate)
@@ -294,6 +294,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             for fields in assets:
                 new_user = alusers(**fields)
                 RELIC_PREFS.user_id = new_user.id
+        session.createuser.callback.disconnect(self.onUserCreate)
 
     @Slot(dict)
     def onRelationCreate(self, data):

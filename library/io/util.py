@@ -1,37 +1,25 @@
-import os
-import tempfile
-from PySide6.QtGui import QImage, QPainter, QColor, QPixmap
-from PySide6.QtCore import QSaveFile, QIODevice, QRunnable
-import cv2
-
+import av
+import io
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QRunnable
 from sequence_path.main import SequencePath as Path
 
-from library.config import USERPROFILE
-
-video_cache = f'{USERPROFILE}/.relic/'
-
 def videoToFrames(data):
-    w = 288
-    h = 192
-    temp_file_path = tempfile.NamedTemporaryFile(
-        suffix='.bin', dir=video_cache, delete=False)
-    temp_file_path.close()
-    in_dat = QSaveFile(temp_file_path.name)
-    in_dat.open(QIODevice.WriteOnly)
-    in_dat.write(data)
-    in_dat.commit()
-    cap = cv2.VideoCapture(temp_file_path.name)
-    ret = True
     frames = []
-    while ret:
-        ret, frame = cap.read()
-        if ret:
-            img = QImage(frame, w, h, QImage.Format_RGB888)
-            px = QPixmap.fromImageInPlace(img.rgbSwapped())
+    buffer = io.BytesIO()
+    buffer.write(data.data())
+
+    with av.open(buffer, mode='r', format='mp4') as container:
+        for frame in container.decode(video=0):
+            rgb = frame.to_rgb()
+            array = rgb.to_ndarray()
+            h, w, c = array.shape
+            img = QImage(array, w, h, QImage.Format_RGB888)
+            px = QPixmap.fromImageInPlace(img)
             frames.append(px)
-    cap.release()
-    os.unlink(temp_file_path.name)
+    buffer.close()
     return frames
+
 
 class LocalThumbnail(QRunnable):
 

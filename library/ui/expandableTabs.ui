@@ -623,7 +623,7 @@ padding: 0px;</string>
 padding: 0px;</string>
               </property>
               <property name="text">
-               <string>...</string>
+               <string/>
               </property>
               <property name="iconSize">
                <size>

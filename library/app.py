@@ -28,6 +28,7 @@ from library.objectmodels import (Category, Library, Type, alusers,
 # -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
 from library.widgets import description
+from library.widgets.fields import ItemState
 from library.widgets.assets_alt import AssetItemModel, AssetListView
 from library.widgets.metadata_view import MetadataView
 from library.widgets.preference_view import PreferencesDialog, ViewScale
@@ -153,26 +154,41 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.preferences_dialog = None
         self.block_search = False
 
+    @staticmethod
+    def detachLinkedAsset(primary, relation):
+        for attr in [primary.upstream, primary.alusers, primary.tags]:
+            if not attr:
+                continue
+            for i, subasset in enumerate(attr):
+                if relation is subasset:
+                    attr.pop(i)
+                    break
+
     @Slot(str, object)
     def updateAssetFromField(self, name, value):
-        
         if name in Relational.__members__.keys():
-            attach = attachLinkToAsset
             # Update asset relationship mappings
             for item in value:
                 relation_asset = item.data(polymorphicItem.Object)
-                if relation_asset.id is None: # CREATE relation asset
+                if relation_asset.status == ItemState.NEW:
+                    # CREATE relation asset
                     id_mapping = []
-                    for asset in self.selected_assets: 
+                    for asset in self.selected_assets:
                         id_mapping.append([relation_asset.relationMap, asset.links])
-                        relation_asset.createNew(id_mapping)
-                else: # LINK existing relation asset
+                    relation_asset.createNew(id_mapping)
+                elif relation_asset.status == ItemState.LINK:
+                    # LINK existing relation asset
                     relations = []
                     for asset in self.selected_assets: 
                         relation = [relation_asset.relationMap, relation_asset.id, asset.links]
                         relations.append(relation)
-                        attachLinkToAsset(asset, item)
+                        attachLinkToAsset(asset, item) # UI atttachment
                     session.createrelationships.execute(relations)
+                elif relation_asset.status == ItemState.REMOVE:
+                    for asset in self.selected_assets: 
+                        relation_asset.unlinkTo(asset)
+                        self.detachLinkedAsset(asset, item)
+            self.metadata_view.setAssets(self.selected_assets)
     
         else: # Update the asset field
             for asset in self.selected_assets:
@@ -285,7 +301,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         user_exists = RELIC_PREFS.user_id
         if not user_exists: # user not cached local OR does not exist
             session.createuser.execute({user.categoryName: [user.export]})
-
+        else: # Disconnect callback
+            try:
+                session.createuser.callback.disconnect(self.onUserCreate)
+            except RuntimeError:pass
         #self.tray.showMessage('Connected', 'Relic is now running and connected.', self.app_icon, 2)
 
     @Slot(dict)
@@ -498,12 +517,19 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot(dict)
     def onSearchResults(self, search_results):
-        matched_assets = []
         self.assets_view.clear()
         if not search_results:
+            self.assets_view.hide()
+            self.noSearchResultsPage.show()
             self.library.assets = []
+            self.pageSpinBox.setMaximum(1)
+            self.statusbar.showMessage('Search results: 0 Assets...')
             return
+        else:
+            self.noSearchResultsPage.hide()
+            self.assets_view.show()
 
+        matched_assets = []
         for category in search_results:
             try:
                 category_int = int(category)
@@ -522,14 +548,18 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                         asset = (category_int, x, tag_ids, subcategory_id)
                         matched_assets.append(asset)
 
+        asset_total = len(matched_assets)
+        page_count = math.ceil(asset_total / int(RELIC_PREFS.assets_per_page)) or 1
+        self.pageSpinBox.setSuffix(f'/{page_count}')
+        self.pageSpinBox.setMaximum(page_count)
+        self.statusbar.showMessage(f'Search results: {asset_total} Assets...')
+
         # Sort the assets by the total number of tag_ids (index 2)
         self.library.assets = sorted(matched_assets, key=lambda x: len(x[2]), reverse=True)
         self.filterAssets()
 
     @Slot(list)
     def onFilterResults(self, filter_results):
-        if not filter_results:
-            return
         load_icons = True #not self.assets_grid.isVisible()
         item_model = self.asset_item_model
 
@@ -594,22 +624,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         search_data = search_data[offset:(offset+limit)]
         [matched_categories[category].append(_id) for category, _id in search_data if _id]
 
-        asset_total = len(assets_filtered)
         self.library.assets_filtered = assets_filtered[offset:(offset+limit)]
         session.retrieveassets.execute(matched_categories)
 
-        if asset_total == 0:
-            self.assets_view.hide()
-            self.noSearchResultsPage.show()
-        else:
-            self.noSearchResultsPage.hide()
-            self.assets_view.show()
-
-        page_count = math.ceil(asset_total / int(RELIC_PREFS.assets_per_page)) or 1
-        self.pageSpinBox.setSuffix('/' + str(page_count))
-        self.pageSpinBox.setMaximum(page_count)
-        msg = 'Search results: {} Assets...'.format(asset_total)
-        self.statusbar.showMessage(msg)
 
     @Slot(QModelIndex)
     def loadAssetData(self, selection):
@@ -660,7 +677,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     
         # Map the views by link and attach to the selected primary assets
         selection = self.selected_assets_by_link
-        attach = attachLinkToAsset
 
         for level, mapping in enumerate(link_map):
             for link, values, in mapping.items():
@@ -673,7 +689,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     _id = ids[index]
                     upstream = [x for x in assets if x.id == _id]
                     for asset in upstream:
-                        attach(primary_asset, asset)
+                        attachLinkToAsset(primary_asset, asset)
 
     @Slot(dict)
     def onAssetsLoaded(self, data):
@@ -703,13 +719,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 if link_item_asset.id == _id and link_item_asset.relationMap == _map:
                     link_map.append(link_item)
 
-        attach = attachLinkToAsset
         for i in range(model.rowCount()):
             asset = model.index(i, 0).data(polymorphicItem.Object)
             for index, link in enumerate(links):
                 if asset.links == link:
                     link_item = link_map[index]
-                    attach(asset, link_item)
+                    attachLinkToAsset(asset, link_item)
             assets.append(asset)
 
         if not assets:

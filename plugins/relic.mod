@@ -21,3 +21,9 @@ plug-ins: relicMaya/plug-ins
 XBMLANGPATH +:= relicMaya/icons
 PYTHONPATH +:= relicMaya/scripts
 PYTHONPATH +:= Lib39
+
++ MAYAVERSION:2024 relic any ./
+plug-ins: relicMaya/plug-ins
+XBMLANGPATH +:= relicMaya/icons
+PYTHONPATH +:= relicMaya/scripts
+PYTHONPATH +:= Lib39

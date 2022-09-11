@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'expandableTabs.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.2.2
+## Created by: Qt User Interface Compiler version 6.3.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -16,15 +16,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QFrame, QHBoxLayout,
-    QLabel, QPushButton, QSizePolicy, QSpacerItem,
-    QSpinBox, QToolButton, QVBoxLayout, QWidget)
-import resources_rc
+    QLabel, QSizePolicy, QSpacerItem, QSpinBox,
+    QToolButton, QVBoxLayout, QWidget)
 
 class Ui_ExpandableTabs(object):
     def setupUi(self, ExpandableTabs):
         if not ExpandableTabs.objectName():
             ExpandableTabs.setObjectName(u"ExpandableTabs")
-        ExpandableTabs.resize(268, 353)
+        ExpandableTabs.resize(233, 353)
         ExpandableTabs.setStyleSheet(u"QWidget {\n"
 "	background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"
@@ -172,7 +171,7 @@ class Ui_ExpandableTabs(object):
         self.HeaderFrame.setSizePolicy(sizePolicy)
         self.HeaderFrame.setFocusPolicy(Qt.ClickFocus)
         self.HeaderFrame.setStyleSheet(u"QFrame{\n"
-"    background-color: rgb(57, 57, 57);\n"
+"    background-color: rgb(58, 58, 58);\n"
 "    border: 1px solid rgb(43,43,43);\n"
 "    border-top: 1px solid rgb(92,92,92);\n"
 "}")
@@ -216,10 +215,7 @@ class Ui_ExpandableTabs(object):
         self.iconButton.setStyleSheet(u"padding: 0px;\n"
 "margin-right: 0px;\n"
 "border: none;\n"
-"background-color: rgb(57, 57, 57);")
-        icon = QIcon()
-        icon.addFile(u":/resources/asset_types/reference.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.iconButton.setIcon(icon)
+"background-color: transparent;")
         self.iconButton.setIconSize(QSize(22, 22))
 
         self.horizontalLayout.addWidget(self.iconButton)
@@ -245,12 +241,13 @@ class Ui_ExpandableTabs(object):
         self.countSpinBox = QSpinBox(self.HeaderFrame)
         self.countSpinBox.setObjectName(u"countSpinBox")
         self.countSpinBox.setFocusPolicy(Qt.NoFocus)
-        self.countSpinBox.setStyleSheet(u"background-color: rgb(57, 57, 57);\n"
+        self.countSpinBox.setStyleSheet(u"background-color: transparent;\n"
 "border:none;")
         self.countSpinBox.setReadOnly(True)
         self.countSpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.countSpinBox.setKeyboardTracking(False)
         self.countSpinBox.setMaximum(999999)
-        self.countSpinBox.setValue(318)
+        self.countSpinBox.setValue(0)
 
         self.horizontalLayout_2.addWidget(self.countSpinBox)
 
@@ -268,17 +265,13 @@ class Ui_ExpandableTabs(object):
         self.checkButton.setStyleSheet(u"QToolButton {\n"
 "    padding: 0px;\n"
 "    margin: 1px;\n"
-"    background-color: rgb(57, 57, 57);\n"
+"    background-color: transparent;\n"
 "	border :none;\n"
 "}\n"
 "QToolButton:hover {\n"
 "    background-color: rgb(92, 92, 92);\n"
 "    color: rgb(250, 250, 250);\n"
 "}")
-        icon1 = QIcon()
-        icon1.addFile(u":/resources/app/blankCubeGrey.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon1.addFile(u":/resources/app/treeExpandGrey.svg", QSize(), QIcon.Active, QIcon.On)
-        self.checkButton.setIcon(icon1)
         self.checkButton.setCheckable(True)
 
         self.horizontalLayout_5.addWidget(self.checkButton)
@@ -383,30 +376,24 @@ class Ui_ExpandableTabs(object):
 
         self.horizontalLayout_4.addWidget(self.frame_3)
 
-        self.pushButton = QPushButton(self.verticalControl)
-        self.pushButton.setObjectName(u"pushButton")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy3)
-        icon2 = QIcon()
-        icon2.addFile(u":/resources/style/stylesheet-branch-openup.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.pushButton.setIcon(icon2)
-        self.pushButton.setIconSize(QSize(10, 10))
+        self.toolButton_up = QToolButton(self.verticalControl)
+        self.toolButton_up.setObjectName(u"toolButton_up")
+        self.toolButton_up.setStyleSheet(u"margin:-1px;\n"
+"padding: 0px;")
+        self.toolButton_up.setIconSize(QSize(8, 8))
+        self.toolButton_up.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.toolButton_up.setArrowType(Qt.UpArrow)
 
-        self.horizontalLayout_4.addWidget(self.pushButton)
+        self.horizontalLayout_4.addWidget(self.toolButton_up)
 
-        self.pushButton_2 = QPushButton(self.verticalControl)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-        sizePolicy3.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
-        self.pushButton_2.setSizePolicy(sizePolicy3)
-        icon3 = QIcon()
-        icon3.addFile(u":/resources/style/stylesheet-branch-open.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.pushButton_2.setIcon(icon3)
-        self.pushButton_2.setIconSize(QSize(10, 10))
+        self.toolButton_down = QToolButton(self.verticalControl)
+        self.toolButton_down.setObjectName(u"toolButton_down")
+        self.toolButton_down.setStyleSheet(u"margin:-1px;\n"
+"padding: 0px;")
+        self.toolButton_down.setIconSize(QSize(8, 8))
+        self.toolButton_down.setArrowType(Qt.DownArrow)
 
-        self.horizontalLayout_4.addWidget(self.pushButton_2)
+        self.horizontalLayout_4.addWidget(self.toolButton_down)
 
         self.frame_5 = QFrame(self.verticalControl)
         self.frame_5.setObjectName(u"frame_5")
@@ -441,12 +428,12 @@ class Ui_ExpandableTabs(object):
 
     def retranslateUi(self, ExpandableTabs):
         ExpandableTabs.setWindowTitle(QCoreApplication.translate("ExpandableTabs", u"Form", None))
-        self.iconButton.setText(QCoreApplication.translate("ExpandableTabs", u"...", None))
-        self.nameLabel.setText(QCoreApplication.translate("ExpandableTabs", u"References", None))
+        self.iconButton.setText("")
+        self.nameLabel.setText(QCoreApplication.translate("ExpandableTabs", u"Title", None))
         self.countSpinBox.setSuffix(QCoreApplication.translate("ExpandableTabs", u" )", None))
         self.countSpinBox.setPrefix(QCoreApplication.translate("ExpandableTabs", u"( ", None))
-        self.checkButton.setText(QCoreApplication.translate("ExpandableTabs", u"...", None))
-        self.pushButton.setText("")
-        self.pushButton_2.setText("")
+        self.checkButton.setText("")
+        self.toolButton_up.setText("")
+        self.toolButton_down.setText("")
     # retranslateUi
 

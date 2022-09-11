@@ -81,7 +81,7 @@ EDITABLE_FIELDS = [
     Fields.STATUS,
     Fields.TAGS,
     Fields.ALUSERS,
-    #Fields.UPSTREAM,
+    Fields.UPSTREAM,
 ]
 
 class MetadataTree(QTreeView):

@@ -2,6 +2,8 @@ import time
 from functools import partial
 from collections import UserList
 from datetime import date, datetime
+from enum import IntEnum
+
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
@@ -43,8 +45,14 @@ class RelationDelegate(QStyledItemDelegate):
         )
         return bounds.size() + QSize(option.decorationSize.width() * 2.1, 0)
 
+class ItemState(IntEnum):
+    NONE = 0
+    NEW = 1
+    LINK = 2
+    REMOVE = 3
 
-class ObjectMulti(QListWidget):
+class ObjectMulti(QListView):
+
     def __init__(self, *args, **kwargs):
         super(ObjectMulti, self).__init__(*args, **kwargs)
         self.setItemDelegate(RelationDelegate(self))
@@ -58,6 +66,8 @@ class ObjectMulti(QListWidget):
         self.relation_view = SimpleAssetView(self)
         self.relation_view.newItem.connect(self.createNewItem)
         self.relation_view.linkItem.connect(self.onLinkItem)
+        model = QStandardItemModel()
+        self.setModel(model)
 
     def mouseDoubleClickEvent(self, event):
         print(event)
@@ -82,29 +92,35 @@ class ObjectMulti(QListWidget):
     @Slot(str)
     def createNewItem(self, name):
         relation_asset = self.relation_view.constructor(name=name)
+        relation_asset.status = ItemState.NEW
         new_item = polymorphicItem(fields=relation_asset)
-        self.setItems([new_item])
+        self.model().appendRow(new_item)
 
     @Slot()
     def onLinkItem(self, relation_asset):
+        relation_asset.status = ItemState.LINK
         new_item = polymorphicItem(fields=relation_asset)
-        self.setItems([new_item])
-
+        self.model().appendRow(new_item)
+ 
     @Slot()
     def removeSelectedItems(self):
-        selection = reversed(sorted(self.selectedItems()))
-        for item in selection:
-            self.takeItem(self.row(item))
+        selection = self.selectionModel().selectedIndexes()
+        for index in selection:
+            self.setRowHidden(index.row(), True)
+            asset = index.data(Qt.UserRole)
+            asset.status = ItemState.REMOVE
 
     def setItems(self, values):
-        for value in values:
-            icon = icon_from_item(value)
-            item = QListWidgetItem(icon, value.name)
-            item.setData(Qt.UserRole, value)
-            self.addItem(item)
+        model = self.model()
+        for item in values:
+            icon = icon_from_item(item)
+            item.status = ItemState.NONE
+            item.setIcon(icon)
+            model.appendRow(item)
 
     def getItems(self):
-        items = [self.item(x).data(Qt.UserRole) for x in range(self.count())]
+        model = self.model()
+        items = [model.takeItem(i, 0) for i in range(model.rowCount())]
         return items
 
 

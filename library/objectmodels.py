@@ -213,14 +213,6 @@ class BaseFields(object):
         session.createcollection.execute(data)
 
     @property
-    def thumbnail(self):
-        return self.icon
-
-    @thumbnail.setter
-    def thumbnail(self, other):
-        self.icon = other
-
-    @property
     def count(self):
         return self.dependencies
 
@@ -365,6 +357,7 @@ class tags(BaseFields):
         'datecreated',
         'type',
         'links',
+        'status', # This is not a modifiable database field.
     )
 
     def createNew(self, id_mapping):
@@ -385,6 +378,7 @@ class alusers(BaseFields):
         'datecreated',
         'type',
         'links',
+        'status', # This is not a modifiable database field.
     )
 
     def createNew(self, id_mapping):

@@ -691,7 +691,9 @@ class CategoryManager(QObject):
 
     def clearAllModels(self):
         for category in self.all_categories:
-            category.tree.clear()
+            # TODO: this line is doing us a favor by erroing and is completely wrong.
+            # the problem is subcategories are not replaced on re-connection.
+            category.tree.clear() 
 
     def filterAll(self, text):
         for category in self.all_categories:
@@ -731,7 +733,7 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
                     color.blue(),
                     )
             )
-        for x in [self.pushButton, self.pushButton_2, self.countSpinBox, self.checkButton, self.iconButton]:
+        for x in [self.toolButton_up, self.toolButton_down, self.countSpinBox, self.checkButton, self.iconButton]:
             x.setAttribute(Qt.WA_TransparentForMouseEvents)
 
         self.ContentFrame.setVisible(False)

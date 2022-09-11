@@ -6,12 +6,10 @@ cmds.loadPlugin('P:/Code/Relic/library/plugins/relicMaya/relicMayaPlugin.py')
 """
 
 import sys
-import subprocess
 import re
 import json
 import os
 from functools import partial
-from pprint import pprint
 
 # -- Third-party --
 from PySide2.QtCore import *
@@ -30,19 +28,15 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # -- Globals --
 MENU_NAME = 'Relic'
-TOKEN_REGEX = re.compile(r'\<\S+\>')
 ANUM_REGEX = re.compile(r"[^A-Za-z0-9]")
 IGNORE_PLUGINS = ['stereoCamera']
 if not 'relicMixinWindow' in globals():
     relicMixinWindow = None
 
 # -- Module --
-#sys.path.append('P:/Code/Relic/library/plugins/Lib')
 from relic_base import asset_views, asset_classes
-from relic_base.ui.qtutil import updateWidgetProperty#, polymorphicItem
 from sequence_path.main import SequencePath as Path
-import relic_base.config as config
-from relic_base.config import RELIC_PREFS, LOG, INGEST_PATH, RELIC_CLIENT, logFunction
+from relic_base.config import INGEST_PATH, RELIC_CLIENT
 #from OpenGL.GL import *
 #from gltfExporterFloat import GLTFExport
 from relicDrop import RelicDropCallback

@@ -99,8 +99,11 @@ class ObjectMulti(QListView):
     @Slot()
     def onLinkItem(self, relation_asset):
         relation_asset.status = ItemState.LINK
-        new_item = polymorphicItem(fields=relation_asset)
-        self.model().appendRow(new_item)
+        model = self.model()
+        exists = model.findItems(relation_asset.name)
+        if not exists:
+            new_item = polymorphicItem(fields=relation_asset)
+            model.appendRow(new_item)
  
     @Slot()
     def removeSelectedItems(self):
@@ -322,6 +325,7 @@ class ObjectField(UserList):
 
     def __init__(self, values):
         super(ObjectField, self).__init__(values)
+        self.value = values
 
     def __str__(self):
         return ','.join([x.name for x in self])

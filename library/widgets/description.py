@@ -4,11 +4,12 @@ import operator
 from functools import partial
 import markdown
 
-from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream, QEvent
+from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream, QEvent, QObject, QTimer
 from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor
 from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit, QWidget, QAbstractButton, QDialog
 
 from library.config import peakLoad, RELIC_PREFS
+from library.io.util import readMovieFrames
 from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
@@ -62,6 +63,21 @@ class TextEdit(QTextEdit):
         self.textCursor().insertText(text)
 
 
+class MiniMovie(QObject):
+    def __init__(self, path):
+        super(MiniMovie, self).__init__()
+        self.frames = readMovieFrames(path)
+        self.frame_number = 0
+
+    def currentFrame(self):
+        return self.frames[self.frame_number]
+
+    def toNextFrame(self):
+        self.frame_number += 1
+        if self.frame_number >= len(self.frames):
+            self.frame_number = 0
+
+
 class TextBrowser(QTextBrowser):
 
     linkToDescription = Signal(str)
@@ -75,8 +91,21 @@ class TextBrowser(QTextBrowser):
         self.search_matches = []
         self.current_match_index = 0
 
-    def setMarkdown(self, text):
+        self.movie_timer = QTimer()
+        self.movie_timer.setInterval(1000/24) # 24 fps in milliseconds
+        #self.capsnap.setTimerType(Qt.PreciseTimer)
+        self.movie_timer.timeout.connect(self.updateMovieFrames)
 
+    def updateMovieFrames(self):
+        for url, movie in self.movies.items():
+            movie.toNextFrame()
+
+            new_img = movie.currentFrame()
+            self.document().addResource(QTextDocument.ImageResource, url, new_img)
+            self.setLineWrapColumnOrWidth(self.lineWrapColumnOrWidth())
+        self.update()
+
+    def setMarkdown(self, text):
         # Find all relative paths.
         matcher = re.findall(URL_REGEX, text)
 
@@ -138,20 +167,13 @@ class TextBrowser(QTextBrowser):
     def changeMatch(self):
         self.matchCountChanged.emit(f'{self.current_match_index}/{len(self.search_matches)}')
 
-    @Slot(int)
-    def movieCallback(self, url, value):
-        new_img = self.movies[url].currentPixmap()
-        self.document().addResource(QTextDocument.ImageResource, url, new_img)
-        self.setLineWrapColumnOrWidth(self.lineWrapColumnOrWidth())
-        self.update()
-
     def addAnimation(self, url):
-        movie = QMovie(url)
+        if not url.endswith('mp4') or not Path(url).exists or url in self.movies.keys():
+            return
+        movie = MiniMovie(url)
         self.movies[url] = movie
-        movie.setCacheMode(QMovie.CacheAll)
-        callback = partial(self.movieCallback, url)
-        movie.frameChanged.connect(callback)
-        movie.start()
+        if not self.movie_timer.isActive():
+            self.movie_timer.start()
 
     def keyPressEvent(self, event):
         super(TextBrowser, self).keyPressEvent(event)
@@ -192,6 +214,7 @@ class Window(Ui_DescriptionDialog, QDialog):
     @Slot(QEvent)
     def closeEvent(self, event):
         self.hide()
+        self.text_browser.movies = {}
         event.ignore()
 
     @Slot(Path)

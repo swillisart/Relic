@@ -193,8 +193,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         else: # Update the asset field
             for asset in self.selected_assets:
                 setattr(asset, name.lower(), value)
-                asset.update(fields=[name])
-
+                asset.update(fields=[name.lower()])
 
     @Slot(QModelIndex)
     def open_file(self, index):

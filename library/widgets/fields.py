@@ -196,11 +196,13 @@ class FieldDelegate(QStyledItemDelegate):
 
         return editor
 
-
     def setModelData(self, editor, model, index):
+        existing = index.model().data(index, Qt.EditRole)
         value = editor._get()
         converted = editor._field.data(value)
-        model.setData(index, converted, Qt.EditRole)
+        # only update the data if it actually modified by the editor 
+        if converted.value != existing.value:
+            model.setData(index, converted, Qt.EditRole)
     
     def paint(self, painter, option, index):
         option.decorationPosition = QStyleOptionViewItem.Left

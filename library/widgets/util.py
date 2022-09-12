@@ -1,4 +1,3 @@
-import re
 from functools import partial
 
 from library.ui.list_view_filtered import Ui_ListViewFiltered
@@ -11,67 +10,12 @@ from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
                            QIcon, QPainter, QPixmap, QStandardItem,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
-from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QDockWidget, QFrame, QLabel, QLineEdit,
                                QListView, QMenu, QScrollArea,
                                QStyledItemDelegate, QTreeView, QVBoxLayout,
                                QWidget, QLayout, QDialog)
 
-def rasterizeSVG(svg_file, size=QSize(28, 28)):
-    svgWidget = QSvgWidget()
-    svgWidget.load(svg_file)
-    svgRenderer = svgWidget.renderer()
-    svg_image = QPixmap(size)
-    svg_image.fill(Qt.transparent)
-    pixPainter = QPainter(svg_image)
-    svgRenderer.render(pixPainter)
-    pixPainter.end()
-    del svgWidget, svgRenderer, pixPainter
-    return svg_image
-
-
-def modifySVG(file_path, find, replace, regex=False, size_override=False):
-    """Modifies an input SVG by swapping find with replace.
-    May be used with regular expression via regex parameter. 
-
-    Parameters
-    ----------
-    file_path : str
-    find : str
-        text or regex to search for
-    replace : str
-        text to replace matched strings
-    regex : bool, optional
-        find is using regular expressions, by default False
-    size_override : QSize, optional
-        Resize image to fit, by default False
-
-    Returns
-    -------
-    QPixmap
-        Modified SVG Pixmap rendered into the size of SVG
-    """
-
-    f = QFile(file_path)
-    if f.open(QFile.ReadOnly | QFile.Text):
-        textStream = QTextStream(f)
-        if regex:
-            svgData = re.sub(find, replace, textStream.readAll())
-        else:
-            svgData = textStream.readAll().replace(find, replace)
-        f.close()
-
-    svg = QSvgRenderer()
-    svg.load(svgData.encode('utf-8'))
-    size = size_override if size_override else svg.defaultSize()
-    image = QPixmap(size)
-    image.fill(Qt.transparent)
-    painter = QPainter(image)
-    svg.render(painter)
-    painter.end()
-    return image
 
 class SimpleAsset(object):
     __slots__ = ['name', 'id']

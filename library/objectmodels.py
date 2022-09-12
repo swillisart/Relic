@@ -172,7 +172,9 @@ class BaseFields(object):
 
             # Convert to id if morphic object.
             # Only allow json serializable data.
-            if isinstance(attr, (str, Path)):
+            if attr is None:
+                continue
+            elif isinstance(attr, (str, Path)):
                 attr = str(attr)
             elif isinstance(attr, int):
                 attr = int(attr)

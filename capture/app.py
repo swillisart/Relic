@@ -528,7 +528,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         image = QPixmap(str(get_preview_path(in_file)))
         capture = CaptureItem(in_file)
         capture.date = mtime
-        capture.thumbnail = image
+        capture.icon = image
         capture.type = item_type
         item = QStandardItem(capture.name)
         item.setData(capture, role=Qt.UserRole)

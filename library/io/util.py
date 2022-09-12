@@ -5,11 +5,15 @@ from PySide6.QtCore import QRunnable
 from sequence_path.main import SequencePath as Path
 
 def videoToFrames(data):
-    frames = []
     buffer = io.BytesIO()
     buffer.write(data.data())
+    frames = readMovieFrames(buffer)
+    buffer.close()
+    return frames
 
-    with av.open(buffer, mode='r', format='mp4') as container:
+def readMovieFrames(file_obj):
+    frames = []
+    with av.open(file_obj, mode='r', format='mp4') as container:
         for frame in container.decode(video=0):
             rgb = frame.to_rgb()
             array = rgb.to_ndarray()
@@ -17,9 +21,7 @@ def videoToFrames(data):
             img = QImage(array, w, h, QImage.Format_RGB888)
             px = QPixmap.fromImageInPlace(img)
             frames.append(px)
-    buffer.close()
     return frames
-
 
 class LocalThumbnail(QRunnable):
 

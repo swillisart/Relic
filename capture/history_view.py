@@ -112,7 +112,7 @@ class HistoryTreeFilter(QSortFilterProxyModel):
 
 
 class CaptureItem(object):
-    __slots__ = ['name', 'path', 'count', 'status', 'type', 'progress', 'date', 'thumbnail']
+    __slots__ = ['name', 'path', 'count', 'status', 'type', 'progress', 'date', 'icon']
 
     def __init__(self, path):
         self.name = path.name
@@ -122,7 +122,7 @@ class CaptureItem(object):
         self.type = 1
         self.progress = 0
         self.date = None
-        self.thumbnail = None
+        self.icon = None
 
     class Indicators(AutoEnum):
         type = {'data': Types, 'rect': QRect(12, -22, 16, 16)}

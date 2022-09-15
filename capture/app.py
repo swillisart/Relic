@@ -32,6 +32,7 @@ import resources
 from history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, Types,
                             scale_icon)
 from ui.dialog import Ui_ScreenCapture
+from cursor import get_cursor_arrays, build_cursor_data
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
@@ -47,11 +48,14 @@ def video_to_gif(path):
     out_stream.pix_fmt = 'rgb8'
     out_stream.width = in_stream.width
     out_stream.height = in_stream.height
+    out_stream.time_base = Fraction(1, 1000)
 
-    for frame in in_container.decode(video=0):
-        frame.pts = None
-        out_packet = out_stream.encode(frame)
-        out_container.mux(out_packet)
+    try:
+        for frame in in_container.decode(video=0):
+            out_packet = out_stream.encode(frame)
+            out_container.mux(out_packet)
+    except Exception as exerr:
+        print(exerr)
 
     in_container.close()
     out_container.close()
@@ -75,12 +79,16 @@ class Recorder(QObject):
         audio_format.setChannelCount(1) # 1 mono, 2 stereo
         audio_format.setSampleFormat(QAudioFormat.Int16)
 
-
         if not self.input_device.isNull():
             self._audio_input = QAudioSource(self.input_device, audio_format, self)
 
         self.time_base = Fraction(1, 1000)
-        self.stopped = True
+        cursor_cache = {}
+        for screen in reversed(QGuiApplication.screens()):
+            scale = screen.devicePixelRatio()
+            cursor_size = int(32 * scale)
+            cursor_cache[screen] = build_cursor_data(cursor_size)
+        self.cursor_cache = cursor_cache
 
     def createContainer(self, out_path):
         # PyAv container and streams
@@ -131,20 +139,21 @@ class Recorder(QObject):
         if self.input_device.isNull():
             return
         self.container.start_encoding()
-        self.stopped = False
+        self.later = 0
 
         # audio timer
         self._io_device = self._audio_input.start()
         self._io_device.readyRead.connect(self.onFrameReady)
-
         self.reference_time = QElapsedTimer()
         self.reference_time.start()
 
     def stop(self):
-        self.stopped = True
         if not self.input_device.isNull(): 
             self._audio_input.stop()
 
+        deferred_cleanup = QTimer.singleShot(1*1000, self.cleanup)
+
+    def cleanup(self):
         container = self.container
         # Flush streams
         try:
@@ -159,11 +168,10 @@ class Recorder(QObject):
             pass
         container.close()
 
+
     @Slot()
     def onFrameReady(self):
         pts = self.reference_time.elapsed()
-        if self.stopped:
-            return
         data = self._io_device.readAll()
         audio_data = data.data()
         container = self.container
@@ -173,17 +181,38 @@ class Recorder(QObject):
         img_data = self.capture_func()
         screen = self.screen.screen()
 
-        width = screen.geometry().width()
-        height = screen.geometry().height()
+        screen_geo = screen.geometry()
+        width = screen_geo.width()
+        height = screen_geo.height()
         image = np.reshape(img_data, (height, width, 4))
+
+        # get the proper cursor and copy / paint into image.
+        cursor, cursor_data = get_cursor_arrays(self.cursor_cache[screen])
+        try:
+            if cursor_data is not None:
+                color, mask = cursor_data
+                top_left = screen_geo.topLeft()
+                pos = QCursor.pos() - top_left
+                x, y = pos.x(), pos.y()
+                h, w, _ = color.shape
+                #x, y = int(cursor.ptScreenPos.x), int(cursor.ptScreenPos.y) # global position
+                slicer = np.s_[y:y+h, x:x+w, :3]
+                np.copyto(image[slicer], color, where=mask)
+        except ValueError as exerr:
+            pass # cursor intersecting or completely out of the capture boundary.
+
         video_frame = VideoFrame.from_ndarray(image, format='bgra')
 
         self.graph.push(video_frame)
         filtered_frame = self.graph.pull()
         filtered_frame.pts = pts
         # muxing
-        video_packet = video_stream.encode(filtered_frame)
-        container.mux(video_packet)
+        try:
+            video_packet = video_stream.encode(filtered_frame)
+            container.mux(video_packet)
+        except Exception as exerr:
+            print(exerr)
+
 
         # audio
         audio_stream = container.streams.audio[0]
@@ -197,9 +226,12 @@ class Recorder(QObject):
         audio_frame = AudioFrame.from_ndarray(bf, format='s16', layout='mono')
         audio_frame.sample_rate = 48000
         filtered_frame.pts = pts
+        try:
+            audio_packet = audio_stream.encode(audio_frame)
+            container.mux(audio_packet)
+        except Exception as exerr:
+            print(exerr)
 
-        audio_packet = audio_stream.encode(audio_frame)
-        container.mux(audio_packet)
 
 
 def get_preview_path(path):
@@ -636,7 +668,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 buttons=QMessageBox.Yes | QMessageBox.No
                 )
 
-        if message == QMessageBox.RejectRole:
+        if message == QMessageBox.NoRole:
             return
 
         while indices := selection_model.selectedIndexes():

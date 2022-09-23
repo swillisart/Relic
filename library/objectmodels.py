@@ -1,96 +1,50 @@
 import sys
 from collections import Sequence
 from enum import IntEnum
+
 from extra_types.enums import AutoEnum
-from qtshared6.delegates import Statuses, TextIndicator, ColorIndicator, IconIndicator, scale_icon
-
-from sequence_path.main import SequencePath as Path
-from qtshared6.utils import polymorphicItem
-
+from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot
 from PySide6.QtGui import QColor, QPixmap
-from PySide6.QtCore import Qt, QSettings, QObject, Slot, QRect
+from relic.qt.delegates import (Indication, ColorIndicator, IconIndicator, Statuses,
+                                 TextIndicator)
+from qtshared6.utils import polymorphicItem
+from relic.base import Fields
+from relic.local import (Alusers, Category, Elements, Lighting, Mayatools,
+                         Modeling, Nuketools, References, Relationships,
+                         Shading, Software, Subcategory, Tags, TempAsset)
+from relic.scheme import Table, AssetType
+from sequence_path.main import SequencePath as Path
 
-from library.io.networking import RelicClientSession
 from library.config import RELIC_PREFS
+from library.io.networking import RelicClientSession
 
 session = RelicClientSession(RelicClientSession.URI)
 
 LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
 NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
 
-class Type(IconIndicator):
-    NONE = {}
-    COMPONENT = {'data': scale_icon(QPixmap('resources/asset_types/component.svg'))}
-    ASSET = {'data': scale_icon(QPixmap('resources/asset_types/asset.svg'))}
-    COLLECTION = {'data': scale_icon(QPixmap('resources/asset_types/collection.svg'))}
-    MOTION = {'data': scale_icon(QPixmap('resources/asset_types/motion.svg'))}
-    VARIANT = {'data': scale_icon(QPixmap('resources/asset_types/variant.svg'))}
-    REFERENCE = {'data': scale_icon(QPixmap('resources/asset_types/reference.svg'))}
+colors = {x.name: QColor(*x.data.color) for x in Category}
+types = {x.name: f':AssetType/{x.name}' for x in AssetType}
 
-class CategoryColor(ColorIndicator):
-    references = {'data': QColor(168, 58, 58)}
-    modeling = {'data': QColor(156, 156, 156)}
-    elements = {'data': QColor(185, 120, 50)}
-    lighting = {'data': QColor(220, 215, 180)}
-    shading = {'data': QColor(148, 68, 158)}
-    software = {'data': QColor(28, 28, 28)}
-    mayatools = {'data': QColor(72, 167, 204)}
-    nuketools = {'data': QColor(205, 170, 60)}
+CategoryColor = ColorIndicator('CategoryColor', colors)
+Type = IconIndicator('Type', types)
 
-class BaseFields(object):
+class FieldMixin(object):
     __slots__ = ()
 
-    class Indicators(AutoEnum):
-        type =       {'data': Type, 'rect': QRect(12, -22, 16, 16)}
-        category =   {'data': CategoryColor, 'rect': QRect(6, -6, 3, -48)}
-        status =     {'data': Statuses, 'rect': QRect(30, -22, 16, 16)}
-        resolution = {'data': TextIndicator, 'rect': QRect(50, -22, 0, 16)}
+    INDICATIONS = [
+        Indication('type', Type, QRect(12, -22, 16, 16)),
+        Indication('category', CategoryColor, QRect(6, -6, 3, -48)),
+        Indication('status', Statuses, QRect(30, -22, 16, 16)),
+        Indication('resolution', TextIndicator, QRect(50, -22, 0, 16))
+    ]
 
     def __init__(self, *args, **kwargs):
-        if args:
-            for i, x in enumerate(self.__slots__):
-                try:
-                    setattr(self, x, args[i])
-                except:
-                    setattr(self, x, None)
-        else:
-            for i, x in enumerate(self.__slots__):
-                bykeword = kwargs.get(x)
-                byindex = kwargs.get(str(i))
-                attr = byindex if bykeword is None else bykeword
-                setattr(self, x, attr)
-
-    def __eq__(self, other):
-        return self.id == other
-
-    def __iter__(self):
-        for i, x in enumerate(self.__slots__):
-            attr = getattr(self, x)
-            yield i, x, attr 
-
-    def __str__(self):
-        attrs = ', '.join(['{}: {}'.format(x, getattr(self, x)) for x in self.__slots__])
-        return '<class {}> ({})'.format(self.categoryName, attrs) 
-
-    def __repr__(self):
-        args = ''
-        for i, x in enumerate(self.__slots__):
-            attr = getattr(self, x)
-            if isinstance(attr, str):
-                attr_fmt = "'{}'".format(attr)
-            else:
-                attr_fmt = attr
-            args += "{}={}, ".format(x, attr_fmt)
-
-        return '{}({})'.format(self.categoryName, args)
-
-    @property
-    def categoryName(self):
-        return self.__class__.__name__.lower()
+        super(FieldMixin, self).__init__(*args, **kwargs)
 
     @property
     def relationMap(self):
-        return int(Category[self.categoryName.upper()])
+        return int(Table[self.categoryName])
 
     def update(self, fields=None):
         data = self.export
@@ -202,7 +156,7 @@ class BaseFields(object):
         if isinstance(asset.upstream, list):
             for upstream in asset.upstream:
                 if upstream.type != Type.VARIANT:
-                    yield from BaseFields.recurseDependencies(upstream)
+                    yield from FieldMixin.recurseDependencies(upstream)
         yield asset
 
     def createCollection(self, link_mapping):
@@ -219,80 +173,43 @@ class BaseFields(object):
         return self.dependencies
 
 
-class allCategories(QObject):
-    slots = (
-        'references',
-        'modeling',
-        'elements',
-        'lighting',
-        'shading',
-        'software',
-        'mayatools',
-        'nuketools',
-    )
-    slot_range = range(len(slots))
-
-    def __init__(self):
-        super(allCategories, self).__init__()
-        for i in allCategories.slot_range:
-            setattr(self, self.slots[i], i)
-
-    def __iter__(self):
-        for i in allCategories.slot_range:
-            yield self.get(i)
-
-    def getLabel(self, i):
-        return self.slots[i]
-
-    def get(self, i):
-        return getattr(self, self.slots[i])
-
-    def set(self, i, data):
-        return setattr(self, self.slots[i], data)
-
-    def fetch(self):
-        # fill empty categories
-        for i in allCategories.slot_range:
-            self.set(i, category(self.getLabel(i), i))
-        session.getcategories.execute([])
-
 class Library(QObject):
 
-    categories = allCategories()
+    categories = []
     assets = []
     assets_filtered = []
 
     def __init__(self):
         super(Library, self).__init__()
-        
+
     def validateCategories(self, categories):
         if not categories:
-            categories = dict.fromkeys(self.categories.slot_range)
+            categories = dict.fromkeys(range(len(Category)))
         return categories
+
+    def fetchCategories(self):
+        # fill empty categories
+        for x in Category:
+            empty_category = category(x.name, x.value)
+            self.categories.append(empty_category)
+
+        session.getcategories.execute([])
 
 class category(object):
     def __init__(self, name, id):
         self.name = name.capitalize()
         self.id = id
         self.count = 0
-        self.icon = ':/resources/categories/{}.svg'.format(self.name.lower())
+        self.icon = ':/resources/categories/{}.svg'.format(name.lower())
         self.subcategory_by_id = {}
         self.tree = None # QTreeView
         self.tab = None # TabWidget
 
-class subcategory(BaseFields):
+class subcategory(Subcategory, FieldMixin):
     """
     >>> repr(subcategory(name='test', category=0))
     "subcategory(name='test', id=None, category=0, link=None, count=None, )"
     """
-    __slots__ = (
-        'name',
-        'id',
-        'category',
-        'link',
-        'count',
-        'upstream', # This is not a modifiable database field.
-    )
 
     LINK_CALLBACK = None 
 
@@ -336,9 +253,6 @@ class subcategory(BaseFields):
         relationships.removeAll([relation.export])
         self.link = 0
 
-    #def reparentSubcategoryToRoot(self, current, old_parent):
-        # Set subcategory link to zero if making top level.
-
     @staticmethod
     def _onRelink(obj, link, old_parent=None, new_parent=None):
         obj.link = link
@@ -351,16 +265,10 @@ class subcategory(BaseFields):
                 cls.LINK_CALLBACK(link)
         cls.LINK_CALLBACK = None
 
-class tags(BaseFields):
+    #def reparentSubcategoryToRoot(self, current, old_parent):
+        # Set subcategory link to zero if making top level.
 
-    __slots__ = (
-        'name',
-        'id',
-        'datecreated',
-        'type',
-        'links',
-        'status', # This is not a modifiable database field.
-    )
+class tags(Tags, FieldMixin):
 
     def createNew(self, id_mapping):
         data = {
@@ -369,19 +277,7 @@ class tags(BaseFields):
         }
         session.createtag.execute(data)
 
-class alusers(BaseFields):
-    """
-    >>> repr(alusers(name='swillis'))
-    "alusers(name='swillis', id=None, datecreated=None, type=None, links=None, )"
-    """
-    __slots__ = (
-        'name',
-        'id',
-        'datecreated',
-        'type',
-        'links',
-        'status', # This is not a modifiable database field.
-    )
+class alusers(Alusers, FieldMixin):
 
     def createNew(self, id_mapping):
         data = {
@@ -390,17 +286,7 @@ class alusers(BaseFields):
         }
         session.createuser.execute(data)
 
-class relationships(BaseFields):
-    """
-    >>> repr(relationships(category_id=0, category_map=0))
-    "relationships(id=None, link=None, category_id=0, category_map=0, )"
-    """
-    __slots__ = (
-        'id',
-        'link',
-        'category_id',
-        'category_map',
-    )
+class relationships(Relationships, FieldMixin):
 
     def create(self):
         relation = [self.category_map, self.category_id, self.link]
@@ -411,139 +297,29 @@ class relationships(BaseFields):
         session.removerelationships.execute(relations)
 
 
-class relic_asset:
-    base = [
-        'name',
-        'id',
-        'path',
-        'description',
-        'datecreated',
-        'datemodified',
-        'links',
-        'resolution',
-        'class',
-        'rating',
-        'proxy',
-        'filesize',
-        'quality',
-        'type',
-        'filehash',
-        'dependencies',
-    ]
-    extra = [
-        'tags',
-        'alusers',
-        'status',
-        'icon',
-        'video',
-        'subcategory',
-        'category',
-        'upstream',
-        'downstream',
-        'traversed',
-        'progress',
-    ]
+class references(References, FieldMixin):
+    pass
 
-class temp_asset(BaseFields):
-    """used to house all possible attributes for constructing an asset
-    which does not yet exist in the library.
-    """
-    attrs = [
-        'duration',
-        'framerate',
-        'polycount',
-        'textured',
-        'colormatrix',
-        'aces',
-        'denoise',
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
+class modeling(Modeling, FieldMixin):
+    pass
 
-class references(BaseFields):
-    attrs = [
-        'hasnodes', # Make Tag
-        'duration',
-        'framerate'
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
+class elements(Elements, FieldMixin):
+    pass
 
-class modeling(BaseFields):
-    attrs = [
-        'polycount',
-        'textured'
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
+class software(Software, FieldMixin):
+    pass
 
-class elements(BaseFields):
-    attrs = [
-        'hasnodes', # Make Tag
-        'duration',
-        'framerate'
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
+class lighting(Lighting, FieldMixin):
+    pass
 
-class software(BaseFields):
-    attrs = [
-        'license',
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
+class shading(Shading, FieldMixin):
+    pass
 
-class lighting(BaseFields):
-    attrs = [
-        'renderer',
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
+class nuketools(Nuketools, FieldMixin):
+    pass
 
-class shading(BaseFields):
-    attrs = [
-        'renderer',
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
-
-class nuketools(BaseFields):
-    attrs = [
-        'nodecount',
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
-
-class mayatools(BaseFields):
-    attrs = [
-        'nodecount',
-    ]
-    __slots__ = tuple(
-        relic_asset.base + attrs + relic_asset.extra
-    )
-
-
-class Category(AutoEnum):
-    RELATIONSHIPS = {'type': relationships,}
-    ALUSERS = {'type': alusers,}
-    TAGS = {'type': tags,}
-    SUBCATEGORY = {'type': subcategory,}
-    REFERENCES = {'type': references, }
-    MODELING = {'type': modeling,}
-    ELEMENTS = {'type': elements,}
-    LIGHTING = {'type': lighting,}
-    SHADING = {'type': shading,}
-    SOFTWARE = {'type': software,}
-    MAYATOOLS = {'type': mayatools,}
-    NUKETOOLS = {'type': nuketools,}
+class mayatools(Mayatools, FieldMixin):
+    pass
 
 
 OBJECT_MAP = {
@@ -570,7 +346,7 @@ OBJECT_MAP = {
 }
 
 def getCategoryConstructor(category):
-    constructor = OBJECT_MAP.get(category, temp_asset)
+    constructor = OBJECT_MAP.get(category, TempAsset)
     return constructor
 
 def appendCreate(asset, name, new):
@@ -589,7 +365,7 @@ def attachSubcategory(asset, category_obj):
 
 def attachLinkToAsset(asset, link_item):
     link_item_asset = link_item.data(polymorphicItem.Object)
-    category_name = link_item_asset.__class__.__name__
+    category_name = link_item_asset.categoryName
     if isinstance(link_item_asset, subcategory):
         asset.subcategory = link_item
     elif hasattr(asset, category_name):
@@ -598,9 +374,9 @@ def attachLinkToAsset(asset, link_item):
         try:
             link_item_asset.path = Path(link_item_asset.path)
         except:pass
-        category_id = allCategories.slots.index(category_name)
+        category_id = int(Category[category_name.upper()])
         link_item_asset.category = category_id
-        category_obj = Library.categories.get(category_id)
+        category_obj = Library.categories[category_id]
         attachSubcategory(link_item_asset, category_obj)
         appendCreate(asset, 'upstream', link_item)
         appendCreate(link_item, 'downstream', asset)

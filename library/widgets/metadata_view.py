@@ -3,9 +3,8 @@ import datetime
 import numpy as np
 from extra_types.enums import AutoEnum, DataAutoEnum
 from library.config import RELIC_PREFS
-from library.objectmodels import (allCategories, alusers, attachLinkToAsset,
+from library.objectmodels import (alusers, attachLinkToAsset,
                                   relationships, session, subcategory, tags)
-#from library.widgets.util import ListViewFiltered
 from library.widgets.fields import (CheckField, DateTimeField, LinkField,
                                     FieldDelegate, IntField, ObjectField, QualityField,
                                     TextField, VerticalTreeModel, FileSizeField, RatingField, FramerateField, DurationField)

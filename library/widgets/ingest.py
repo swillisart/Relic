@@ -4,12 +4,12 @@ from collections import defaultdict
 from functools import partial
 
 from imagine.colorchecker_detection import detectColorChecker
-from library.config import (Extension, INGEST_PATH,
-                            RELIC_PREFS, peakPreview)
+from relic.local import (Extension, TempAsset, INGEST_PATH, getAssetSourceLocation, Category)
+from library.config import (RELIC_PREFS, peakPreview)
 from library.io.ingest import (ConversionRouter, IngestionThread, TaskRunner,
                                applyImageModifications, blendRawExposures)
 from library.objectmodels import (Type, alusers, getCategoryConstructor,
-                                  relationships, session, tags, temp_asset)
+                                  relationships, session, tags)
 from library.ui.ingestion import Ui_IngestForm
 from library.widgets.assets_alt import AssetItemModel
 from library.widgets.util import SimpleAsset
@@ -22,7 +22,7 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
                            QIcon, QImage, QMovie, QPainter, QPixmap,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
-from qtshared6.delegates import Statuses
+from relic.qt.delegates import Statuses
 from qtshared6.utils import polymorphicItem
 from sequence_path.main import SequencePath as Path
 
@@ -75,7 +75,6 @@ class IngestForm(Ui_IngestForm, QDialog):
 
         self.collect_item_model.rowsInserted.connect(self.updateLabelCounts)
         self.new_asset_item_model.rowsInserted.connect(self.updateLabelCounts)
-        self.categoryComboBox.currentIndexChanged.connect(self.onCategoryChange)
         self.collectPathTextEdit.textChanged.connect(self.next_enabled)
         self.collectedListView.assetsDeleted.connect(self.updateLabelCounts)
         self.existingNamesList.newItem.connect(self.onNewItem)
@@ -92,15 +91,15 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.processLoadingLabel.setMovie(self.loading_movie)
         self.processLoadingLabel.hide()
         self.processCompleteLabel.hide()
-        self.kept_original_name = False 
+        self.kept_original_name = False
         self.pool = QThreadPool.globalInstance()
-        self.categoryComboBox.currentIndexChanged.connect(session.retrieveassetnames.execute)
 
         session.retrieveassetnames.callback.connect(self.onAssetNameRetrieval)
         session.initializeprimaryasset.callback.connect(self.createVariations)
         session.createassets.callback.connect(self.ingestAssets)
         self.collectedListView.doubleClicked.connect(self.previewLocal)
         self.working = False
+        self.current_category_id = None
 
     def previewLocal(self, index):
         temp_path, temp_asset = self.getCollectedPath(index)
@@ -113,7 +112,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.updateLabelCounts(None)
         self.completedLabel.hide()
         self.processCompleteLabel.hide()
-        self.tabWidget.setCurrentIndex(0)
+        self.ingestTabWidget.setCurrentIndex(0)
 
     @Slot()
     def removeIngestFiles(self, index):
@@ -157,13 +156,13 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     def collectAssetsFromPlugin(self, assets):
         self.categorizeTab.setEnabled(True)
-        self.tabWidget.setCurrentIndex(1)
+        self.ingestTabWidget.setCurrentIndex(1)
         self.kept_original_name = True
         self.todo = len(assets)
         self.updateLabelCounts(len(assets)-1)
         item_model = self.collect_item_model
         for fields in assets:
-            asset = temp_asset(**fields)
+            asset = TempAsset(**fields)
             asset.path = Path(asset.path)
             icon_path = asset.path.suffixed('_icon', ext='.jpg')
             asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
@@ -185,7 +184,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         if not selection:
             return
         subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
-        category_id = self.categoryComboBox.currentIndex()
+        category_id = self.current_category_id
         asset_constructor = getCategoryConstructor(category_id)
         # If a selection contains multiple switch the creation mode
         # to make a collection and link all created Assets as Variants.
@@ -236,7 +235,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         simple_asset.name = f'{base} {total}'
         qitem.setData(simple_asset.name, Qt.DisplayRole)
 
-        category_id = self.categoryComboBox.currentIndex()
+        category_id = self.current_category_id
         asset_constructor = getCategoryConstructor(category_id)
 
         primary_asset = asset_constructor(name=base, id=simple_asset.id)
@@ -278,7 +277,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         new_asset_fields = new_assets_data.popitem()[-1]
 
         selection = self.collectedListView.selectedIndexes()
-        category_id = self.categoryComboBox.currentIndex()
+        category_id = self.current_category_id
         subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
         asset_constructor = getCategoryConstructor(category_id)
         ingester = self.ingest_thread
@@ -347,24 +346,24 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     @property
     def selectedSubcategory(self):
-        tab = self.category_widgets[self.categoryComboBox.currentIndex()]
+        tab = self.category_widgets[self.current_category_id]
         if selection := tab.category.tree.selectedIndexes():
             return selection[-1]
 
     def updateSubcategoryCounts(self, index):
-        tab = self.category_widgets[self.categoryComboBox.currentIndex()]
+        tab = self.category_widgets[self.current_category_id]
         item = tab.category.tree.indexToItem(index)
         tab.category.tree.updateSubcategoryCounts(item)
 
     @Slot()
     def nextStage(self):
-        stage = self.tabWidget.currentIndex()
+        stage = self.ingestTabWidget.currentIndex()
         if stage == 0:
             self.loadingLabel.show()
             self.categorizeTab.setEnabled(True)
             self.next_disabled()
             self.collect()
-            self.tabWidget.setCurrentIndex(stage+1)
+            self.ingestTabWidget.setCurrentIndex(stage+1)
         else:
             self.close()
 
@@ -407,8 +406,10 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.categorizeFrame.layout().insertWidget(0, dock)
         self.category_dock = dock
         self.category_widgets = []
-        for index in range(self.categoryComboBox.count()):
-            self.category_widgets.append(layout.itemAt(index).widget()) 
+        for x in Category:
+            category_widget = layout.itemAt(int(x)).widget()
+            category_widget.collapseExpand.connect(self.onCategoryChanged)
+            self.category_widgets.append(category_widget)
 
     @Slot()
     def updateLabelCounts(self, value):
@@ -487,18 +488,19 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.parent().close()
 
     @Slot()
-    def onCategoryChange(self, value):
+    def onCategoryChanged(self, state):
         """Fetch Assets in active Category 
         and set the naming and categorization views"""
-        category_name = self.categoryComboBox.currentText().lower()
-        category_index = self.categoryComboBox.currentIndex()
-        for index, category in enumerate(self.category_widgets):
-            if index == category_index:
-                category.expandState()
-                category.show()
+        self.existingNamesList.itemModel.clear()
+        sender = self.sender()
+        if not sender.state:
+            return
+        for i, expander_widget in enumerate(self.category_widgets):
+            if expander_widget is sender:
+                session.retrieveassetnames.execute(i)
+                self.current_category_id = i
             else:
-                category.collapseState()
-                category.hide()
+                expander_widget.collapseState()
 
     @Slot(list)
     def onAssetNameRetrieval(self, asset_data):

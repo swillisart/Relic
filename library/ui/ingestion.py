@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
     QVBoxLayout, QWidget)
 
 from library.widgets.assets_alt import AssetListView
-from library.widgets.metadataView import categoryWidget
 from library.widgets.util import AssetNameListView
 import resources_rc
 
@@ -30,574 +29,8 @@ class Ui_IngestForm(object):
         if not IngestForm.objectName():
             IngestForm.setObjectName(u"IngestForm")
         IngestForm.resize(866, 478)
-        IngestForm.setStyleSheet(u"QWidget {\n"
-"	background-color: rgb(68, 68, 68);\n"
-"    color: rgb(200, 200, 200);\n"
-"    selection-background-color: rgb(126, 126, 126);\n"
-"    selection-color: rgb(250, 250, 250);\n"
-"    outline: 0;\n"
-"}\n"
-"QWidget:item {\n"
-"    background-color: transparent;\n"
-"}\n"
-"QWidget:item:hover {\n"
-"    background-color: rgb(150, 146, 137);\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"QWidget:item:selected {\n"
-"    background-color: rgb(150, 146, 137);\n"
-"    color: rgb(43, 43, 43);\n"
-"}\n"
-"QWidget:disabled {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    color: rgb(92, 92, 92);\n"
-"}\n"
-"\n"
-"QMainWindow::separator {\n"
-"  width: 0px;\n"
-"  height: 0px;\n"
-"  border: 2px solid rgb(43,43,43);\n"
-"  border-right: 1px solid rgb(108,108,108);\n"
-"  border-bottom: 1px solid rgb(108,108,108);\n"
-"  border-radius: 0px;\n"
-"  margin: 8px;\n"
-"}\n"
-"QMainWindow::separator:hover {\n"
-"  border-right: 1px solid rgb(150, 146, 137);\n"
-"  border-bottom: 1px solid rgb(150, 146, 137);\n"
-"}\n"
-"QPushButton {\n"
-""
-                        "    outline: none;\n"
-"    padding: 3px;\n"
-"	padding-left: 18px;\n"
-"	padding-right: 18px;\n"
-"	border: none;\n"
-"    background-color: rgb(92, 92, 92);\n"
-"}\n"
-"QPushButton:hover {\n"
-"    color: rgb(250, 250, 250);\n"
-"    background-color: rgb(108, 108, 108);\n"
-" }\n"
-"QScrollArea {\n"
-"    border: 1px solid rgb(57, 57, 57);\n"
-"}\n"
-"\n"
-"/* QMenu ------------------------------------------------------------------ */\n"
-"\n"
-"QMenu {\n"
-"    border: 1px solid rgb(68, 68, 68);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    padding: 1px;\n"
-"}\n"
-"QMenu::separator {\n"
-"    height: 1px;\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    color: rgb(200, 200, 200);\n"
-"    padding-left: 2px;\n"
-"    margin-left: 0px;\n"
-"    margin-right: 0px;\n"
-"}\n"
-"QMenu::item {\n"
-"    padding: 4px;\n"
-"    padding-left: 16px;\n"
-"    padding-right: 16px;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"QMenu::indicator {\n"
-"    padding: 6px;\n"
-"    margin: -1px;\n"
-"	width: 13px;\n"
-"	height: 13px;\n"
-"    b"
-                        "ackground-color: rgb(57, 57, 57);\n"
-"}\n"
-"QMenu::icon {\n"
-"    padding: 4px;\n"
-"    margin: 0px;\n"
-"	width: 18px;\n"
-"	height: 18px;\n"
-"    background-color: rgb(57, 57, 57);\n"
-"}\n"
-"QMenu::indicator:non-exclusive:checked {\n"
-"    image: url(:/resources/style/checkbox_checked.svg);\n"
-"}\n"
-"QMenu::indicator:non-exclusive:unchecked {\n"
-"    image: url(:/resources/style/checkbox.svg);\n"
-"}\n"
-"\n"
-"QLineEdit,\n"
-"QAbstractSpinBox,\n"
-"QTextEdit {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    background-image: url();\n"
-"    color: rgb(200, 200, 200);\n"
-"/*\n"
-"    border: 2px solid rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"    color: rgb(200, 200, 200);\n"
-"    padding: 1px;\n"
-"    margin-top: 0px;\n"
-"    padding-left: 0px;\n"
-"*/\n"
-"}\n"
-"\n"
-"/* QSlider ---------------------------------------------------------------- */\n"
-"QSlider::add-page:horizontal, \n"
-"QSlider::sub-page:horizontal,\n"
-"QSlider::add-page:vertical, \n"
-"QSlider::sub-page:vertical {\n"
-"    background: rgb(43, 43"
-                        ", 43);\n"
-"}\n"
-"QSlider::add-page:vertical, \n"
-"QSlider::sub-page:vertical {\n"
-"    margin-left: 4px;\n"
-"    margin-right: 4px;\n"
-"}\n"
-"QSlider::add-page:horizontal, \n"
-"QSlider::sub-page:horizontal {\n"
-"    margin-top: 4px;\n"
-"    margin-bottom: 4px;\n"
-"}\n"
-"QSlider::handle:vertical {\n"
-"    background: #787878;\n"
-"    border: 2px solid rgb(43, 43, 43);\n"
-"    width: 8px;\n"
-"    height: 6px;\n"
-"    margin: 0 -8px;\n"
-"    border-radius: 4px;\n"
-"}\n"
-"QSlider::handle:horizontal {\n"
-"    background: #787878;\n"
-"    border: 2px solid rgb(43, 43, 43);\n"
-"    margin: -8px 0;\n"
-"	width: 6px;\n"
-"	height: 8px;\n"
-"    border-radius: 4px;\n"
-"}\n"
-"QSlider::groove {\n"
-"    background: rgb(43, 43, 43);\n"
-"    border: 1px solid rgb(68, 68, 68);\n"
-"    border-radius: 4px;\n"
-"    margin: 0px;\n"
-"}\n"
-"QSlider::groove:horizontal {\n"
-"    height: 4px;\n"
-"}\n"
-"QSlider::groove:vertical {\n"
-"    width: 4px;\n"
-"}\n"
-"QSlider::sub-page:vertical:disabled, \n"
-"QSlider::sub-page:horizontal:disabled "
-                        "{\n"
-"    background: #14506E;\n"
-"}\n"
-"\n"
-"/* QScrollBar ------------------------------------------------------------- */\n"
-"\n"
-"QScrollBar:horizontal {\n"
-"    height: 10px;\n"
-"    margin: 0px 16px 0px 16px;\n"
-"    border: 1px solid rgb(55, 55, 55);\n"
-"    border-radius: 40px;\n"
-"    background-color: rgb(55, 55, 55);\n"
-"}\n"
-"QScrollBar::handle:horizontal {\n"
-"    background-color: #787878;\n"
-"    border: 0px solid rgb(68, 68, 68);\n"
-"    border-radius: 4px;\n"
-"    min-width: 8px;\n"
-"}\n"
-"QScrollBar::add-line:horizontal:hover,\n"
-"QScrollBar::add-line:horizontal:on,\n"
-"QScrollBar::add-line:horizontal {\n"
-"    margin: 0px 3px 0px 0px;\n"
-"    border-image: url(:/resources/style/stylesheet-branch-closed.png);\n"
-"    height: 10px;\n"
-"    width: 6px;\n"
-"    subcontrol-position: right;\n"
-"    subcontrol-origin: margin;\n"
-"}\n"
-"QScrollBar::sub-line:horizontal:hover,\n"
-"QScrollBar::sub-line:horizontal:on,\n"
-"QScrollBar::sub-line:horizontal {\n"
-"    margin: 0px 0px 0px 3px;\n"
-"    border-"
-                        "image: url(:/resources/style/stylesheet-branch-closedleft.png);\n"
-"    height: 10px;\n"
-"    width: 6px;\n"
-"    subcontrol-position: left;\n"
-"    subcontrol-origin: margin;\n"
-"}\n"
-"QScrollBar:vertical {\n"
-"    background-color: rgb(55, 55, 55);\n"
-"    width: 10px;\n"
-"    margin: 16px 0px 16px 0px;\n"
-"    border: 1px solid rgb(55, 55, 55);\n"
-"    border-radius: 4px;\n"
-"}\n"
-"QScrollBar::handle:vertical {\n"
-"    background-color: #787878;\n"
-"    border: 1px solid rgb(68, 68, 68);\n"
-"    min-height: 8px;\n"
-"    border-radius: 4px;\n"
-"}\n"
-"QScrollBar::sub-line:vertical {\n"
-"    margin: 3px 0px 0px 0px;\n"
-"    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
-"    height: 6px;\n"
-"    width: 10px;\n"
-"    subcontrol-position: top;\n"
-"    subcontrol-origin: margin;\n"
-"}\n"
-"QScrollBar::add-line:vertical {\n"
-"    margin: 0px 0px 3px 0px;\n"
-"    border-image: url(:/resources/style/stylesheet-branch-open.png);\n"
-"    height: 6px;\n"
-"    width: 10px;\n"
-"    subcontrol-positi"
-                        "on: bottom;\n"
-"    subcontrol-origin: margin;\n"
-"}\n"
-"QScrollBar::sub-line:vertical:hover,\n"
-"QScrollBar::sub-line:vertical:on {\n"
-"    border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
-"    height: 10px;\n"
-"    width: 10px;\n"
-"    subcontrol-position: top;\n"
-"    subcontrol-origin: margin;\n"
-"}\n"
-"QScrollBar::add-page:horizontal,\n"
-"QScrollBar::sub-page:horizontal,\n"
-"QScrollBar::up-arrow:horizontal,\n"
-"QScrollBar::down-arrow:horizontal,\n"
-"QScrollBar::up-arrow:vertical,\n"
-"QScrollBar::down-arrow:vertical,\n"
-"QScrollBar::add-page:vertical,\n"
-"QScrollBar::sub-page:vertical  {\n"
-"    background: none;\n"
-"}\n"
-"\n"
-"QListView,\n"
-"QTreeView,\n"
-"QTableView,\n"
-"QColumnView {\n"
-"    border: none;\n"
-"}\n"
-"QListView::item,\n"
-"QTreeView::item,\n"
-"QTableView::item,\n"
-"QColumnView::item {\n"
-"    border-top: none;\n"
-"    padding: 0px; /*DO NOT CHANGE*/\n"
-"    padding-right: 8px; /*DO NOT CHANGE*/\n"
-"    margin-top: 2px;\n"
-"    margin-bottom: 2px;\n"
-"}\n"
-"\n"
-"QTreeVie"
-                        "w::branch {\n"
-"    border-top: 0px solid rgb(43, 43, 43);\n"
-"    border-bottom: 0px solid rgb(43, 43, 43);\n"
-"    padding: 4px; /*DO NOT CHANGE*/\n"
-"    margin-top: 2px;\n"
-"    margin-bottom: 2px;\n"
-"}\n"
-"QTreeView::branch:has-siblings:!adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-vline.png);\n"
-"}\n"
-"QTreeView::branch:has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
-"}\n"
-"QTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-branch-end.png);\n"
-"}\n"
-"QTreeView::branch:has-children:!has-siblings:closed,\n"
-"QTreeView::branch:closed:has-children:has-siblings {\n"
-"    image: url(:/resources/style/treeExpand.svg);\n"
-"}\n"
-"QTreeView::branch:open:has-children:!has-siblings,\n"
-"QTreeView::branch:open:has-children:has-siblings  {\n"
-"    image: url(:/resources/style/treeCollapse.svg);\n"
-"}\n"
-"\n"
-"\n"
-"/* QCombobox -----------------------------------------------"
-                        "--------------- */\n"
-"QComboBox {\n"
-"    border: 0px;\n"
-"    border-radius: 3px;\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    padding-top: 2px;     /* This fix  #103, #111*/\n"
-"    padding-bottom: 1px;  /* This fix  #103, #111*/\n"
-"    padding-left: 4px;\n"
-"    padding-right: 4px;\n"
-"    min-width: 75px;\n"
-"}\n"
-"QComboBox::drop-down {\n"
-"    subcontrol-origin: padding;\n"
-"    subcontrol-position: top right;\n"
-"    width: 20px;\n"
-"    border-left-width: 2px;\n"
-"    border-left-color: rgb(68, 68, 68);\n"
-"    border-left-style: solid;\n"
-"    border-top-right-radius: 0px;\n"
-"    border-bottom-right-radius: 0px;\n"
-"    padding-right: 3px;\n"
-"    margin-left: 6px;\n"
-"}\n"
-"QComboBox::down-arrow,\n"
-"QComboBox::down-arrow:on,\n"
-"QComboBox::down-arrow:hover,\n"
-"QComboBox::down-arrow:focus {\n"
-"    image: url(:/resources/style/stylesheet-branch-open.png);\n"
-"}\n"
-"\n"
-"\n"
-"/* QCheckBox -------------------------------------------------------------- */\n"
-"\n"
-"\n"
-"QCheckBox::indicator:che"
-                        "cked:hover,\n"
-"QTreeView::indicator:checked:hover,\n"
-"QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
-"}\n"
-"QCheckBox::indicator:unchecked:hover,\n"
-"QTreeView::indicator:unchecked:hover,\n"
-"QListView::indicator:unchecked:hover {\n"
-"    image: url(:/resources/style/checkbox_hover.svg);\n"
-"}\n"
-"QCheckBox::indicator {\n"
-"    width: 14px;\n"
-"    height: 14px;\n"
-"}\n"
-"QCheckBox::indicator:checked,\n"
-"QTreeView::indicator:checked,\n"
-"QListView::indicator:checked {\n"
-"    image: url(:/resources/style/checkbox_checked.svg);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:checked:hover,\n"
-"QTreeView::indicator:checked:hover,\n"
-"QListView::indicator:checked:hover {\n"
-"    image: url(:/resources/style/checkbox_checked_hover.svg);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:unchecked,\n"
-"QTreeView::indicator:unchecked,\n"
-"QListView::indicator:unchecked {\n"
-"    color: rgb(43, 43, 43);\n"
-"    image: url(:/resources/style/checkbox.svg);\n"
-"}\n"
-"\n"
-"\n"
-"\n"
-"\n"
-""
-                        "\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"/* QTabWiget -------------------------------------------------------------- */\n"
-"\n"
-"QTabWidget {\n"
-"    padding: 4px;\n"
-"    padding-left: 16px;\n"
-"    padding-right: 16px;\n"
-"    selection-background-color: rgb(68, 68, 68);\n"
-"    border: 0;\n"
-"}\n"
-"QTabWidget::tab-bar {\n"
-"    alignment: center;\n"
-"}\n"
-"QTabWidget::pane {\n"
-"    border: none;\n"
-"    margin: 0px;\n"
-"}\n"
-"QTabWidget::pane:selected {\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"\n"
-"/* QTabBar ---------------------------------------------------------------- */\n"
-"\n"
-"QTabBar {\n"
-"    qproperty-drawBase: 0;\n"
-"    border-radius: 3px;\n"
-"    margin: 0px;\n"
-"    padding: 4px;\n"
-"    border: 0;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"    font: bold 10pt;\n"
-"}\n"
-"\n"
-"QTabBar::tab {\n"
-"    border-bottom: 3px solid rgb(55, 55, 55);\n"
-"    color: #787878;\n"
-" "
-                        "   background-color: rgb(68, 68, 68);\n"
-"}\n"
-"\n"
-"/* QTabBar::tab - selected ----------------------------------------------- */\n"
-"\n"
-"QTabBar::tab:top:selected:disabled {\n"
-"    border-bottom: 3px solid #14506E;\n"
-"    color: #787878;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"QTabBar::tab:bottom:selected:disabled {\n"
-"    border-top: 3px solid #14506E;\n"
-"    color: #787878;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"QTabBar::tab:left:selected:disabled {\n"
-"    border-left: 3px solid #14506E;\n"
-"    color: #787878;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"QTabBar::tab:right:selected:disabled {\n"
-"    border-right: 3px solid #14506E;\n"
-"    color: #787878;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"\n"
-"/* QTabBar::tab - !selected and disabled ---------------------------------- */\n"
-"\n"
-"QTabBar::tab:disabled {\n"
-"	margin: 0; padding: 0; border: none;\n"
-"}\n"
-"QTabBar::tab:top:!selected:disabled {\n"
-"    margin-left: 4px;\n"
-"    margin-right: 4px;\n"
-""
-                        "    margin-top: 2px;\n"
-"    margin-bottom: 1px;\n"
-"    padding-left: 10px; \n"
-"    padding-right: 10px;\n"
-"    padding-top: 4px;\n"
-"    padding-bottom: 4px;\n"
-"    min-width: 4px;\n"
-"    border-top-left-radius: 3px;\n"
-"    border-top-right-radius: 3px;\n"
-"    font-weight: normal;\n"
-"    border-bottom: 3px solid rgb(68, 68, 68);\n"
-"    border-right: 1px solid rgb(68, 68, 68);\n"
-"    border-left: 1px solid rgb(68, 68, 68);\n"
-"    border-top: 1px solid rgb(68, 68, 68);\n"
-"    color: rgb(100, 100, 100);\n"
-"}\n"
-"QTabBar::tab:bottom:!selected:disabled {\n"
-"    border-top: 3px solid rgb(43, 43, 43);\n"
-"    color: #787878;\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}\n"
-"QTabBar::tab:left:!selected:disabled {\n"
-"    border-right: 3px solid rgb(43, 43, 43);\n"
-"    color: #787878;\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}\n"
-"QTabBar::tab:right:!selected:disabled {\n"
-"    border-left: 3px solid rgb(43, 43, 43);\n"
-"    color: #787878;\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}\n"
-"/"
-                        "* QTabBar::tab - selected ----------------------------------------------- */\n"
-"\n"
-"QTabBar::tab {\n"
-"    background-color: rgb(55, 55, 55);\n"
-"    color: rgb(175, 175, 175);\n"
-"    margin-left: 4px;\n"
-"    margin-right: 4px;\n"
-"    margin-top: 2px;\n"
-"    margin-bottom: 1px;\n"
-"    padding-left: 18px; \n"
-"    padding-right: 18px;\n"
-"    padding-top: 4px;\n"
-"    padding-bottom: 4px;\n"
-"    min-width: 4px;\n"
-"    border-top-left-radius: 3px;\n"
-"    border-top-right-radius: 3px;\n"
-"    font-weight: normal;\n"
-"    border-bottom: 3px solid rgb(43, 43, 43);\n"
-"    border-right: 1px solid rgb(43, 43, 43);\n"
-"    border-left: 1px solid rgb(43, 43, 43);\n"
-"    border-top: 1px solid rgb(43, 43, 43);\n"
-"}\n"
-"\n"
-"QTabBar::tab:selected {\n"
-"    color: rgb(220, 220, 220);\n"
-"    background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));\n"
-"    border-bottom: 2px solid rgb(70, 125, 160);\n"
-"    border-right: 1px solid rgb(66, 118, 150);\n"
-"    border"
-                        "-left: 1px solid rgb(66, 118, 150);\n"
-"    border-top-left-radius: 3px;\n"
-"    border-top-right-radius: 3px;\n"
-"    border-top: 1px solid rgb(43, 43, 43);\n"
-"}")
         self.verticalLayout_3 = QVBoxLayout(IngestForm)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.frame_4 = QFrame(IngestForm)
-        self.frame_4.setObjectName(u"frame_4")
-        self.frame_4.setFrameShape(QFrame.StyledPanel)
-        self.frame_4.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_3 = QHBoxLayout(self.frame_4)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalLayout_3.setContentsMargins(18, -1, 18, -1)
-        self.titleLabel = QLabel(self.frame_4)
-        self.titleLabel.setObjectName(u"titleLabel")
-        font = QFont()
-        font.setPointSize(12)
-        font.setBold(False)
-        self.titleLabel.setFont(font)
-
-        self.horizontalLayout_3.addWidget(self.titleLabel)
-
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
-
-        self.label_3 = QLabel(self.frame_4)
-        self.label_3.setObjectName(u"label_3")
-
-        self.horizontalLayout_3.addWidget(self.label_3)
-
-        self.categoryComboBox = categoryWidget(self.frame_4)
-        self.categoryComboBox.setObjectName(u"categoryComboBox")
-
-        self.horizontalLayout_3.addWidget(self.categoryComboBox)
-
-
-        self.verticalLayout_3.addWidget(self.frame_4)
-
         self.frame_2 = QFrame(IngestForm)
         self.frame_2.setObjectName(u"frame_2")
         self.frame_2.setFrameShape(QFrame.StyledPanel)
@@ -605,17 +38,16 @@ class Ui_IngestForm(object):
         self.verticalLayout_2 = QVBoxLayout(self.frame_2)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(-1, 0, -1, 0)
-        self.tabWidget = QTabWidget(self.frame_2)
-        self.tabWidget.setObjectName(u"tabWidget")
-        self.tabWidget.setEnabled(True)
-        self.tabWidget.setStyleSheet(u"QWidget {\n"
-"    background-color: rgb(75, 75, 75);\n"
-"}\n"
-"QToolTip {\n"
-"    background-color: #ffffff;\n"
-"}")
+        self.ingestTabWidget = QTabWidget(self.frame_2)
+        self.ingestTabWidget.setObjectName(u"ingestTabWidget")
+        self.ingestTabWidget.setEnabled(True)
+        self.ingestTabWidget.setStyleSheet(u"QTabBar,\n"
+"QTabWidget,\n"
+"QStackedWidget {background-color: rgb(72, 72, 72);}")
         self.collectTab = QWidget()
         self.collectTab.setObjectName(u"collectTab")
+        self.collectTab.setStyleSheet(u"QFrame,\n"
+"QWidget {background-color: rgb(72, 72, 72);}")
         self.verticalLayout_4 = QVBoxLayout(self.collectTab)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.collectPathTextEdit = QPlainTextEdit(self.collectTab)
@@ -682,9 +114,11 @@ class Ui_IngestForm(object):
 
         self.label_2 = QLabel(self.collectTab)
         self.label_2.setObjectName(u"label_2")
-        font1 = QFont()
-        font1.setPointSize(10)
-        self.label_2.setFont(font1)
+        font = QFont()
+        font.setPointSize(10)
+        font.setUnderline(False)
+        font.setKerning(True)
+        self.label_2.setFont(font)
 
         self.gridLayout.addWidget(self.label_2, 0, 0, 1, 1)
 
@@ -726,7 +160,7 @@ class Ui_IngestForm(object):
         self.gridLayout_2.setContentsMargins(9, 0, 9, 0)
         self.label_7 = QLabel(self.collectTab)
         self.label_7.setObjectName(u"label_7")
-        self.label_7.setFont(font1)
+        self.label_7.setFont(font)
 
         self.gridLayout_2.addWidget(self.label_7, 0, 0, 1, 1)
 
@@ -774,41 +208,52 @@ class Ui_IngestForm(object):
 
         self.verticalLayout_4.addLayout(self.horizontalLayout_6)
 
-        self.tabWidget.addTab(self.collectTab, "")
+        self.ingestTabWidget.addTab(self.collectTab, "")
         self.categorizeTab = QWidget()
         self.categorizeTab.setObjectName(u"categorizeTab")
         self.categorizeTab.setEnabled(False)
+        font1 = QFont()
+        font1.setUnderline(False)
+        font1.setKerning(True)
+        self.categorizeTab.setFont(font1)
         self.horizontalLayout = QHBoxLayout(self.categorizeTab)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.frame = QFrame(self.categorizeTab)
-        self.frame.setObjectName(u"frame")
-        self.frame.setFrameShape(QFrame.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Raised)
-        self.verticalLayout = QVBoxLayout(self.frame)
+        self.collected_frame = QFrame(self.categorizeTab)
+        self.collected_frame.setObjectName(u"collected_frame")
+        self.collected_frame.setStyleSheet(u"QFrame#collected_subframe,\n"
+"QFrame#collected_frame {background-color: rgb(72, 72, 72);}")
+        self.collected_frame.setFrameShape(QFrame.StyledPanel)
+        self.collected_frame.setFrameShadow(QFrame.Raised)
+        self.verticalLayout = QVBoxLayout(self.collected_frame)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(-1, 0, -1, 0)
-        self.frame_5 = QFrame(self.frame)
-        self.frame_5.setObjectName(u"frame_5")
-        self.frame_5.setFrameShape(QFrame.StyledPanel)
-        self.frame_5.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_7 = QHBoxLayout(self.frame_5)
+        self.collected_subframe = QFrame(self.collected_frame)
+        self.collected_subframe.setObjectName(u"collected_subframe")
+        self.collected_subframe.setFrameShape(QFrame.StyledPanel)
+        self.collected_subframe.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_7 = QHBoxLayout(self.collected_subframe)
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.loadingLabel = QLabel(self.frame_5)
+        self.loadingLabel = QLabel(self.collected_subframe)
         self.loadingLabel.setObjectName(u"loadingLabel")
         self.loadingLabel.setPixmap(QPixmap(u":/resources/general/load_wheel_24.webp"))
 
         self.horizontalLayout_7.addWidget(self.loadingLabel)
 
-        self.completedLabel = QLabel(self.frame_5)
+        self.completedLabel = QLabel(self.collected_subframe)
         self.completedLabel.setObjectName(u"completedLabel")
         self.completedLabel.setPixmap(QPixmap(u":/resources/general/check_green.png"))
 
         self.horizontalLayout_7.addWidget(self.completedLabel)
 
-        self.collectedLabel = QLabel(self.frame_5)
+        self.collectedLabel = QLabel(self.collected_subframe)
         self.collectedLabel.setObjectName(u"collectedLabel")
-        self.collectedLabel.setFont(font)
+        font2 = QFont()
+        font2.setPointSize(12)
+        font2.setBold(False)
+        font2.setUnderline(False)
+        font2.setKerning(True)
+        self.collectedLabel.setFont(font2)
 
         self.horizontalLayout_7.addWidget(self.collectedLabel)
 
@@ -817,17 +262,22 @@ class Ui_IngestForm(object):
         self.horizontalLayout_7.addItem(self.horizontalSpacer_4)
 
 
-        self.verticalLayout.addWidget(self.frame_5)
+        self.verticalLayout.addWidget(self.collected_subframe)
 
-        self.line_2 = QFrame(self.frame)
+        self.line_2 = QFrame(self.collected_frame)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.HLine)
         self.line_2.setFrameShadow(QFrame.Sunken)
 
         self.verticalLayout.addWidget(self.line_2)
 
-        self.collectedListView = AssetListView(self.frame)
+        self.collectedListView = AssetListView(self.collected_frame)
         self.collectedListView.setObjectName(u"collectedListView")
+        self.collectedListView.setStyleSheet(u"QWidget#collectedListView {\n"
+"background-color: rgb(72, 72, 72);\n"
+"border: none;\n"
+"}")
+        self.collectedListView.setFrameShape(QFrame.NoFrame)
         self.collectedListView.setResizeMode(QListView.Adjust)
         self.collectedListView.setUniformItemSizes(True)
         self.collectedListView.setWordWrap(True)
@@ -836,7 +286,7 @@ class Ui_IngestForm(object):
         self.verticalLayout.addWidget(self.collectedListView)
 
 
-        self.horizontalLayout.addWidget(self.frame)
+        self.horizontalLayout.addWidget(self.collected_frame)
 
         self.line = QFrame(self.categorizeTab)
         self.line.setObjectName(u"line")
@@ -847,6 +297,9 @@ class Ui_IngestForm(object):
 
         self.categorizeFrame = QFrame(self.categorizeTab)
         self.categorizeFrame.setObjectName(u"categorizeFrame")
+        self.categorizeFrame.setFont(font1)
+        self.categorizeFrame.setStyleSheet(u"QFrame#categorizeFrame {background-color: rgb(72, 72, 72);}\n"
+"")
         self.categorizeFrame.setFrameShape(QFrame.StyledPanel)
         self.categorizeFrame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_5 = QVBoxLayout(self.categorizeFrame)
@@ -859,7 +312,7 @@ class Ui_IngestForm(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
         self.label_4.setSizePolicy(sizePolicy)
-        self.label_4.setFont(font)
+        self.label_4.setFont(font2)
 
         self.verticalLayout_5.addWidget(self.label_4)
 
@@ -872,11 +325,17 @@ class Ui_IngestForm(object):
 
         self.label_5 = QLabel(self.categorizeFrame)
         self.label_5.setObjectName(u"label_5")
+        font3 = QFont()
+        font3.setPointSize(8)
+        font3.setUnderline(False)
+        font3.setKerning(True)
+        self.label_5.setFont(font3)
 
         self.verticalLayout_5.addWidget(self.label_5)
 
         self.existingNamesList = AssetNameListView(self.categorizeFrame)
         self.existingNamesList.setObjectName(u"existingNamesList")
+        self.existingNamesList.setFont(font1)
 
         self.verticalLayout_5.addWidget(self.existingNamesList)
 
@@ -890,35 +349,38 @@ class Ui_IngestForm(object):
 
         self.horizontalLayout.addWidget(self.line_5)
 
-        self.frame_6 = QFrame(self.categorizeTab)
-        self.frame_6.setObjectName(u"frame_6")
-        self.frame_6.setFrameShape(QFrame.StyledPanel)
-        self.frame_6.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_6 = QVBoxLayout(self.frame_6)
+        self.processed_frame = QFrame(self.categorizeTab)
+        self.processed_frame.setObjectName(u"processed_frame")
+        self.processed_frame.setStyleSheet(u"QFrame#processed_subframe,\n"
+"QFrame#processed_frame {background-color: rgb(72, 72, 72);}\n"
+"")
+        self.processed_frame.setFrameShape(QFrame.StyledPanel)
+        self.processed_frame.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_6 = QVBoxLayout(self.processed_frame)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
         self.verticalLayout_6.setContentsMargins(-1, 0, -1, 0)
-        self.frame_7 = QFrame(self.frame_6)
-        self.frame_7.setObjectName(u"frame_7")
-        self.frame_7.setFrameShape(QFrame.StyledPanel)
-        self.frame_7.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_8 = QHBoxLayout(self.frame_7)
+        self.processed_subframe = QFrame(self.processed_frame)
+        self.processed_subframe.setObjectName(u"processed_subframe")
+        self.processed_subframe.setFrameShape(QFrame.StyledPanel)
+        self.processed_subframe.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_8 = QHBoxLayout(self.processed_subframe)
         self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
         self.horizontalLayout_8.setContentsMargins(0, 0, 0, 0)
-        self.processLoadingLabel = QLabel(self.frame_7)
+        self.processLoadingLabel = QLabel(self.processed_subframe)
         self.processLoadingLabel.setObjectName(u"processLoadingLabel")
         self.processLoadingLabel.setPixmap(QPixmap(u":/resources/general/load_wheel_24.webp"))
 
         self.horizontalLayout_8.addWidget(self.processLoadingLabel)
 
-        self.processCompleteLabel = QLabel(self.frame_7)
+        self.processCompleteLabel = QLabel(self.processed_subframe)
         self.processCompleteLabel.setObjectName(u"processCompleteLabel")
         self.processCompleteLabel.setPixmap(QPixmap(u":/resources/general/check_green.png"))
 
         self.horizontalLayout_8.addWidget(self.processCompleteLabel)
 
-        self.newAssetsLabel = QLabel(self.frame_7)
+        self.newAssetsLabel = QLabel(self.processed_subframe)
         self.newAssetsLabel.setObjectName(u"newAssetsLabel")
-        self.newAssetsLabel.setFont(font)
+        self.newAssetsLabel.setFont(font2)
 
         self.horizontalLayout_8.addWidget(self.newAssetsLabel)
 
@@ -927,17 +389,22 @@ class Ui_IngestForm(object):
         self.horizontalLayout_8.addItem(self.horizontalSpacer_5)
 
 
-        self.verticalLayout_6.addWidget(self.frame_7)
+        self.verticalLayout_6.addWidget(self.processed_subframe)
 
-        self.line_4 = QFrame(self.frame_6)
+        self.line_4 = QFrame(self.processed_frame)
         self.line_4.setObjectName(u"line_4")
         self.line_4.setFrameShape(QFrame.HLine)
         self.line_4.setFrameShadow(QFrame.Sunken)
 
         self.verticalLayout_6.addWidget(self.line_4)
 
-        self.newAssetListView = AssetListView(self.frame_6)
+        self.newAssetListView = AssetListView(self.processed_frame)
         self.newAssetListView.setObjectName(u"newAssetListView")
+        self.newAssetListView.setStyleSheet(u"QWidget#newAssetListView {\n"
+"background-color: rgb(72, 72, 72);\n"
+"border: none;\n"
+"}")
+        self.newAssetListView.setFrameShape(QFrame.NoFrame)
         self.newAssetListView.setResizeMode(QListView.Adjust)
         self.newAssetListView.setUniformItemSizes(True)
         self.newAssetListView.setWordWrap(True)
@@ -946,11 +413,11 @@ class Ui_IngestForm(object):
         self.verticalLayout_6.addWidget(self.newAssetListView)
 
 
-        self.horizontalLayout.addWidget(self.frame_6)
+        self.horizontalLayout.addWidget(self.processed_frame)
 
-        self.tabWidget.addTab(self.categorizeTab, "")
+        self.ingestTabWidget.addTab(self.categorizeTab, "")
 
-        self.verticalLayout_2.addWidget(self.tabWidget)
+        self.verticalLayout_2.addWidget(self.ingestTabWidget)
 
 
         self.verticalLayout_3.addWidget(self.frame_2)
@@ -999,7 +466,7 @@ class Ui_IngestForm(object):
         self.retranslateUi(IngestForm)
         self.cancelButton.clicked.connect(IngestForm.close)
 
-        self.tabWidget.setCurrentIndex(1)
+        self.ingestTabWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(IngestForm)
@@ -1007,8 +474,6 @@ class Ui_IngestForm(object):
 
     def retranslateUi(self, IngestForm):
         IngestForm.setWindowTitle(QCoreApplication.translate("IngestForm", u"Form", None))
-        self.titleLabel.setText(QCoreApplication.translate("IngestForm", u"Ingest Wizard", None))
-        self.label_3.setText(QCoreApplication.translate("IngestForm", u"Category :", None))
         self.collectPathTextEdit.setPlaceholderText(QCoreApplication.translate("IngestForm", u"Insert paths or urls here...", None))
         self.lightsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .ies ]", None))
         self.moviesLabel.setText(QCoreApplication.translate("IngestForm", u"Movies :", None))
@@ -1026,7 +491,7 @@ class Ui_IngestForm(object):
         self.copyLabel.setText(QCoreApplication.translate("IngestForm", u"Copy Assets", None))
         self.texturesReferencesLabel_2.setText(QCoreApplication.translate("IngestForm", u"Categorize Using Parent Folder", None))
         self.texturesReferencesCheckBox_2.setText("")
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.collectTab), QCoreApplication.translate("IngestForm", u"1. Collect", None))
+        self.ingestTabWidget.setTabText(self.ingestTabWidget.indexOf(self.collectTab), QCoreApplication.translate("IngestForm", u"Collection", None))
         self.loadingLabel.setText("")
         self.completedLabel.setText("")
         self.collectedLabel.setText(QCoreApplication.translate("IngestForm", u"Collected : 0/0 ", None))
@@ -1035,7 +500,7 @@ class Ui_IngestForm(object):
         self.processLoadingLabel.setText("")
         self.processCompleteLabel.setText("")
         self.newAssetsLabel.setText(QCoreApplication.translate("IngestForm", u"Processed : 0/0", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.categorizeTab), QCoreApplication.translate("IngestForm", u"2. Categorize", None))
+        self.ingestTabWidget.setTabText(self.ingestTabWidget.indexOf(self.categorizeTab), QCoreApplication.translate("IngestForm", u"Ingestion", None))
         self.nextButton.setText(QCoreApplication.translate("IngestForm", u"Next", None))
         self.cancelButton.setText(QCoreApplication.translate("IngestForm", u"Cancel", None))
     # retranslateUi

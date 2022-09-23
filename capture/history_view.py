@@ -1,12 +1,7 @@
 # -- Third-party --
-from PySide6.QtCore import QMargins, QPoint, QRect, Qt, QSortFilterProxyModel, Slot, QItemSelection, QModelIndex, Signal
-from PySide6.QtGui import (QColor, QFont, QPainter, QRegion, QPainterPath, QPixmap,
-                            QDrag, QCursor, QAction, QIcon)
-from PySide6.QtWidgets import (QHBoxLayout, QListView, QStyle,
-                               QStyledItemDelegate, QAbstractItemView, QTreeView, QTreeWidgetItem,
-                               QWidget, QStyleOption, QMenu)
-from qtshared6.delegates import (BaseItemDelegate, IconIndicator, NamedEnum, AutoEnum,
-                                 Statuses, scale_icon)
+from relic.qt import *
+from relic.qt.delegates import (BaseItemDelegate, IconIndicator,
+                                Statuses, Indication)
 
 TREE_GROUP_STYLE = """
 QTreeView {
@@ -57,34 +52,10 @@ QTreeView::branch:open:has-children:has-siblings  {
 }
 """
 
-class Types(IconIndicator):
-    Screenshot = {
-        'data': scale_icon(QPixmap(':type/screenshot.png')),
-        'group': None,
-        'ext': ['.png'],
-        'actions': []}
-    Video = {
-        'data': scale_icon(QPixmap(':type/video.png')),
-        'group': None,
-        'ext': ['.mp4'],
-        'actions': []}
-    Animated = {
-        'data': scale_icon(QPixmap(':type/gif.png')),
-        'group': None,
-        'ext': ['.webp', '.gif'],
-        'actions': []}
-    """
-    Maya = {
-        'data': scale_icon(QPixmap(':type/gif.png')),
-        'group': None,
-        'ext': ['.ma'],
-        'actions': []}
-    Nuke = {
-        'data': scale_icon(QPixmap(':type/gif.png')),
-        'group': None,
-        'ext': ['.nk'],
-        'actions': []}
-    """
+class TypesIndicator(IconIndicator):
+    Screenshot = ':type/screenshot.png'
+    Video = ':type/video.png'
+    Animated = ':type/gif.png'
 
 class HistoryTreeFilter(QSortFilterProxyModel):
     def __init__(self, filter_id):
@@ -114,6 +85,11 @@ class HistoryTreeFilter(QSortFilterProxyModel):
 class CaptureItem(object):
     __slots__ = ['name', 'path', 'count', 'status', 'type', 'progress', 'date', 'icon']
 
+    INDICATIONS = [
+        Indication('type', TypesIndicator, QRect(12, -22, 16, 16)),
+        Indication('status', Statuses,  QRect(28, -22, 16, 16))
+    ]
+
     def __init__(self, path):
         self.name = path.name
         self.path = path
@@ -123,14 +99,6 @@ class CaptureItem(object):
         self.progress = 0
         self.date = None
         self.icon = None
-
-    class Indicators(AutoEnum):
-        type = {'data': Types, 'rect': QRect(12, -22, 16, 16)}
-        status = {'data': Statuses, 'rect': QRect(28, -22, 16, 16)}
-
-    class Columns(AutoEnum):
-        name = {'data': 0}
-        date = {'data': 6}
 
 
 class HistoryTreeView(QTreeView):
@@ -154,6 +122,7 @@ class HistoryTreeView(QTreeView):
         self.clicked.connect(self.expand_index)
         self.setSortingEnabled(True)
         self.setStyleSheet(TREE_GROUP_STYLE)
+        TypesIndicator.cache() # cache icon indicators
 
     @Slot(QModelIndex)
     def expand_index(self, index):

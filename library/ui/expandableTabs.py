@@ -47,7 +47,6 @@ class Ui_ExpandableTabs(object):
 "    background-color: rgb(108, 108, 108);\n"
 " }\n"
 "\n"
-"\n"
 "/* QMenu ------------------------------------------------------------------ */\n"
 "\n"
 "QMenu {\n"
@@ -61,8 +60,8 @@ class Ui_ExpandableTabs(object):
 "    color: rgb(200, 200, 200);\n"
 "    padding-left: 2px;\n"
 "    margin-left: 0px;\n"
-"    m"
-                        "argin-right: 0px;\n"
+"    margin"
+                        "-right: 0px;\n"
 "}\n"
 "QMenu::item {\n"
 "    padding: 4px;\n"
@@ -95,23 +94,15 @@ class Ui_ExpandableTabs(object):
 "QAbstractSpinBox,\n"
 "QTextEdit {\n"
 "    background-color: rgb(43, 43, 43);\n"
-"/*\n"
-"    border: 2px solid rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"    color: rgb(200, 200, 200);\n"
-"    padding: 1px;\n"
-"    margin-top: 0px;\n"
-"    padding-left: 0px;\n"
-"*/\n"
 "}\n"
 "\n"
-"/* QSlider ------------------"
-                        "---------------------------------------------- */\n"
+"/* QSlider ---------------------------------------------------------------- */\n"
 "QSlider::add-page:horizontal, \n"
 "QSlider::sub-page:horizontal,\n"
 "QSlider::add-page:vertical, \n"
 "QSlider::sub-page:vertical {\n"
-"    background: rgb(43, 43, 43);\n"
+"    backgr"
+                        "ound: rgb(43, 43, 43);\n"
 "}\n"
 "QSlider::add-page:vertical, \n"
 "QSlider::sub-page:vertical {\n"
@@ -143,8 +134,7 @@ class Ui_ExpandableTabs(object):
 "    background: rgb(43, 43, 43);\n"
 "    border: 1px solid rgb(68, 68, 68);\n"
 "    border-radius: 4px;\n"
-"    margi"
-                        "n: 0px;\n"
+"    margin: 0px;\n"
 "}\n"
 "QSlider::groove:horizontal {\n"
 "    height: 4px;\n"
@@ -153,7 +143,8 @@ class Ui_ExpandableTabs(object):
 "    width: 4px;\n"
 "}\n"
 "QSlider::sub-page:vertical:disabled, \n"
-"QSlider::sub-page:horizontal:disabled {\n"
+"QSlider::sub-page:hori"
+                        "zontal:disabled {\n"
 "    background: #14506E;\n"
 "}\n"
 "\n"
@@ -170,10 +161,16 @@ class Ui_ExpandableTabs(object):
         sizePolicy.setHeightForWidth(self.HeaderFrame.sizePolicy().hasHeightForWidth())
         self.HeaderFrame.setSizePolicy(sizePolicy)
         self.HeaderFrame.setFocusPolicy(Qt.ClickFocus)
-        self.HeaderFrame.setStyleSheet(u"QFrame{\n"
+        self.HeaderFrame.setStyleSheet(u"QFrame#HeaderFrame {\n"
 "    background-color: rgb(58, 58, 58);\n"
 "    border: 1px solid rgb(43,43,43);\n"
 "    border-top: 1px solid rgb(92,92,92);\n"
+"}\n"
+"QWidget {\n"
+"padding: 0px;\n"
+"margin: 0px;\n"
+"border: none;\n"
+"background-color: transparent;\n"
 "}")
         self.horizontalLayout_5 = QHBoxLayout(self.HeaderFrame)
         self.horizontalLayout_5.setSpacing(0)
@@ -201,6 +198,8 @@ class Ui_ExpandableTabs(object):
 "    background-color: rgb(150, 146, 137);\n"
 "	border: none;\n"
 "    border-radius: 1px;\n"
+"    margin-top: 1px;\n"
+"    margin-bottom: 1px;\n"
 "}")
         self.styledLine_1.setFrameShadow(QFrame.Plain)
         self.styledLine_1.setLineWidth(0)
@@ -212,10 +211,6 @@ class Ui_ExpandableTabs(object):
         self.iconButton = QToolButton(self.HeaderFrame)
         self.iconButton.setObjectName(u"iconButton")
         self.iconButton.setFocusPolicy(Qt.NoFocus)
-        self.iconButton.setStyleSheet(u"padding: 0px;\n"
-"margin-right: 0px;\n"
-"border: none;\n"
-"background-color: transparent;")
         self.iconButton.setIconSize(QSize(22, 22))
 
         self.horizontalLayout.addWidget(self.iconButton)
@@ -232,7 +227,6 @@ class Ui_ExpandableTabs(object):
         font = QFont()
         font.setPointSize(10)
         self.nameLabel.setFont(font)
-        self.nameLabel.setStyleSheet(u"border:none;")
         self.nameLabel.setFrameShape(QFrame.NoFrame)
         self.nameLabel.setFrameShadow(QFrame.Sunken)
 
@@ -241,8 +235,6 @@ class Ui_ExpandableTabs(object):
         self.countSpinBox = QSpinBox(self.HeaderFrame)
         self.countSpinBox.setObjectName(u"countSpinBox")
         self.countSpinBox.setFocusPolicy(Qt.NoFocus)
-        self.countSpinBox.setStyleSheet(u"background-color: transparent;\n"
-"border:none;")
         self.countSpinBox.setReadOnly(True)
         self.countSpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.countSpinBox.setKeyboardTracking(False)
@@ -262,15 +254,10 @@ class Ui_ExpandableTabs(object):
         self.checkButton.setObjectName(u"checkButton")
         self.checkButton.setEnabled(True)
         self.checkButton.setFocusPolicy(Qt.NoFocus)
-        self.checkButton.setStyleSheet(u"QToolButton {\n"
-"    padding: 0px;\n"
-"    margin: 1px;\n"
-"    background-color: transparent;\n"
-"	border :none;\n"
-"}\n"
-"QToolButton:hover {\n"
+        self.checkButton.setStyleSheet(u"QToolButton:hover {\n"
 "    background-color: rgb(92, 92, 92);\n"
 "    color: rgb(250, 250, 250);\n"
+"    border-radius: 2px;\n"
 "}")
         self.checkButton.setCheckable(True)
 
@@ -286,7 +273,6 @@ class Ui_ExpandableTabs(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.ContentFrame.sizePolicy().hasHeightForWidth())
         self.ContentFrame.setSizePolicy(sizePolicy1)
-        self.ContentFrame.setStyleSheet(u"")
         self.ContentFrame.setFrameShape(QFrame.StyledPanel)
         self.ContentFrame.setFrameShadow(QFrame.Raised)
         self.horizontalLayout_3 = QHBoxLayout(self.ContentFrame)
@@ -339,15 +325,14 @@ class Ui_ExpandableTabs(object):
         self.verticalControl.setSizePolicy(sizePolicy)
         self.verticalControl.setMinimumSize(QSize(0, 0))
         self.verticalControl.setMaximumSize(QSize(16777215, 10))
-        self.verticalControl.setStyleSheet(u"QWidget {\n"
-"background-color: transparent;\n"
+        self.verticalControl.setCursor(QCursor(Qt.SplitVCursor))
+        self.verticalControl.setStyleSheet(u"QFrame#verticalControl {\n"
+"    border: 1px solid rgb(68,68,68);\n"
+"    background-color: rgb(52, 52, 52);\n"
 "}\n"
-"QWidget:hover {\n"
+"QFrame#verticalControl:hover {\n"
 "    background-color: rgb(92, 92, 92);\n"
 "    border: 1px solid rgb(92, 92, 92);\n"
-"}\n"
-"QFrame#verticalControl {\n"
-"border: 1px solid rgb(68,68,68);\n"
 "}\n"
 "")
         self.verticalControl.setFrameShape(QFrame.Box)
@@ -355,31 +340,23 @@ class Ui_ExpandableTabs(object):
         self.horizontalLayout_4.setSpacing(12)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.frame_3 = QFrame(self.verticalControl)
-        self.frame_3.setObjectName(u"frame_3")
-        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.frame_3.sizePolicy().hasHeightForWidth())
-        self.frame_3.setSizePolicy(sizePolicy2)
-        self.frame_3.setStyleSheet(u"QFrame {\n"
-"    border-radius: 0px;\n"
-"	border: 1px dotted gray;	\n"
-"	margin: 1px;\n"
-"	margin-left: -1px;\n"
-"	margin-right: -2px;\n"
+        self.line_5 = QFrame(self.verticalControl)
+        self.line_5.setObjectName(u"line_5")
+        self.line_5.setStyleSheet(u"QFrame {\n"
+"    background-color: transparent;\n"
+"	border-top: 1px dotted white;	\n"
+"	margin: 2px;\n"
 "}")
-        self.frame_3.setFrameShape(QFrame.StyledPanel)
-        self.frame_3.setFrameShadow(QFrame.Plain)
-        self.frame_3.setLineWidth(0)
-        self.frame_3.setMidLineWidth(0)
+        self.line_5.setFrameShape(QFrame.HLine)
+        self.line_5.setFrameShadow(QFrame.Sunken)
 
-        self.horizontalLayout_4.addWidget(self.frame_3)
+        self.horizontalLayout_4.addWidget(self.line_5)
 
         self.toolButton_up = QToolButton(self.verticalControl)
         self.toolButton_up.setObjectName(u"toolButton_up")
-        self.toolButton_up.setStyleSheet(u"margin:-1px;\n"
-"padding: 0px;")
+        self.toolButton_up.setEnabled(False)
+        self.toolButton_up.setStyleSheet(u"border:none;\n"
+"background-color: transparent;")
         self.toolButton_up.setIconSize(QSize(8, 8))
         self.toolButton_up.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.toolButton_up.setArrowType(Qt.UpArrow)
@@ -388,28 +365,25 @@ class Ui_ExpandableTabs(object):
 
         self.toolButton_down = QToolButton(self.verticalControl)
         self.toolButton_down.setObjectName(u"toolButton_down")
-        self.toolButton_down.setStyleSheet(u"margin:-1px;\n"
-"padding: 0px;")
+        self.toolButton_down.setEnabled(False)
+        self.toolButton_down.setStyleSheet(u"border:none;\n"
+"background-color: transparent;")
         self.toolButton_down.setIconSize(QSize(8, 8))
         self.toolButton_down.setArrowType(Qt.DownArrow)
 
         self.horizontalLayout_4.addWidget(self.toolButton_down)
 
-        self.frame_5 = QFrame(self.verticalControl)
-        self.frame_5.setObjectName(u"frame_5")
-        sizePolicy2.setHeightForWidth(self.frame_5.sizePolicy().hasHeightForWidth())
-        self.frame_5.setSizePolicy(sizePolicy2)
-        self.frame_5.setStyleSheet(u"QFrame {\n"
-"    border-radius: 0px;\n"
-"	border: 1px dotted gray;	\n"
-"	margin: 1px;\n"
-"	margin-left: -1px;\n"
-"	margin-right: -2px;\n"
+        self.line_2 = QFrame(self.verticalControl)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setStyleSheet(u"QFrame {\n"
+"    background-color: transparent;\n"
+"	border-top: 1px dotted white;	\n"
+"	margin: 2px;\n"
 "}")
-        self.frame_5.setFrameShape(QFrame.StyledPanel)
-        self.frame_5.setFrameShadow(QFrame.Plain)
+        self.line_2.setFrameShape(QFrame.HLine)
+        self.line_2.setFrameShadow(QFrame.Sunken)
 
-        self.horizontalLayout_4.addWidget(self.frame_5)
+        self.horizontalLayout_4.addWidget(self.line_2)
 
 
         self.verticalLayout_2.addWidget(self.verticalControl)

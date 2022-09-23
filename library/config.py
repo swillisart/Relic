@@ -10,7 +10,7 @@ from strand.client import StrandClient
 from qtshared6.settings import Preferences
 
 from relic.scheme import Classification
-from relic.local import Extension, INGEST_PATH, getAssetSourceLocation
+from relic.local import Extension
 
 PEAK = StrandClient('peak')
 USERPROFILE = os.getenv('userprofile')

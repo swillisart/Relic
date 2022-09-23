@@ -6,9 +6,8 @@ from collections import defaultdict
 from library import objectmodels
 from library.config import RELIC_PREFS
 from library.objectmodels import relationships, subcategory, CategoryColor
-from library.ui.expandableTabs import Ui_ExpandableTabs
 from library.widgets.util import ListViewFocus
-
+from relic.qt.expandable_group import ExpandableGroup
 from qtshared6.utils import polymorphicItem
 # -- Third-party --
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
@@ -69,7 +68,6 @@ class subcategoryDelegate(QStyledItemDelegate):
 
         fm = painter.fontMetrics()
         lh = fm.lineSpacing() + 18
-        #print(self.parent().isExpanded(index))#self.IsExpanded)
         text_width = fm.horizontalAdvance(name_text) + lh
         painter.setPen(QColor(108, 108, 108))
         painter.drawText(
@@ -708,16 +706,13 @@ class CategoryManager(QObject):
 
 
 
-class ExpandableTab(Ui_ExpandableTabs, QWidget):
+class ExpandableTab(ExpandableGroup):
 
-    collapseExpand = Signal(bool)
+    BASE_HEIGHT = 320
 
-    def __init__(self, category, *args, **kwargs):
-        super(ExpandableTab, self).__init__(*args, **kwargs)
-        self.setupUi(self)
-        self.state = False
+    def __init__(self, category):
+        super(ExpandableTab, self).__init__(content=None)
         self.category = category
-        self.height_store = 320
 
         icon = QIcon(category.icon)
         self.iconButton.setIcon(icon)
@@ -733,57 +728,3 @@ class ExpandableTab(Ui_ExpandableTabs, QWidget):
                     color.blue(),
                     )
             )
-        for x in [self.toolButton_up, self.toolButton_down, self.countSpinBox, self.checkButton, self.iconButton]:
-            x.setAttribute(Qt.WA_TransparentForMouseEvents)
-
-        self.ContentFrame.setVisible(False)
-        self.pressing = False
-
-    @property
-    def expand_height(self):
-        return self.height_store
-
-    @expand_height.setter
-    def expand_height(self, h):
-        self.height_store = h if h > 120 else 320
-
-    def mousePressEvent(self, event):
-        super(ExpandableTab, self).mousePressEvent(event)
-        self.global_start = self.mapToGlobal(event.pos())
-        if self.HeaderFrame.underMouse():
-            self.toggleState()
-        elif event.buttons() == Qt.LeftButton and self.verticalControl.underMouse():
-            self.last = 0
-            self.pressing = True
-
-    def mouseMoveEvent(self, event):
-        super(ExpandableTab, self).mouseMoveEvent(event)
-        if (event.buttons() & Qt.LeftButton & self.pressing):
-            offset = (self.global_start.y() - self.mapToGlobal(event.pos()).y())                
-            height_adjust = self.size().height() + -(offset - self.last)
-            if not height_adjust <= 76:
-                self.setFixedHeight(height_adjust)
-            self.last = offset
-
-    def mouseReleaseEvent(self, event):
-        super(ExpandableTab, self).mouseReleaseEvent(event)
-        self.pressing = False
-
-    def expandState(self):
-        self.state = False
-        self.toggleState()
-
-    def collapseState(self):
-        self.state = True
-        self.toggleState()
-
-    def toggleState(self):
-        self.state = not self.state
-        if self.state:
-            self.setFixedHeight(self.expand_height )
-        else:
-            self.expand_height = self.size().height() 
-            self.setFixedHeight(29)
-        self.checkButton.setChecked(self.state)
-        self.ContentFrame.setVisible(self.state)
-        self.collapseExpand.emit(self.state)

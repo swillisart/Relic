@@ -23,18 +23,18 @@ class SimpleAsset(object):
         self.name = name
         self.id = id
 
-class SearchBox(QLineEdit):
+class FocusedSearchBox(QLineEdit):
 
     focusOut = Signal(bool)
     onReturn = Signal(bool)
 
     def __init__(self, *args, **kwargs):
-        super(SearchBox, self).__init__(*args, **kwargs)
+        super(FocusedSearchBox, self).__init__(*args, **kwargs)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setPlaceholderText('Filter...')
-        self.stylefont = QFont("Segoi UI", 9)
-        self.stylefont.setStyleHint(QFont.TypeWriter)
-        self.setFont(self.stylefont)
+        stylefont = QFont("Segoi UI", 9)
+        stylefont.setStyleHint(QFont.TypeWriter)
+        self.setFont(stylefont)
         self.setFrame(False)
 
     def keyPressEvent(self, event):
@@ -44,10 +44,10 @@ class SearchBox(QLineEdit):
         elif event.key() == Qt.Key_Return:
             self.onReturn.emit(True)
         else:
-            super(SearchBox, self).keyPressEvent(event)
+            super(FocusedSearchBox, self).keyPressEvent(event)
 
     def paintEvent(self, event):
-        super(SearchBox, self).paintEvent(event)
+        super(FocusedSearchBox, self).paintEvent(event)
 
         if self.hasFocus() and self.text() and not self.selectedText():
             painter = QPainter(self)
@@ -134,7 +134,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         selmod.selectionChanged.connect(self.onSelection)
 
         # Widgets
-        self.searchBox = SearchBox()
+        self.searchBox = FocusedSearchBox()
         self.searchBox.installEventFilter(self.focus_filter)
         self.searchBox.textChanged.connect(self.filterRegExpChanged)
         self.searchBox.focusOut.connect(self.listView.setFocus)

@@ -37,7 +37,6 @@ QPushButton:hover {
     background-color: rgb(108, 108, 108);
  }
 
-
 /* QMenu ------------------------------------------------------------------ */
 
 QMenu {
@@ -84,14 +83,6 @@ QLineEdit,
 QAbstractSpinBox,
 QTextEdit {
     background-color: rgb(43, 43, 43);
-/*
-    border: 2px solid rgb(43, 43, 43);
-    border-radius: 3px;
-    color: rgb(200, 200, 200);
-    padding: 1px;
-    margin-top: 0px;
-    padding-left: 0px;
-*/
 }
 
 /* QSlider ---------------------------------------------------------------- */
@@ -174,10 +165,16 @@ QSlider::sub-page:horizontal:disabled {
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">QFrame{
+      <string notr="true">QFrame#HeaderFrame {
     background-color: rgb(58, 58, 58);
     border: 1px solid rgb(43,43,43);
     border-top: 1px solid rgb(92,92,92);
+}
+QWidget {
+padding: 0px;
+margin: 0px;
+border: none;
+background-color: transparent;
 }</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -244,6 +241,8 @@ QSlider::sub-page:horizontal:disabled {
     background-color: rgb(150, 146, 137);
 	border: none;
     border-radius: 1px;
+    margin-top: 1px;
+    margin-bottom: 1px;
 }</string>
           </property>
           <property name="frameShadow">
@@ -264,12 +263,6 @@ QSlider::sub-page:horizontal:disabled {
          <widget class="QToolButton" name="iconButton">
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">padding: 0px;
-margin-right: 0px;
-border: none;
-background-color: transparent;</string>
           </property>
           <property name="text">
            <string/>
@@ -308,9 +301,6 @@ background-color: transparent;</string>
             <pointsize>10</pointsize>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true">border:none;</string>
-          </property>
           <property name="frameShape">
            <enum>QFrame::NoFrame</enum>
           </property>
@@ -326,10 +316,6 @@ background-color: transparent;</string>
          <widget class="QSpinBox" name="countSpinBox">
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">background-color: transparent;
-border:none;</string>
           </property>
           <property name="readOnly">
            <bool>true</bool>
@@ -378,15 +364,10 @@ border:none;</string>
          <enum>Qt::NoFocus</enum>
         </property>
         <property name="styleSheet">
-         <string notr="true">QToolButton {
-    padding: 0px;
-    margin: 1px;
-    background-color: transparent;
-	border :none;
-}
-QToolButton:hover {
+         <string notr="true">QToolButton:hover {
     background-color: rgb(92, 92, 92);
     color: rgb(250, 250, 250);
+    border-radius: 2px;
 }</string>
         </property>
         <property name="text">
@@ -407,9 +388,6 @@ QToolButton:hover {
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
-     </property>
-     <property name="styleSheet">
-      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -530,16 +508,17 @@ QToolButton:hover {
              <height>10</height>
             </size>
            </property>
+           <property name="cursor">
+            <cursorShape>SplitVCursor</cursorShape>
+           </property>
            <property name="styleSheet">
-            <string notr="true">QWidget {
-background-color: transparent;
+            <string notr="true">QFrame#verticalControl {
+    border: 1px solid rgb(68,68,68);
+    background-color: rgb(52, 52, 52);
 }
-QWidget:hover {
+QFrame#verticalControl:hover {
     background-color: rgb(92, 92, 92);
     border: 1px solid rgb(92, 92, 92);
-}
-QFrame#verticalControl {
-border: 1px solid rgb(68,68,68);
 }
 </string>
            </property>
@@ -563,41 +542,27 @@ border: 1px solid rgb(68,68,68);
              <number>0</number>
             </property>
             <item>
-             <widget class="QFrame" name="frame_3">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
+             <widget class="Line" name="line_5">
               <property name="styleSheet">
                <string notr="true">QFrame {
-    border-radius: 0px;
-	border: 1px dotted gray;	
-	margin: 1px;
-	margin-left: -1px;
-	margin-right: -2px;
+    background-color: transparent;
+	border-top: 1px dotted white;	
+	margin: 2px;
 }</string>
               </property>
-              <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Plain</enum>
-              </property>
-              <property name="lineWidth">
-               <number>0</number>
-              </property>
-              <property name="midLineWidth">
-               <number>0</number>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QToolButton" name="toolButton_up">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="styleSheet">
-               <string notr="true">margin:-1px;
-padding: 0px;</string>
+               <string notr="true">border:none;
+background-color: transparent;</string>
               </property>
               <property name="text">
                <string/>
@@ -618,9 +583,12 @@ padding: 0px;</string>
             </item>
             <item>
              <widget class="QToolButton" name="toolButton_down">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="styleSheet">
-               <string notr="true">margin:-1px;
-padding: 0px;</string>
+               <string notr="true">border:none;
+background-color: transparent;</string>
               </property>
               <property name="text">
                <string/>
@@ -637,27 +605,16 @@ padding: 0px;</string>
              </widget>
             </item>
             <item>
-             <widget class="QFrame" name="frame_5">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
+             <widget class="Line" name="line_2">
               <property name="styleSheet">
                <string notr="true">QFrame {
-    border-radius: 0px;
-	border: 1px dotted gray;	
-	margin: 1px;
-	margin-left: -1px;
-	margin-right: -2px;
+    background-color: transparent;
+	border-top: 1px dotted white;	
+	margin: 2px;
 }</string>
               </property>
-              <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Plain</enum>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
               </property>
              </widget>
             </item>

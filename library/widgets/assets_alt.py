@@ -8,15 +8,16 @@ from functools import partial
 from sequence_path.main import SequencePath as Path
 from collections import defaultdict
 from qtshared6.utils import polymorphicItem
-from qtshared6.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseItemModel, ItemDispalyModes
+from relic.qt.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseItemModel, ItemDispalyModes
 
 # -- Module --
 import library.config as config
-from library.config import Classification, Extension
+from relic.local import Category, Extension, TempAsset
+from relic.scheme import Classification
 from library.io.ingest import ConversionRouter, remakePreview
 from library.io.util import LocalThumbnail
 
-from library.objectmodels import allCategories, subcategory, temp_asset, getCategoryConstructor, Library, Type
+from library.objectmodels import subcategory, getCategoryConstructor, Library, Type
 
 # -- Third-party --
 from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPool,
@@ -47,16 +48,16 @@ class AssetItemModel(BaseItemModel):
         for index in indices:
             obj = index.data(polymorphicItem.Object)
             if obj:
-                if isinstance(obj, temp_asset):
+                if isinstance(obj, TempAsset):
                     by_category['uncategorized'].append(obj.export)
                 else:
                     for asset in obj.recurseDependencies(obj):
                         # Insert asset into the payload
                         if isinstance(asset, polymorphicItem):
                             asset = asset.data(polymorphicItem.Object)
-                        key = allCategories.slots[asset.category]
+                        key = Category(asset.category).name.lower()
                         by_category[key].append(asset.export)
-                        
+
                 paths.append(QUrl.fromLocalFile(str(obj.path)))
                 unhashable['icon'].append(obj.icon)
                 unhashable['category'].append(obj.category)
@@ -365,7 +366,7 @@ class AssetListView(BaseView):
             if subcategory and asset.type != Type.COLLECTION:
                 count_data[subcategory.id] -= 1
 
-            if not isinstance(asset, temp_asset):
+            if not isinstance(asset, TempAsset):
                 asset.remove()
             self.setRowHidden(index.row(), True)
             self.onDeleted.emit(index)

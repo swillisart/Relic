@@ -8,24 +8,8 @@ from enum import Enum
 from PySide6.QtCore import  QSize
 from PySide6.QtGui import Qt, QPixmap, QPainter, QImage
 from PySide6.QtSvgWidgets import QSvgWidget
-from PySide6.QtSvg import QSvgRenderer
 import numpy as np
-
-
-class IndexedEnum(Enum):
-    """Automatically sets the INDEX by order and VALUE from the argument.
-    """
-    def __new__(cls, arg):
-        obj = object.__new__(cls)
-        obj.index = len(cls)
-        obj._value_ = arg
-        return obj
-
-    def __int__(self):
-        return int(self.index)
-
-    def __str__(self):
-        return str(self.name)
+from extra_types.enums import IndexedEnum
 
 
 class Cursors(IndexedEnum):
@@ -65,15 +49,14 @@ class CursorInfo(Structure):
 GetCursorInfo = windll.user32.GetCursorInfo
 GetCursorInfo.argtypes = [POINTER(CursorInfo)]
 
-SVG_WIDGET = QSvgWidget()
-SVG_RENDERER = SVG_WIDGET.renderer()
 
 CURSOR_ROOT = '{}/cursors/'.format(os.getenv('SystemRoot').replace('\\', '/'))
 EXTENSION = '.svg'
 
-
 def build_cursor_data(cursor_size):
     results = []
+    SVG_WIDGET = QSvgWidget()
+    SVG_RENDERER = SVG_WIDGET.renderer()
     for cursor in Cursors:
         SVG_WIDGET.load(CURSOR_ROOT + cursor.name.lower() + EXTENSION)
         w = cursor_size; h = cursor_size

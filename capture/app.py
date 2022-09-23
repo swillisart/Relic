@@ -2,40 +2,63 @@ import ctypes
 import os
 import sys
 import operator
-import timeit
 
 from datetime import datetime
-from functools import partial
+from functools import partial, cached_property
 from enum import IntEnum
+from extra_types.enums import DataAutoEnum
+
+# -- Third-party --
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
+from relic.qt.delegates import ItemDispalyModes, BaseItemModel
+from relic.qt.expandable_group import ExpandableGroup
+from sequence_path.main import SequencePath as Path
+from strand.client import StrandClient
+from strand.server import StrandServer
+from d3dshot.d3dshot import D3DShot
 import av
 from av.filter import Graph
 from av import AudioFrame, VideoFrame
 import numpy as np
 from fractions import Fraction
 
-import qtshared6.resources
-# -- Third-party --
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
-from qtshared6.delegates import ItemDispalyModes, AutoEnum, Statuses, BaseItemModel
-from qtshared6.expandable_group import ExpandableGroup
-from sequence_path.main import SequencePath as Path
-from strand.client import StrandClient
-from strand.server import StrandServer
-from enum import Enum
-from d3dshot.d3dshot import D3DShot
-
 # -- Module --
 import resources
-from history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, Types,
-                            scale_icon)
+from history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, TypesIndicator)
 from ui.dialog import Ui_ScreenCapture
 from cursor import get_cursor_arrays, build_cursor_data
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
+
+
+class CaptureType(object):
+    __slots__ = ['ext', 'group', 'actions']
+    def __init__(self, ext):
+        self.ext = ext
+        self.group = None
+        self.actions = []
+
+class Types(DataAutoEnum):
+    Screenshot = CaptureType(['.png'])
+    Video = CaptureType(['.mp4'])
+    Animated = CaptureType(['.webp', '.gif'])
+
+    def __getattr__(self, name):
+        try:
+            return self.__dict__[name]
+        except:
+            return getattr(self.__dict__['data'], name)
+
+    def __setattr__(self, name, value):
+        try:
+            setattr(self.data, name, value)
+        except:
+            super().__setattr__(name, value)
+
 
 def video_to_gif(path):
     out_path = path.suffixed('', ext='.gif')
@@ -108,7 +131,7 @@ class Recorder(QObject):
         audio_stream.codec_context.time_base = Fraction(1, 48000) #self.time_base
         return container
 
-    def createGraph(self):
+    def createCropGraph(self):
         graph = Graph()
         screen_width = self.screen.geometry().width()
         screen_height = self.screen.geometry().height()
@@ -134,7 +157,7 @@ class Recorder(QObject):
         self.capture_func = partial(self.d3d.screenshot, region=(tl.x(), tl.y(), br.x(), br.y()))
         self.container = self.createContainer(out_path)
 
-        self.graph = self.createGraph()
+        self.crop_graph = self.createCropGraph()
 
         if self.input_device.isNull():
             return
@@ -203,8 +226,8 @@ class Recorder(QObject):
 
         video_frame = VideoFrame.from_ndarray(image, format='bgra')
 
-        self.graph.push(video_frame)
-        filtered_frame = self.graph.pull()
+        self.crop_graph.push(video_frame)
+        filtered_frame = self.crop_graph.pull()
         filtered_frame.pts = pts
         # muxing
         try:
@@ -213,10 +236,8 @@ class Recorder(QObject):
         except Exception as exerr:
             print(exerr)
 
-
         # audio
         audio_stream = container.streams.audio[0]
-
         if data.size() == 0:
             return
 
@@ -231,7 +252,6 @@ class Recorder(QObject):
             container.mux(audio_packet)
         except Exception as exerr:
             print(exerr)
-
 
 
 def get_preview_path(path):
@@ -378,48 +398,21 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     onConvertedGif = Signal(object)
 
-    class TreeActions(AutoEnum):
-        view_item = {
-            'obj': QAction(QIcon(':resources/icons/app_icon.ico'), 'View'),
-            'key': 'space'}
-        open_location = {
-            'obj': QAction(QIcon(':resources/icons/folder.svg'), 'Open File Location'),
-            'key': 'Ctrl+O'}
-        rename_item = {
-            'obj': QAction('Rename')}
-        remove_item = {
-            'obj': QAction('Delete'),
-            'key': 'Del'}
-        copy_to_clipboard = {
-            'obj': QAction('Copy To Clipboard'),
-            'key': 'ctrl+c'}
-
-    class TrayActions(AutoEnum):
-        taskbar_pin = {'obj': QAction('Taskbar Pin Toggle')}
-        separator = {'obj': None}
-        _close = {'obj': QAction('Exit')}
-
     def __init__(self, *args, **kwargs):
         super(CaptureWindow, self).__init__(*args, **kwargs)
         self.pinned = False
         self.setupUi(self)
 
         # -- System Tray --
-        app_icon = QIcon(':/resources/icons/capture.svg')
-        self.tray = QSystemTrayIcon(app_icon, self)
+        self.tray = QSystemTrayIcon(QIcon(':/resources/icons/capture.svg'), self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
         tray_menu = QMenu(self)
         self.tray.setContextMenu(tray_menu)
-
+        self.separator = QAction()
+        self.separator.setSeparator(True)
         # -- Actions, Signals & Slots --
-        for action in self.TrayActions:
-            if isinstance(action.obj, QAction):
-                self.defineAction(action)
-                tray_menu.addAction(action.obj)
-            else:
-                tray_menu.addSeparator()
-
+        tray_menu.addActions(self.tray_actions)
 
         gif_action = QAction('Convert To GIF')
         gif_action.triggered.connect(self.convert_to_animated)
@@ -438,10 +431,6 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         model_root = self.item_model.invisibleRootItem()
         history_layout = self.historyGroupBox.layout()
 
-        # Shared Tree actions
-        for action in self.TreeActions:
-            self.defineAction(action)
-
         for item_type in Types:
             tree = HistoryTreeView(self)
             proxy_model = HistoryTreeFilter(item_type)
@@ -449,8 +438,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             proxy_model.setSourceModel(self.item_model)
             tree.setModel(proxy_model)
             
-            for action in self.TreeActions:
-                tree.addAction(action.obj)
+            tree.addActions(self.tree_actions)
 
             tree.doubleClicked.connect(self.openInViewer)
             tree.resizeColumnToContents(0)
@@ -458,11 +446,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
             group = ExpandableGroup(tree, self.historyGroupBox)
             group.collapseExpand.connect(self.onGroupCollapse)
-            group.iconButton.setIconSize(QSize(16,16))
+            group.iconButton.setIconSize(QSize(18,18))
             ExpandableGroup.BAR_HEIGHT -= 1
             group.styledLine.hide()
             group.styledLine_1.hide()
-            group.iconButton.setIcon(QIcon(item_type.data))
+            item_icon = TypesIndicator(int(item_type))
+            group.iconButton.setIcon(item_icon.data)
             group.nameLabel.setText(item_type.name)
 
             history_layout.insertWidget(-2, group)
@@ -475,12 +464,31 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         try: os.mkdir(OUTPUT_PATH + '/previews')
         except: pass
-        self.cursor_pix = scale_icon(QPixmap(':/resources/icons/cursor.png'))
         self.strand_client = StrandClient('peak')
         self.recorder = Recorder()
         self.recording_thread = QThread(self)
         self.recorder.moveToThread(self.recording_thread)
         self.recording_thread.start()
+
+    @cached_property
+    def tree_actions(self):
+        result = [
+            QAction(QIcon(':resources/icons/app_icon.ico'), 'View', self, shortcut='space', triggered=self.view_item),
+            QAction(QIcon(':resources/icons/folder.svg'), 'Open File Location', self, shortcut='Ctrl+O', triggered=self.open_location),
+            QAction('Copy To Clipboard', self, shortcut='ctrl+c', triggered=self.copy_to_clipboard),
+            QAction('Rename', self, triggered=self.rename_item),
+            QAction('Delete', self, shortcut='Del', triggered=self.remove_item),
+        ]
+        return result
+
+    @cached_property
+    def tray_actions(self):
+        result = [
+            QAction('Taskbar Pin Toggle', self, triggered=self.taskbar_pin),
+            self.separator,
+            QAction('Exit', self, triggered=self._close),
+        ]
+        return result
 
     def taskbar_pin(self):
         if self.pinned:
@@ -608,7 +616,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         return new
 
     @Slot()
-    def view_item(self, val):
+    def view_item(self):
         item_type, selection_model = self.getActiveSelectionModel()
         indices = selection_model.selectedIndexes()
         if not indices:
@@ -617,7 +625,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.openInViewer(index)
 
     @Slot()
-    def rename_item(self, val):
+    def rename_item(self):
         item_type, selection_model = self.getActiveSelectionModel()
         indices = selection_model.selectedIndexes()
         if not indices:
@@ -641,7 +649,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.pinned = pin_state
 
     @Slot()
-    def open_location(self, val):
+    def open_location(self):
         item_type, selection_model = self.getActiveSelectionModel()
         indices = selection_model.selectedIndexes()
         if not indices:
@@ -655,7 +663,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         os.system(cmd)
 
     @Slot()
-    def remove_item(self, val):
+    def remove_item(self):
         item_type, selection_model = self.getActiveSelectionModel()
 
         if not selection_model.hasSelection():
@@ -694,9 +702,6 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         self.change_count(operator.sub, item_type, count)
         self.pinned = pin_state
-
-    def updateMovie(self, item, movie, val):
-        item.setIcon(QIcon(movie.currentPixmap()))
 
     @Slot()
     def convert_to_animated(self):
@@ -818,7 +823,7 @@ def new_capture_file(out_format='png'):
     return result
 
 def main(args):
-    app = qApp or QApplication(sys.argv)
+    app = QApplication(args)
     window = CaptureWindow()
     window.setWindowIcon(QIcon(':resources/icons/capture.svg'))
     ctypes.windll.kernel32.SetConsoleTitleW('Capture')
@@ -838,7 +843,6 @@ if __name__ == "__main__":
 
     # Define our Environment
     os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
-    os.environ['PATH'] = os.environ['PATH'] + ';P:/Code/Relic'
     from strand.client import StrandClient
     client = StrandClient('capture')
     client.sendPayload('')

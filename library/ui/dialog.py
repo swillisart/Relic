@@ -23,12 +23,13 @@ from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCh
     QSizePolicy, QSlider, QSpacerItem, QSpinBox,
     QStatusBar, QToolButton, QVBoxLayout, QWidget)
 import resources_rc
+import resources_rc
 
 class Ui_RelicMainWindow(object):
     def setupUi(self, RelicMainWindow):
         if not RelicMainWindow.objectName():
             RelicMainWindow.setObjectName(u"RelicMainWindow")
-        RelicMainWindow.resize(945, 474)
+        RelicMainWindow.resize(945, 540)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -37,738 +38,7 @@ class Ui_RelicMainWindow(object):
         icon = QIcon()
         icon.addFile(u":/resources/app/app_icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         RelicMainWindow.setWindowIcon(icon)
-        RelicMainWindow.setStyleSheet(u"\n"
-"QMainWindow::separator {\n"
-"    width: 0px;\n"
-"    height: 0px;\n"
-"    border: 2px solid rgb(43,43,43);\n"
-"    border-right: 1px solid rgb(108,108,108);\n"
-"    border-bottom: 1px solid rgb(108,108,108);\n"
-"    border-radius: 0px;\n"
-"    margin: 8px;\n"
-"    }\n"
-"    QMainWindow::separator:hover {\n"
-"    border-right: 1px solid rgb(150, 146, 137);\n"
-"    border-bottom: 1px solid rgb(150, 146, 137);\n"
-"    }\n"
-"    \n"
-"    interactiveSpinBox {\n"
-"        padding: 1px;\n"
-"        margin: 1px;\n"
-"        border: 1px solid rgb(43, 43, 43);\n"
-"    }\n"
-"    \n"
-"    /* QSlider ---------------------------------------------------------------- */\n"
-"    QSlider::add-page:horizontal, \n"
-"    QSlider::sub-page:horizontal,\n"
-"    QSlider::add-page:vertical, \n"
-"    QSlider::sub-page:vertical {\n"
-"        background: rgb(43, 43, 43);\n"
-"    }\n"
-"    QSlider::add-page:vertical, \n"
-"    QSlider::sub-page:vertical {\n"
-"        margin-left: 4px;\n"
-"        margin-right: 4px;\n"
-"    }\n"
-"    QS"
-                        "lider::add-page:horizontal, \n"
-"    QSlider::sub-page:horizontal {\n"
-"        margin-top: 4px;\n"
-"        margin-bottom: 4px;\n"
-"    }\n"
-"    QSlider::handle:vertical {\n"
-"        background: #787878;\n"
-"        border: 2px solid rgb(43, 43, 43);\n"
-"        width: 8px;\n"
-"        height: 6px;\n"
-"        margin: 0 -8px;\n"
-"        border-radius: 4px;\n"
-"    }\n"
-"    QSlider::handle:horizontal {\n"
-"        background: #787878;\n"
-"        border: 2px solid rgb(43, 43, 43);\n"
-"        margin: -8px 0;\n"
-"        width: 6px;\n"
-"        height: 8px;\n"
-"        border-radius: 4px;\n"
-"    }\n"
-"    QSlider::groove {\n"
-"        background: rgb(43, 43, 43);\n"
-"        border: 1px solid rgb(68, 68, 68);\n"
-"        border-radius: 4px;\n"
-"        margin: 0px;\n"
-"    }\n"
-"    QSlider::groove:horizontal {\n"
-"        height: 4px;\n"
-"    }\n"
-"    QSlider::groove:vertical {\n"
-"        width: 4px;\n"
-"    }\n"
-"    QSlider::sub-page:vertical:disabled, \n"
-"    QSlider::sub-page:horizontal:disabled {\n"
-""
-                        "        background: #14506E;\n"
-"    }\n"
-"    \n"
-"    \n"
-"    QGroupBox {\n"
-"        background-color: rgb(68, 68, 68);\n"
-"        color: rgb(225, 225, 225);\n"
-"        border: 1px solid rgb(43, 43, 43);\n"
-"        border-radius: 2px;\n"
-"        padding-top: 14px;\n"
-"    }\n"
-"    QGroupBox:title { \n"
-"        subcontrol-origin: padding;\n"
-"        padding-left: 6px;\n"
-"        padding-top: 3px;\n"
-"        margin-top: -2px;\n"
-"    }\n"
-"    \n"
-"    /* QTabWiget -------------------------------------------------------------- */\n"
-"    \n"
-"    QTabWidget {\n"
-"        padding: 4px;\n"
-"        padding-left: 16px;\n"
-"        padding-right: 16px;\n"
-"        selection-background-color: rgb(68, 68, 68);\n"
-"        border: 0;\n"
-"    }\n"
-"    QTabWidget::tab-bar {\n"
-"        alignment: center;\n"
-"    }\n"
-"    QTabWidget::pane {\n"
-"        border: none;\n"
-"        margin: 0px;\n"
-"    }\n"
-"    QTabWidget::pane:selected {\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    \n"
-"  "
-                        "  /* QTabBar ---------------------------------------------------------------- */\n"
-"    \n"
-"    QTabBar {\n"
-"        qproperty-drawBase: 0;\n"
-"        border-radius: 3px;\n"
-"        margin: 0px;\n"
-"        padding: 4px;\n"
-"        border: 0;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"        font: bold 10pt;\n"
-"    }\n"
-"    \n"
-"    QTabBar::tab {\n"
-"        border-bottom: 3px solid rgb(55, 55, 55);\n"
-"        color: #787878;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    \n"
-"    /* QTabBar::tab - selected ----------------------------------------------- */\n"
-"    \n"
-"    QTabBar::tab:top:selected:disabled {\n"
-"        border-bottom: 3px solid #14506E;\n"
-"        color: #787878;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    QTabBar::tab:bottom:selected:disabled {\n"
-"        border-top: 3px solid #14506E;\n"
-"        color: #787878;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    QTabBar::tab:left:selected:disabled {\n"
-"        borde"
-                        "r-left: 3px solid #14506E;\n"
-"        color: #787878;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    QTabBar::tab:right:selected:disabled {\n"
-"        border-right: 3px solid #14506E;\n"
-"        color: #787878;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    \n"
-"    /* QTabBar::tab - !selected and disabled ---------------------------------- */\n"
-"    \n"
-"    QTabBar::tab:disabled {\n"
-"        margin: 0; padding: 0; border: none;\n"
-"    }\n"
-"    QTabBar::tab:top:!selected:disabled {\n"
-"        margin-left: 4px;\n"
-"        margin-right: 4px;\n"
-"        margin-top: 2px;\n"
-"        margin-bottom: 1px;\n"
-"        padding-left: 10px; \n"
-"        padding-right: 10px;\n"
-"        padding-top: 4px;\n"
-"        padding-bottom: 4px;\n"
-"        min-width: 4px;\n"
-"        border-top-left-radius: 3px;\n"
-"        border-top-right-radius: 3px;\n"
-"        font-weight: normal;\n"
-"        border-bottom: 3px solid rgb(68, 68, 68);\n"
-"        border-right: 1px solid rgb(68, 6"
-                        "8, 68);\n"
-"        border-left: 1px solid rgb(68, 68, 68);\n"
-"        border-top: 1px solid rgb(68, 68, 68);\n"
-"        color: rgb(100, 100, 100);\n"
-"    }\n"
-"    QTabBar::tab:bottom:!selected:disabled {\n"
-"        border-top: 3px solid rgb(43, 43, 43);\n"
-"        color: #787878;\n"
-"        background-color: rgb(43, 43, 43);\n"
-"    }\n"
-"    QTabBar::tab:left:!selected:disabled {\n"
-"        border-right: 3px solid rgb(43, 43, 43);\n"
-"        color: #787878;\n"
-"        background-color: rgb(43, 43, 43);\n"
-"    }\n"
-"    QTabBar::tab:right:!selected:disabled {\n"
-"        border-left: 3px solid rgb(43, 43, 43);\n"
-"        color: #787878;\n"
-"        background-color: rgb(43, 43, 43);\n"
-"    }\n"
-"    /* QTabBar::tab - selected ----------------------------------------------- */\n"
-"    \n"
-"    QTabBar::tab {\n"
-"        background-color: rgb(55, 55, 55);\n"
-"        color: rgb(175, 175, 175);\n"
-"        margin-left: 4px;\n"
-"        margin-right: 4px;\n"
-"        margin-top: 2px;\n"
-"        marg"
-                        "in-bottom: 1px;\n"
-"        padding-left: 18px; \n"
-"        padding-right: 18px;\n"
-"        padding-top: 4px;\n"
-"        padding-bottom: 4px;\n"
-"        min-width: 4px;\n"
-"        border-top-left-radius: 3px;\n"
-"        border-top-right-radius: 3px;\n"
-"        font-weight: normal;\n"
-"        border-bottom: 3px solid rgb(43, 43, 43);\n"
-"        border-right: 1px solid rgb(43, 43, 43);\n"
-"        border-left: 1px solid rgb(43, 43, 43);\n"
-"        border-top: 1px solid rgb(43, 43, 43);\n"
-"    }\n"
-"    \n"
-"    QTabBar::tab:selected {\n"
-"        color: rgb(220, 220, 220);\n"
-"        background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));\n"
-"        border-bottom: 2px solid rgb(70, 125, 160);\n"
-"        border-right: 1px solid rgb(66, 118, 150);\n"
-"        border-left: 1px solid rgb(66, 118, 150);\n"
-"        border-top-left-radius: 3px;\n"
-"        border-top-right-radius: 3px;\n"
-"        border-top: 1px solid rgb(43, 43, 43);\n"
-"    }\n"
-"    \n"
-""
-                        "    QRadioButton::indicator {\n"
-"        width:                  8px;\n"
-"        height:                 8px;\n"
-"        border-radius:          6px;\n"
-"    }\n"
-"    QRadioButton::indicator:checked {\n"
-"        background-color:       gray;\n"
-"        border:                 2px solid rgb(43,43,43);\n"
-"    }\n"
-"    QRadioButton::indicator:unchecked {\n"
-"        background-color:       rgb(43,43,43);\n"
-"        border:                 2px solid rgb(43,43,43);\n"
-"    }\n"
-"    QRadioButton:indicator:hover {\n"
-"        border: 2px solid rgb(150, 146, 137);\n"
-"    }\n"
-"    \n"
-"    QToolButton {\n"
-"        color: rgb(220,220,220);\n"
-"        padding: 0px;\n"
-"        margin: 0px;\n"
-"        border-radius: 3px;\n"
-"        border: 1px solid rgb(68, 68, 68);\n"
-"    }\n"
-"    QToolButton:pressed {\n"
-"        background-color: rgb(43, 43, 43);\n"
-"        border: 1px solid rgb(150, 149, 147);\n"
-"    }\n"
-"    QToolButton:checked {\n"
-"        background-color: rgb(140, 136, 127);\n"
-"        borde"
-                        "r: 1px solid rgb(150, 146, 137);\n"
-"        color: rgb(255, 255, 255);\n"
-"    }\n"
-"    QToolButton:hover {\n"
-"        background-color: rgb(108, 108, 108);\n"
-"        color: rgb(250, 250, 250);\n"
-"    }\n"
-"    \n"
-"    QAbstractSpinBox:hover {\n"
-"        margin: 0px;\n"
-"        border: 1px solid rgb(43, 43, 43);\n"
-"    }\n"
-"    QToolBox {\n"
-"        font-size: 11px;\n"
-"        border: 0px;\n"
-"        border-radius: 3px;\n"
-"        border: 1px solid rgb(43,43,43);\n"
-"    }\n"
-"    \n"
-"    QToolBox::tab {\n"
-"        border: 0px solid rgb(108, 108, 108);\n"
-"        border-radius: 3px;\n"
-"        background-color:rgb(92, 92, 92);\n"
-"        margin: 0px;\n"
-"        padding: 0px;\n"
-"    }\n"
-"    QToolBox::tab:selected {\n"
-"        border-left: 2px solid rgb(150, 146, 137);\n"
-"        background-color:rgb(108,108,108);\n"
-"    }\n"
-"    QStatusBar {\n"
-"        background-color: rgb(68, 68, 68);\n"
-"        color: rgb(200, 200, 200);\n"
-"        border-top: 1px solid rgb(43, 43, 43);\n"
-"   "
-                        "     margin-top: 2px;\n"
-"        padding-top: 2px;\n"
-"    }\n"
-"    QLineEdit:focus,\n"
-"    QTextEdit:focus,\n"
-"    QAbstractSpinBox:focus {\n"
-"        border: 1px solid rgb(43, 43, 43);\n"
-"        background-color: rgb(55, 55, 55);\n"
-"    }\n"
-"    QLineEdit,\n"
-"    QAbstractSpinBox,\n"
-"    QTextEdit {\n"
-"        background-color: rgb(43, 43, 43);\n"
-"        border-radius: 0px;\n"
-"        color: rgb(200, 200, 200);\n"
-"        padding: 0px;\n"
-"    }\n"
-"    QAbstractSpinBox {\n"
-"        background-color: rgb(68,68,68);\n"
-"        padding-left: 1px;\n"
-"    }\n"
-"    QDialog,\n"
-"    QLabel,\n"
-"    QFrame,\n"
-"    QPushButton,\n"
-"    QCheckBox,\n"
-"    QMainWindow,\n"
-"    QRadioButton {\n"
-"        background-color: rgb(68, 68, 68);\n"
-"        color: rgb(220, 220, 220);\n"
-"        selection-background-color: rgb(126, 126, 126);\n"
-"        selection-color: rgb(250, 250, 250);\n"
-"        outline: 0;\n"
-"    }\n"
-"    QSlider,\n"
-"    QFrame,\n"
-"    QScrollArea,\n"
-"    QVBoxLayout, \n"
-"  "
-                        "  QHBoxLayout {\n"
-"    background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    QDockWidget {\n"
-"        background: rgb(32,32,32);\n"
-"    }\n"
-"    QWidget:item:hover {\n"
-"        background-color: rgb(75, 75, 75);\n"
-"        color: rgb(250, 250, 250);\n"
-"    }\n"
-"    QWidget:item:selected {\n"
-"        background-color: rgb(140, 136, 127);\n"
-"        color: rgb(43, 43, 43);\n"
-"    }\n"
-"    QWidget:disabled {\n"
-"        background-color: rgb(43, 43, 43);\n"
-"        color: rgb(92, 92, 92);\n"
-"    }\n"
-"    \n"
-"    QScrollArea {\n"
-"        border: 1px solid rgb(57, 57, 57);\n"
-"    }\n"
-"    \n"
-"    /*\n"
-"    /* QMenu ------------------------------------------------------------------ */\n"
-"    \n"
-"    QMenu,\n"
-"    QMenuBar {\n"
-"        border: 1px solid rgb(68, 68, 68);\n"
-"        padding: 1px;\n"
-"        selection-color: rgb(250, 250, 250);\n"
-"        color: rgb(200, 200, 200);\n"
-"    }\n"
-"    QMenu::separator {\n"
-"        height: 1px;\n"
-"        background-color: rgb(92, 92, 92);\n"
-""
-                        "        color: rgb(200, 200, 200);\n"
-"        padding-left: 2px;\n"
-"        margin-left: 0px;\n"
-"        margin-right: 0px;\n"
-"    }\n"
-"    QMenu::item {\n"
-"        padding: 4px;\n"
-"        padding-left: 16px;\n"
-"        padding-right: 16px;\n"
-"        background-color: rgb(68, 68, 68);\n"
-"        color: rgb(200, 200, 200);\n"
-"    }\n"
-"    QMenu::indicator {\n"
-"        padding: 6px;\n"
-"        margin: -1px;\n"
-"        width: 13px;\n"
-"        height: 13px;\n"
-"        background-color: rgb(57, 57, 57);\n"
-"    }\n"
-"    QMenu::icon {\n"
-"        padding: 4px;\n"
-"        margin: 0px;\n"
-"        width: 18px;\n"
-"        height: 18px;\n"
-"        background-color: rgb(57, 57, 57);\n"
-"    }\n"
-"    QMenu::indicator:non-exclusive:checked {\n"
-"        image: url(:/resources/style/checkbox_checked.svg);\n"
-"    }\n"
-"    QMenu::indicator:non-exclusive:unchecked {\n"
-"        image: url(:/resources/style/checkbox.svg);\n"
-"    }\n"
-"    \n"
-"    /* QScrollBar ----------------------------------------"
-                        "--------------------- */\n"
-"    QScrollBar:horizontal {\n"
-"        height: 10px;\n"
-"        margin: 0px 16px 0px 16px;\n"
-"        border: 1px solid rgb(55, 55, 55);\n"
-"        border-radius: 40px;\n"
-"        background-color: rgb(55, 55, 55);\n"
-"    }\n"
-"    QScrollBar::handle:horizontal {\n"
-"        background-color: #787878;\n"
-"        border: 0px solid rgb(68, 68, 68);\n"
-"        border-radius: 4px;\n"
-"        min-width: 8px;\n"
-"    }\n"
-"    QScrollBar::add-line:horizontal:hover,\n"
-"    QScrollBar::add-line:horizontal:on,\n"
-"    QScrollBar::add-line:horizontal {\n"
-"        margin: 0px 3px 0px 0px;\n"
-"        border-image: url(:/resources/style/stylesheet-branch-closed.png);\n"
-"        height: 10px;\n"
-"        width: 6px;\n"
-"        subcontrol-position: right;\n"
-"        subcontrol-origin: margin;\n"
-"    }\n"
-"    QScrollBar::sub-line:horizontal:hover,\n"
-"    QScrollBar::sub-line:horizontal:on,\n"
-"    QScrollBar::sub-line:horizontal {\n"
-"        margin: 0px 0px 0px 3px;\n"
-"        "
-                        "border-image: url(:/resources/style/stylesheet-branch-closedleft.png);\n"
-"        height: 10px;\n"
-"        width: 6px;\n"
-"        subcontrol-position: left;\n"
-"        subcontrol-origin: margin;\n"
-"    }\n"
-"    QScrollBar:vertical {\n"
-"        background-color: rgb(55, 55, 55);\n"
-"        width: 10px;\n"
-"        margin: 16px 0px 16px 0px;\n"
-"        border: 1px solid rgb(55, 55, 55);\n"
-"        border-radius: 4px;\n"
-"    }\n"
-"    QScrollBar::handle:vertical {\n"
-"        background-color: #787878;\n"
-"        border: 1px solid rgb(68, 68, 68);\n"
-"        min-height: 8px;\n"
-"        border-radius: 4px;\n"
-"    }\n"
-"    QScrollBar::sub-line:vertical {\n"
-"        margin: 3px 0px 0px 0px;\n"
-"        border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
-"        height: 6px;\n"
-"        width: 10px;\n"
-"        subcontrol-position: top;\n"
-"        subcontrol-origin: margin;\n"
-"    }\n"
-"    QScrollBar::add-line:vertical {\n"
-"        margin: 0px 0px 3px 0px;\n"
-"        border-im"
-                        "age: url(:/resources/style/stylesheet-branch-open.png);\n"
-"        height: 6px;\n"
-"        width: 10px;\n"
-"        subcontrol-position: bottom;\n"
-"        subcontrol-origin: margin;\n"
-"    }\n"
-"    QScrollBar::sub-line:vertical:hover,\n"
-"    QScrollBar::sub-line:vertical:on {\n"
-"        border-image: url(:/resources/style/stylesheet-branch-openup.png);\n"
-"        height: 10px;\n"
-"        width: 10px;\n"
-"        subcontrol-position: top;\n"
-"        subcontrol-origin: margin;\n"
-"    }\n"
-"    QScrollBar::add-page:horizontal,\n"
-"    QScrollBar::sub-page:horizontal,\n"
-"    QScrollBar::up-arrow:horizontal,\n"
-"    QScrollBar::down-arrow:horizontal,\n"
-"    QScrollBar::up-arrow:vertical,\n"
-"    QScrollBar::down-arrow:vertical,\n"
-"    QScrollBar::add-page:vertical,\n"
-"    QScrollBar::sub-page:vertical  {\n"
-"        background: none;\n"
-"    }\n"
-"    QTableCornerButton::section {\n"
-"        background-color: rgb(92, 92, 92);\n"
-"        border: 1px rgb(43,43,43);\n"
-"        border-radius: 0px;\n"
-""
-                        "    }\n"
-"    QHeaderView {\n"
-"        background-color: rgb(68, 68, 68);\n"
-"        border: 0px transparent rgb(68,68,68);\n"
-"        padding: 0px;\n"
-"        margin: 1px;\n"
-"        border-radius: 0px;\n"
-"    }\n"
-"    QHeaderView::section {\n"
-"        background-color: rgb(92, 92, 92);\n"
-"        color: rgb(200,200,200);\n"
-"        border-bottom: 1px solid rgb(43,43,43);\n"
-"        border-right: 1px solid rgb(43,43,43);\n"
-"        border-radius: 0px;\n"
-"        text-align: center;\n"
-"    }\n"
-"    QHeaderView::section:vertical,\n"
-"    QHeaderView::section:horizontal {\n"
-"        padding-left: 6px;\n"
-"        margin-top: -2px;\n"
-"        margin-left: -3px;\n"
-"    }\n"
-"    QPushButton {\n"
-"        outline: none;\n"
-"        padding: 3px;\n"
-"        padding-left: 18px;\n"
-"        padding-right: 18px;\n"
-"        border: none;\n"
-"        background-color: rgb(92, 92, 92);\n"
-"    }\n"
-"    QPushButton:hover {\n"
-"        color: rgb(250, 250, 250);\n"
-"        background-color: rgb(108, 10"
-                        "8, 108);\n"
-"    }\n"
-"    \n"
-"    QAbstractItemView {\n"
-"        border: none;\n"
-"        alternate-background-color: rgb(75,75,75);\n"
-"        background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    QAbstractItemView::item {\n"
-"        color: rgb(200,200,200);\n"
-"        padding: 2px;\n"
-"    }\n"
-"    QAbstractItemView::item:has-children {\n"
-"        background-color: rgb(93, 93, 93);\n"
-"        margin-bottom: 2px;\n"
-"        color: rgb(250, 250, 250);\n"
-"    }\n"
-"    QAbstractItemView::item:!has-children {\n"
-"        border: none;\n"
-"    }\n"
-"    QTreeView::item:!has-children {\n"
-"        border-right: 1px solid rgb(43,43,43);\n"
-"        border-top: 1px solid rgb(64,64,64);\n"
-"    }\n"
-"    QAbstractItemView::branch {\n"
-"        padding: 2px;\n"
-"        padding-bottom: 2px;\n"
-"        padding-top: 2px;\n"
-"        padding-left: 4px;\n"
-"        margin-top: 0px;\n"
-"        margin-left: 0px;\n"
-"    }\n"
-"    QAbstractItemView::branch:has-children:!has-siblings:closed,\n"
-"    QAbstractItem"
-                        "View::branch:closed:has-children:has-siblings {\n"
-"        image: url(:/resources/style/stylesheet-branch-closed.png);\n"
-"        background-color: rgb(93, 93, 93);\n"
-"        margin-bottom: 2px;\n"
-"        padding-bottom: 4px;\n"
-"        padding-left: 7px;\n"
-"        padding-right: 3px;\n"
-"    }\n"
-"    QAbstractItemView::branch:open:has-children:!has-siblings,\n"
-"    QAbstractItemView::branch:open:has-children:has-siblings  {\n"
-"        image: url(:/resources/style/stylesheet-branch-open.png);\n"
-"        background-color: rgb(93, 93, 93);\n"
-"        width: 12px;\n"
-"        height: 12px;\n"
-"        margin-bottom: 2px;\n"
-"    }\n"
-"    QAbstractItemView::branch:has-siblings:!adjoins-item {\n"
-"        border-image: url(:/resources/style/stylesheet-vline.png);\n"
-"        margin-bottom: 2px;\n"
-"    }\n"
-"    QAbstractItemView::branch:!has-children:has-siblings:adjoins-item {\n"
-"        border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
-"        margin: -1px;\n"
-"        margin-t"
-                        "op: 1px;\n"
-"    }\n"
-"    QAbstractItemView::branch:!has-children:!has-siblings:adjoins-item {\n"
-"        border-image: url(:/resources/style/stylesheet-branch-end.png);\n"
-"        margin-bottom: -2px;\n"
-"    }\n"
-"    \n"
-"    /* QCombobox -------------------------------------------------------------- */\n"
-"    QComboBox {\n"
-"        border: 1px solid rgb(55,55,55);\n"
-"        border-radius: 2px;\n"
-"        background-color: rgb(92, 92, 92);\n"
-"        padding-top: 1px;\n"
-"        padding-bottom: 1px;\n"
-"        padding-left: 2px;\n"
-"        padding-right: 6px;\n"
-"        min-width: 75px;\n"
-"        color: rgb(200, 200, 200);\n"
-"    }\n"
-"    QComboBox::drop-down {\n"
-"        subcontrol-position: right;\n"
-"        width: 18px;\n"
-"        border-left-width: 2px;\n"
-"        border-left-color: rgb(68, 68, 68);\n"
-"        border-left-style: solid;\n"
-"        border-top-right-radius: 0px;\n"
-"        border-bottom-right-radius: 0px;\n"
-"        padding-right: 2px;\n"
-"        padding-left: 0px"
-                        ";\n"
-"    }\n"
-"    QComboBox::down-arrow,\n"
-"    QComboBox::down-arrow:on,\n"
-"    QComboBox::down-arrow:hover,\n"
-"    QComboBox::down-arrow:focus {\n"
-"        image: url(:/resources/style/stylesheet-branch-open.png);\n"
-"        width: 10px;\n"
-"        height: 6px;\n"
-"    }\n"
-"    \n"
-"    /* QCheckBox -------------------------------------------------------------- */\n"
-"    QCheckBox {\n"
-"        padding-left: -3px;\n"
-"        margin: 0px;\n"
-"        border: 1px solid transparent;\n"
-"    }\n"
-"    QCheckBox:hover {\n"
-"        border: 1px solid rgb(55,55,55);\n"
-"    }\n"
-"    QCheckBox::indicator {\n"
-"        width: 14px;\n"
-"        height: 14px;\n"
-"    }\n"
-"    QCheckBox::indicator:checked:hover,\n"
-"    QAbstractItemView::indicator:checked:hover {\n"
-"        image: url(:/resources/style/checkbox_checked_hover.svg);\n"
-"        padding-left: 4px;\n"
-"        width: 14px;\n"
-"        height: 14px;\n"
-"    }\n"
-"    QCheckBox::indicator:unchecked:hover,\n"
-"    QAbstractItemView::indicator:un"
-                        "checked:hover {\n"
-"        image: url(:/resources/style/checkbox_hover.svg);\n"
-"        padding-left: 4px;\n"
-"        width: 14px;\n"
-"        height: 14px;\n"
-"    }\n"
-"    QCheckBox::indicator:checked,\n"
-"    QAbstractItemView::indicator:checked {\n"
-"        image: url(:/resources/style/checkbox_checked.svg);\n"
-"        padding-left: 4px;\n"
-"        width: 14px;\n"
-"        height: 14px;\n"
-"    }\n"
-"    QCheckBox::indicator:checked:hover,\n"
-"    QAbstractItemView::indicator:checked:hover {\n"
-"        image: url(:/resources/style/checkbox_checked_hover.svg);\n"
-"        padding-left: 4px;\n"
-"        width: 14px;\n"
-"        height: 14px;\n"
-"    }\n"
-"    QCheckBox::indicator:unchecked,\n"
-"    QAbstractItemView::indicator:unchecked {\n"
-"        color: rgb(43, 43, 43);\n"
-"        image: url(:/resources/style/checkbox.svg);\n"
-"        padding-left: 4px;\n"
-"        width: 14px;\n"
-"        height: 14px;\n"
-"    }\n"
-"    QListView {\n"
-"        background-color: rgb(43, 43, 43);\n"
-"        bor"
-                        "der: 1px solid rgb(43,43,43);\n"
-"        margin: 1px;\n"
-"    }\n"
-"    \n"
-"    subcategoryTreeView {\n"
-"        border: none;\n"
-"        alternate-background-color: rgb(56,56,56);\n"
-"        background-color: rgb(43, 43, 43);\n"
-"    }\n"
-"    subcategoryTreeView::item,\n"
-"    subcategoryTreeView::item:has-children {\n"
-"        border-top: none;\n"
-"        padding-right: 8px;\n"
-"        padding-left: 1px;\n"
-"        margin-top: 1px;\n"
-"        margin-bottom: 1px;\n"
-"        margin-left: 1px;\n"
-"        padding: 0px;\n"
-"    }\n"
-"    \n"
-"    subcategoryTreeView::branch {\n"
-"        border-top: 0px solid rgb(43, 43, 43);\n"
-"        border-bottom: 0px solid rgb(43, 43, 43);\n"
-"        padding: 4px;\n"
-"        margin-top: 2px;\n"
-"        margin-bottom: 2px;\n"
-"    }\n"
-"    subcategoryTreeView::branch:has-siblings:!adjoins-item {\n"
-"        border-image: url(:/resources/style/stylesheet-vline.png);\n"
-"    }\n"
-"    subcategoryTreeView::branch:has-siblings:adjoins-item {\n"
-"        border-i"
-                        "mage: url(:/resources/style/stylesheet-branch-more.png);\n"
-"    }\n"
-"    subcategoryTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
-"        border-image: url(:/resources/style/stylesheet-branch-end.png);\n"
-"    }\n"
-"    subcategoryTreeView::branch:!has-children:has-siblings:adjoins-item {\n"
-"        border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
-"    }\n"
-"    subcategoryTreeView::branch:has-children:!has-siblings:closed,\n"
-"    subcategoryTreeView::branch:closed:has-children:has-siblings {\n"
-"        image: url(:/resources/style/treeExpand.svg);\n"
-"        background-color: rgb(43, 43, 43);\n"
-"    }\n"
-"    subcategoryTreeView::branch:open:has-children:!has-siblings,\n"
-"    subcategoryTreeView::branch:open:has-children:has-siblings  {\n"
-"        image: url(:/resources/style/treeCollapse.svg);\n"
-"        background-color: rgb(43, 43, 43);\n"
-"    }\n"
-"    scrollAreaWidgetContents {\n"
-"    background-color: rgb(68, 68, 68);\n"
-"    }\n"
-"    categoryScrollAreaW"
-                        "idgetContents {\n"
-"    background-color: rgb(68, 68, 68);\n"
-"    }")
+        RelicMainWindow.setStyleSheet(u"")
         RelicMainWindow.setAnimated(True)
         RelicMainWindow.setDockNestingEnabled(True)
         self.actionPreferences = QAction(RelicMainWindow)
@@ -975,6 +245,7 @@ class Ui_RelicMainWindow(object):
         palette.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
 #endif
         self.linksDock.setPalette(palette)
+        self.linksDock.setAutoFillBackground(True)
         self.linksDock.setStyleSheet(u"")
         self.linksDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.attrDockWidgetContents_2 = QWidget()
@@ -982,410 +253,6 @@ class Ui_RelicMainWindow(object):
         self.linksDock.setWidget(self.attrDockWidgetContents_2)
 
         self.verticalLayout.addWidget(self.linksDock)
-
-        self.dockTitleFrame = QFrame(self.centralwidget)
-        self.dockTitleFrame.setObjectName(u"dockTitleFrame")
-        self.dockTitleFrame.setStyleSheet(u"QFrame {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    border: 2px solid rgb(57,57,57);\n"
-"}")
-        self.dockTitleFrame.setFrameShape(QFrame.StyledPanel)
-        self.dockTitleFrame.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_5 = QHBoxLayout(self.dockTitleFrame)
-        self.horizontalLayout_5.setSpacing(9)
-        self.horizontalLayout_5.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.horizontalLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.dockTitleWidgets = QFrame(self.dockTitleFrame)
-        self.dockTitleWidgets.setObjectName(u"dockTitleWidgets")
-        self.dockTitleWidgets.setStyleSheet(u"border: none;")
-        self.dockTitleWidgets.setFrameShape(QFrame.StyledPanel)
-        self.dockTitleWidgets.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_7 = QHBoxLayout(self.dockTitleWidgets)
-        self.horizontalLayout_7.setSpacing(9)
-        self.horizontalLayout_7.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
-        self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.toolButton = QToolButton(self.dockTitleWidgets)
-        self.toolButton.setObjectName(u"toolButton")
-        self.toolButton.setEnabled(False)
-        self.toolButton.setStyleSheet(u"padding: -2px;\n"
-"margin-left: 4px;")
-
-        self.horizontalLayout_7.addWidget(self.toolButton)
-
-        self.label_2 = QLabel(self.dockTitleWidgets)
-        self.label_2.setObjectName(u"label_2")
-        font2 = QFont()
-        font2.setPointSize(11)
-        self.label_2.setFont(font2)
-        self.label_2.setStyleSheet(u"border:none;")
-        self.label_2.setFrameShape(QFrame.NoFrame)
-        self.label_2.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_7.addWidget(self.label_2)
-
-        self.filterFrame = QFrame(self.dockTitleWidgets)
-        self.filterFrame.setObjectName(u"filterFrame")
-        sizePolicy1.setHeightForWidth(self.filterFrame.sizePolicy().hasHeightForWidth())
-        self.filterFrame.setSizePolicy(sizePolicy1)
-        self.filterFrame.setStyleSheet(u"QFrame {\n"
-"	margin: 2px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame:hover {\n"
-"    border: 1px solid rgb(150, 146, 137);\n"
-"}")
-        self.filterFrame.setFrameShape(QFrame.StyledPanel)
-        self.filterFrame.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout_6 = QHBoxLayout(self.filterFrame)
-        self.horizontalLayout_6.setSpacing(0)
-        self.horizontalLayout_6.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
-        self.horizontalLayout_6.setContentsMargins(0, 0, 0, 0)
-        self.filterButton = QPushButton(self.filterFrame)
-        self.filterButton.setObjectName(u"filterButton")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.filterButton.sizePolicy().hasHeightForWidth())
-        self.filterButton.setSizePolicy(sizePolicy3)
-        self.filterButton.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    padding: 0px;\n"
-"	border: none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(108, 108, 108);\n"
-"}\n"
-"QPushButton:checked {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}")
-        self.filterButton.setIcon(icon3)
-        self.filterButton.setIconSize(QSize(18, 18))
-        self.filterButton.setCheckable(True)
-        self.filterButton.setChecked(True)
-        self.filterButton.setFlat(False)
-
-        self.horizontalLayout_6.addWidget(self.filterButton)
-
-        self.filterBox = QLineEdit(self.filterFrame)
-        self.filterBox.setObjectName(u"filterBox")
-        sizePolicy4 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.filterBox.sizePolicy().hasHeightForWidth())
-        self.filterBox.setSizePolicy(sizePolicy4)
-        self.filterBox.setMinimumSize(QSize(0, 0))
-        font3 = QFont()
-        font3.setPointSize(8)
-        self.filterBox.setFont(font3)
-        self.filterBox.setFrame(False)
-        self.filterBox.setClearButtonEnabled(True)
-
-        self.horizontalLayout_6.addWidget(self.filterBox)
-
-
-        self.horizontalLayout_7.addWidget(self.filterFrame)
-
-
-        self.horizontalLayout_5.addWidget(self.dockTitleWidgets)
-
-        self.horizontalSpacer_4 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_5.addItem(self.horizontalSpacer_4)
-
-        self.categoryExpandButton = QPushButton(self.dockTitleFrame)
-        self.categoryExpandButton.setObjectName(u"categoryExpandButton")
-        self.categoryExpandButton.setStyleSheet(u"QPushButton {\n"
-"    padding: 0px;\n"
-"    margin: 1px;\n"
-"    background-color: rgb(57, 57, 57);\n"
-"	border :none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"")
-        icon4 = QIcon()
-        icon4.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon4.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Active, QIcon.On)
-        self.categoryExpandButton.setIcon(icon4)
-        self.categoryExpandButton.setIconSize(QSize(22, 22))
-        self.categoryExpandButton.setCheckable(True)
-        self.categoryExpandButton.setChecked(True)
-
-        self.horizontalLayout_5.addWidget(self.categoryExpandButton)
-
-
-        self.verticalLayout.addWidget(self.dockTitleFrame)
-
-        self.attributeDockTitle = QFrame(self.centralwidget)
-        self.attributeDockTitle.setObjectName(u"attributeDockTitle")
-        self.attributeDockTitle.setStyleSheet(u"QFrame {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    border: 2px solid rgb(57,57,57);\n"
-"}")
-        self.attributeDockTitle.setFrameShape(QFrame.StyledPanel)
-        self.attributeDockTitle.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_8 = QHBoxLayout(self.attributeDockTitle)
-        self.horizontalLayout_8.setSpacing(9)
-        self.horizontalLayout_8.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.horizontalLayout_8.setContentsMargins(0, 0, 0, 0)
-        self.attrExpandButton = QPushButton(self.attributeDockTitle)
-        self.attrExpandButton.setObjectName(u"attrExpandButton")
-        self.attrExpandButton.setStyleSheet(u"QPushButton {\n"
-"    padding: 0px;\n"
-"    margin: 1px;\n"
-"    background-color: rgb(57, 57, 57);\n"
-"	border :none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"")
-        icon5 = QIcon()
-        icon5.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon5.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Active, QIcon.On)
-        self.attrExpandButton.setIcon(icon5)
-        self.attrExpandButton.setIconSize(QSize(22, 22))
-        self.attrExpandButton.setCheckable(True)
-        self.attrExpandButton.setChecked(True)
-
-        self.horizontalLayout_8.addWidget(self.attrExpandButton)
-
-        self.attributeDockTitleWidget = QFrame(self.attributeDockTitle)
-        self.attributeDockTitleWidget.setObjectName(u"attributeDockTitleWidget")
-        self.attributeDockTitleWidget.setStyleSheet(u"border: none;")
-        self.attributeDockTitleWidget.setFrameShape(QFrame.StyledPanel)
-        self.attributeDockTitleWidget.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_9 = QHBoxLayout(self.attributeDockTitleWidget)
-        self.horizontalLayout_9.setSpacing(9)
-        self.horizontalLayout_9.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
-        self.horizontalLayout_9.setContentsMargins(0, 0, 0, 0)
-        self.label_3 = QLabel(self.attributeDockTitleWidget)
-        self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font2)
-        self.label_3.setStyleSheet(u"border:none;")
-        self.label_3.setFrameShape(QFrame.NoFrame)
-        self.label_3.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_9.addWidget(self.label_3)
-
-        self.attrFilterFrame = QFrame(self.attributeDockTitleWidget)
-        self.attrFilterFrame.setObjectName(u"attrFilterFrame")
-        sizePolicy1.setHeightForWidth(self.attrFilterFrame.sizePolicy().hasHeightForWidth())
-        self.attrFilterFrame.setSizePolicy(sizePolicy1)
-        self.attrFilterFrame.setStyleSheet(u"QFrame {\n"
-"	margin: 2px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame:hover {\n"
-"    border: 1px solid rgb(150, 146, 137);\n"
-"}")
-        self.attrFilterFrame.setFrameShape(QFrame.StyledPanel)
-        self.attrFilterFrame.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout_10 = QHBoxLayout(self.attrFilterFrame)
-        self.horizontalLayout_10.setSpacing(0)
-        self.horizontalLayout_10.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
-        self.horizontalLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.attrFilterButotn = QPushButton(self.attrFilterFrame)
-        self.attrFilterButotn.setObjectName(u"attrFilterButotn")
-        sizePolicy3.setHeightForWidth(self.attrFilterButotn.sizePolicy().hasHeightForWidth())
-        self.attrFilterButotn.setSizePolicy(sizePolicy3)
-        self.attrFilterButotn.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    padding: 0px;\n"
-"	border: none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(108, 108, 108);\n"
-"}\n"
-"QPushButton:checked {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}")
-        self.attrFilterButotn.setIcon(icon3)
-        self.attrFilterButotn.setIconSize(QSize(18, 18))
-        self.attrFilterButotn.setCheckable(True)
-        self.attrFilterButotn.setChecked(True)
-        self.attrFilterButotn.setFlat(False)
-
-        self.horizontalLayout_10.addWidget(self.attrFilterButotn)
-
-        self.attrFilterBox = QLineEdit(self.attrFilterFrame)
-        self.attrFilterBox.setObjectName(u"attrFilterBox")
-        sizePolicy4.setHeightForWidth(self.attrFilterBox.sizePolicy().hasHeightForWidth())
-        self.attrFilterBox.setSizePolicy(sizePolicy4)
-        self.attrFilterBox.setMinimumSize(QSize(0, 0))
-        self.attrFilterBox.setFont(font3)
-        self.attrFilterBox.setFrame(False)
-        self.attrFilterBox.setClearButtonEnabled(True)
-
-        self.horizontalLayout_10.addWidget(self.attrFilterBox)
-
-
-        self.horizontalLayout_9.addWidget(self.attrFilterFrame)
-
-        self.horizontalSpacer_5 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_9.addItem(self.horizontalSpacer_5)
-
-        self.toolButton_2 = QToolButton(self.attributeDockTitleWidget)
-        self.toolButton_2.setObjectName(u"toolButton_2")
-        self.toolButton_2.setEnabled(False)
-        self.toolButton_2.setStyleSheet(u"padding: -2px;\n"
-"margin-right: 4px;\n"
-"border: none;")
-
-        self.horizontalLayout_9.addWidget(self.toolButton_2)
-
-
-        self.horizontalLayout_8.addWidget(self.attributeDockTitleWidget)
-
-
-        self.verticalLayout.addWidget(self.attributeDockTitle)
-
-        self.linkDockTitle = QFrame(self.centralwidget)
-        self.linkDockTitle.setObjectName(u"linkDockTitle")
-        self.linkDockTitle.setStyleSheet(u"QFrame{\n"
-"    background-color: rgb(57, 57, 57);\n"
-"   /* border: 1px solid rgb(43,43,43);*/\n"
-"    border: 2px solid rgb(57,57,57);\n"
-"\n"
-"}")
-        self.linkDockTitle.setFrameShape(QFrame.StyledPanel)
-        self.linkDockTitle.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_14 = QHBoxLayout(self.linkDockTitle)
-        self.horizontalLayout_14.setSpacing(9)
-        self.horizontalLayout_14.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
-        self.horizontalLayout_14.setContentsMargins(0, 0, 0, 0)
-        self.backButton = QToolButton(self.linkDockTitle)
-        self.backButton.setObjectName(u"backButton")
-        self.backButton.setStyleSheet(u"QToolButton {\n"
-"    padding: 0px;\n"
-"    margin: 0px;\n"
-"    background-color: rgb(57, 57, 57);\n"
-"	border :none;\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"QToolButton:hover {\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    color: rgb(250, 250, 250);\n"
-"}\n"
-"")
-        icon6 = QIcon()
-        icon6.addFile(u":/resources/general/backArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.backButton.setIcon(icon6)
-        self.backButton.setIconSize(QSize(22, 22))
-        self.backButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self.backButton.setArrowType(Qt.NoArrow)
-
-        self.horizontalLayout_14.addWidget(self.backButton)
-
-        self.linkDockTitleWidget = QFrame(self.linkDockTitle)
-        self.linkDockTitleWidget.setObjectName(u"linkDockTitleWidget")
-        self.linkDockTitleWidget.setStyleSheet(u"border: none;")
-        self.linkDockTitleWidget.setFrameShape(QFrame.StyledPanel)
-        self.linkDockTitleWidget.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_15 = QHBoxLayout(self.linkDockTitleWidget)
-        self.horizontalLayout_15.setSpacing(9)
-        self.horizontalLayout_15.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
-        self.horizontalLayout_15.setContentsMargins(0, 0, 0, 0)
-        self.label_5 = QLabel(self.linkDockTitleWidget)
-        self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font2)
-        self.label_5.setStyleSheet(u"border:none;")
-        self.label_5.setFrameShape(QFrame.NoFrame)
-        self.label_5.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_15.addWidget(self.label_5)
-
-        self.linkFilterFrame = QFrame(self.linkDockTitleWidget)
-        self.linkFilterFrame.setObjectName(u"linkFilterFrame")
-        sizePolicy1.setHeightForWidth(self.linkFilterFrame.sizePolicy().hasHeightForWidth())
-        self.linkFilterFrame.setSizePolicy(sizePolicy1)
-        self.linkFilterFrame.setStyleSheet(u"QFrame {\n"
-"	margin: 2px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame:hover {\n"
-"    border: 1px solid rgb(150, 146, 137);\n"
-"}")
-        self.linkFilterFrame.setFrameShape(QFrame.StyledPanel)
-        self.linkFilterFrame.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout_16 = QHBoxLayout(self.linkFilterFrame)
-        self.horizontalLayout_16.setSpacing(0)
-        self.horizontalLayout_16.setContentsMargins(9, 9, 9, 9)
-        self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
-        self.horizontalLayout_16.setContentsMargins(0, 0, 0, 0)
-        self.linkFilterButton = QPushButton(self.linkFilterFrame)
-        self.linkFilterButton.setObjectName(u"linkFilterButton")
-        sizePolicy3.setHeightForWidth(self.linkFilterButton.sizePolicy().hasHeightForWidth())
-        self.linkFilterButton.setSizePolicy(sizePolicy3)
-        self.linkFilterButton.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    padding: 0px;\n"
-"	border: none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(108, 108, 108);\n"
-"}\n"
-"QPushButton:checked {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}")
-        self.linkFilterButton.setIcon(icon3)
-        self.linkFilterButton.setIconSize(QSize(18, 18))
-        self.linkFilterButton.setCheckable(True)
-        self.linkFilterButton.setChecked(True)
-        self.linkFilterButton.setFlat(False)
-
-        self.horizontalLayout_16.addWidget(self.linkFilterButton)
-
-        self.linkFilterBox = QLineEdit(self.linkFilterFrame)
-        self.linkFilterBox.setObjectName(u"linkFilterBox")
-        sizePolicy4.setHeightForWidth(self.linkFilterBox.sizePolicy().hasHeightForWidth())
-        self.linkFilterBox.setSizePolicy(sizePolicy4)
-        self.linkFilterBox.setMinimumSize(QSize(0, 0))
-        self.linkFilterBox.setFont(font3)
-        self.linkFilterBox.setFrame(False)
-        self.linkFilterBox.setClearButtonEnabled(True)
-
-        self.horizontalLayout_16.addWidget(self.linkFilterBox)
-
-
-        self.horizontalLayout_15.addWidget(self.linkFilterFrame)
-
-        self.horizontalSpacer_7 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_15.addItem(self.horizontalSpacer_7)
-
-        self.toolButton_4 = QToolButton(self.linkDockTitleWidget)
-        self.toolButton_4.setObjectName(u"toolButton_4")
-        self.toolButton_4.setEnabled(False)
-        self.toolButton_4.setStyleSheet(u"padding: -2px;\n"
-"margin-right: 4px;\n"
-"border: none;")
-
-        self.horizontalLayout_15.addWidget(self.toolButton_4)
-
-
-        self.horizontalLayout_14.addWidget(self.linkDockTitleWidget)
-
-
-        self.verticalLayout.addWidget(self.linkDockTitle)
 
         self.line_4 = QFrame(self.centralwidget)
         self.line_4.setObjectName(u"line_4")
@@ -1409,9 +276,11 @@ class Ui_RelicMainWindow(object):
 
         self.viewScaleSlider = QSlider(self.centralwidget)
         self.viewScaleSlider.setObjectName(u"viewScaleSlider")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.viewScaleSlider.sizePolicy().hasHeightForWidth())
         self.viewScaleSlider.setSizePolicy(sizePolicy3)
-        self.viewScaleSlider.setStyleSheet(u"")
         self.viewScaleSlider.setMaximum(2)
         self.viewScaleSlider.setPageStep(1)
         self.viewScaleSlider.setValue(2)
@@ -1429,9 +298,9 @@ class Ui_RelicMainWindow(object):
 
         self.previewCheckBox = QCheckBox(self.centralwidget)
         self.previewCheckBox.setObjectName(u"previewCheckBox")
-        icon7 = QIcon()
-        icon7.addFile(u":/resources/app/kohai.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.previewCheckBox.setIcon(icon7)
+        icon4 = QIcon()
+        icon4.addFile(u":/resources/app/kohai.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.previewCheckBox.setIcon(icon4)
 
         self.horizontalLayout_3.addWidget(self.previewCheckBox)
 
@@ -1446,28 +315,17 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_4.setSpacing(6)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(-1, -1, 3, -1)
-        self.pageDownButton = QPushButton(self.centralwidget)
+        self.pageDownButton = QToolButton(self.centralwidget)
         self.pageDownButton.setObjectName(u"pageDownButton")
-        self.pageDownButton.setStyleSheet(u"QPushButton {\n"
-"    padding: 2px;\n"
-"	border: none;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    color: rgb(250, 250, 250);\n"
-"}")
-        icon8 = QIcon()
-        icon8.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pageDownButton.setIcon(icon8)
+        icon5 = QIcon()
+        icon5.addFile(u":/resources/general/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.pageDownButton.setIcon(icon5)
         self.pageDownButton.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_4.addWidget(self.pageDownButton)
 
         self.pageSpinBox = QSpinBox(self.centralwidget)
         self.pageSpinBox.setObjectName(u"pageSpinBox")
-        self.pageSpinBox.setStyleSheet(u"")
-        self.pageSpinBox.setFrame(False)
         self.pageSpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.pageSpinBox.setMinimum(1)
         self.pageSpinBox.setMaximum(9999)
@@ -1475,20 +333,11 @@ class Ui_RelicMainWindow(object):
 
         self.horizontalLayout_4.addWidget(self.pageSpinBox)
 
-        self.pageUpButton = QPushButton(self.centralwidget)
+        self.pageUpButton = QToolButton(self.centralwidget)
         self.pageUpButton.setObjectName(u"pageUpButton")
-        self.pageUpButton.setStyleSheet(u"QPushButton {\n"
-"    padding: 2px;\n"
-"	border: none;\n"
-"    background-color: rgb(68, 68, 68);\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(92, 92, 92);\n"
-"    color: rgb(250, 250, 250);\n"
-"}")
-        icon9 = QIcon()
-        icon9.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pageUpButton.setIcon(icon9)
+        icon6 = QIcon()
+        icon6.addFile(u":/resources/general/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.pageUpButton.setIcon(icon6)
         self.pageUpButton.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_4.addWidget(self.pageUpButton)
@@ -1502,7 +351,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(RelicMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 945, 26))
+        self.menubar.setGeometry(QRect(0, 0, 945, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -1514,6 +363,7 @@ class Ui_RelicMainWindow(object):
         RelicMainWindow.setMenuBar(self.menubar)
         self.categoryDock = QDockWidget(RelicMainWindow)
         self.categoryDock.setObjectName(u"categoryDock")
+        self.categoryDock.setAutoFillBackground(True)
         self.categoryDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
@@ -1529,24 +379,28 @@ class Ui_RelicMainWindow(object):
 "	alternate-background-color: rgb(56,56,56);\n"
 "    background-color: rgb(48, 48, 48);\n"
 "}\n"
-"\n"
 "QTreeView::item,\n"
 "QTreeView::item:has-children {\n"
-"    border-top: none;\n"
-"    padding-right: 8px;\n"
-"    padding-left: 1px;\n"
-"    margin-top: 1px;\n"
-"    margin-bottom: 1px;\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    margin: 0px;\n"
 "    margin-left: 1px;\n"
 "    padding: 0px;\n"
+"    padding-left: 1px;\n"
 "}\n"
-"\n"
+"QTreeView:item:hover {\n"
+"        background-color: rgb(75, 75, 75);\n"
+"        color: rgb(250, 250, 250);\n"
+"}\n"
+"QTreeView:item:selected {\n"
+"        background-color: rgb(140, 136, 127);\n"
+"        color: rgb(43, 43, 43);\n"
+"    }\n"
 "QTreeView::branch {\n"
 "    border-top: 0px solid rgb(43, 43, 43);\n"
 "    border-bottom: 0px solid rgb(43, 43, 43);\n"
 "    padding: 4px;\n"
-"    margin-top: 2px;\n"
-"    margin-bottom: 2px;\n"
+"    margin: 0px;\n"
 "}\n"
 "QTreeView::branch:has-siblings:!adjoins-item {\n"
 "    border-image: url(:/resources/style/stylesheet-vline.png);\n"
@@ -1554,27 +408,27 @@ class Ui_RelicMainWindow(object):
 "QTreeView::branch:has-siblings:adjoins-item {\n"
 "    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
 "}\n"
-"QTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
+"QTr"
+                        "eeView::branch:!has-children:!has-siblings:adjoins-item {\n"
 "    border-image: url(:/resources/style/stylesheet-branch-end.png);\n"
 "}\n"
-"QTreeView::branch:!has-children:has-si"
-                        "blings:adjoins-item {\n"
+"QTreeView::branch:!has-children:has-siblings:adjoins-item {\n"
 "    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
 "}\n"
 "QTreeView::branch:has-children:!has-siblings:closed,\n"
 "QTreeView::branch:closed:has-children:has-siblings {\n"
 "    image: url(:/resources/style/treeExpand.svg);\n"
-"    background-color: rgb(43, 43, 43);\n"
+"    background-color: transparent;\n"
 "}\n"
 "QTreeView::branch:open:has-children:!has-siblings,\n"
 "QTreeView::branch:open:has-children:has-siblings  {\n"
 "    image: url(:/resources/style/treeCollapse.svg);\n"
-"    background-color: rgb(43, 43, 43);\n"
+"    background-color: transparent;\n"
 "}")
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")
-        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 124, 311))
+        self.categoryScrollAreaWidgetContents.setGeometry(QRect(0, 0, 124, 401))
         self.categoryDockLayout = QVBoxLayout(self.categoryScrollAreaWidgetContents)
         self.categoryDockLayout.setSpacing(0)
         self.categoryDockLayout.setContentsMargins(9, 9, 9, 9)
@@ -1646,9 +500,9 @@ class Ui_RelicMainWindow(object):
         self.buttonGroup.addButton(self.collectionRadioButton)
         self.collectionRadioButton.setObjectName(u"collectionRadioButton")
         self.collectionRadioButton.setMaximumSize(QSize(16777215, 16))
-        icon10 = QIcon()
-        icon10.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.collectionRadioButton.setIcon(icon10)
+        icon7 = QIcon()
+        icon7.addFile(u":/resources/asset_types/collection.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.collectionRadioButton.setIcon(icon7)
         self.collectionRadioButton.setChecked(True)
 
         self.verticalLayout_4.addWidget(self.collectionRadioButton)
@@ -1656,16 +510,16 @@ class Ui_RelicMainWindow(object):
         self.variationRadioButton = QRadioButton(self.searchDockWidgetContents)
         self.buttonGroup.addButton(self.variationRadioButton)
         self.variationRadioButton.setObjectName(u"variationRadioButton")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.variationRadioButton.sizePolicy().hasHeightForWidth())
-        self.variationRadioButton.setSizePolicy(sizePolicy5)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.variationRadioButton.sizePolicy().hasHeightForWidth())
+        self.variationRadioButton.setSizePolicy(sizePolicy4)
         self.variationRadioButton.setMaximumSize(QSize(16777215, 16))
         self.variationRadioButton.setBaseSize(QSize(0, 0))
-        icon11 = QIcon()
-        icon11.addFile(u":/resources/asset_types/variant.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.variationRadioButton.setIcon(icon11)
+        icon8 = QIcon()
+        icon8.addFile(u":/resources/asset_types/variant.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.variationRadioButton.setIcon(icon8)
 
         self.verticalLayout_4.addWidget(self.variationRadioButton)
 
@@ -1731,15 +585,15 @@ class Ui_RelicMainWindow(object):
 
         self.searchBox = QLineEdit(self.searchFrame)
         self.searchBox.setObjectName(u"searchBox")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.searchBox.sizePolicy().hasHeightForWidth())
-        self.searchBox.setSizePolicy(sizePolicy6)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.searchBox.sizePolicy().hasHeightForWidth())
+        self.searchBox.setSizePolicy(sizePolicy5)
         self.searchBox.setMinimumSize(QSize(256, 26))
-        font4 = QFont()
-        font4.setBold(True)
-        self.searchBox.setFont(font4)
+        font2 = QFont()
+        font2.setBold(True)
+        self.searchBox.setFont(font2)
         self.searchBox.setFrame(False)
         self.searchBox.setClearButtonEnabled(True)
 
@@ -1787,7 +641,6 @@ class Ui_RelicMainWindow(object):
         palette1.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
 #endif
         self.attributeDock.setPalette(palette1)
-        self.attributeDock.setStyleSheet(u"b")
         self.attributeDock.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.attrDockWidgetContents = QWidget()
         self.attrDockWidgetContents.setObjectName(u"attrDockWidgetContents")
@@ -1799,10 +652,11 @@ class Ui_RelicMainWindow(object):
         self.scrollArea = QScrollArea(self.attrDockWidgetContents)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setMinimumSize(QSize(355, 0))
+        self.scrollArea.setAutoFillBackground(True)
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 316))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 353, 401))
         self.attributesLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.attributesLayout.setSpacing(0)
         self.attributesLayout.setContentsMargins(9, 9, 9, 9)
@@ -1833,16 +687,10 @@ class Ui_RelicMainWindow(object):
         self.menuView.addAction(self.actionRecurseSubcategory)
 
         self.retranslateUi(RelicMainWindow)
-        self.pageDownButton.clicked["bool"].connect(self.pageSpinBox.stepDown)
-        self.pageUpButton.clicked["bool"].connect(self.pageSpinBox.stepUp)
-        self.filterButton.toggled.connect(self.filterBox.setVisible)
-        self.categoryExpandButton.toggled.connect(self.dockTitleWidgets.setVisible)
-        self.attrFilterButotn.toggled.connect(self.attrFilterBox.setVisible)
-        self.attrExpandButton.toggled.connect(self.attributeDockTitleWidget.setVisible)
-        self.actionPortal.toggled.connect(self.attrExpandButton.setChecked)
-        self.actionPortal.toggled.connect(self.categoryExpandButton.setChecked)
         self.actionAdministration_Mode.toggled.connect(RelicMainWindow.toggleAdminMode)
         self.actionExit.triggered.connect(RelicMainWindow.close)
+        self.pageDownButton.clicked.connect(self.pageSpinBox.stepDown)
+        self.pageUpButton.clicked.connect(self.pageSpinBox.stepUp)
 
         QMetaObject.connectSlotsByName(RelicMainWindow)
     # setupUi
@@ -1875,27 +723,10 @@ class Ui_RelicMainWindow(object):
         self.label_4.setText(QCoreApplication.translate("RelicMainWindow", u"OR", None))
         self.clearSearchButton.setText(QCoreApplication.translate("RelicMainWindow", u"Clear Search Keywords", None))
         self.linksDock.setWindowTitle(QCoreApplication.translate("RelicMainWindow", u"Links", None))
-        self.toolButton.setText("")
-        self.label_2.setText(QCoreApplication.translate("RelicMainWindow", u"CATEGORIES", None))
-        self.filterButton.setText("")
-        self.filterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Filter...", None))
-        self.categoryExpandButton.setText("")
-        self.attrExpandButton.setText("")
-        self.label_3.setText(QCoreApplication.translate("RelicMainWindow", u"ATTRIBUTES", None))
-        self.attrFilterButotn.setText("")
-        self.attrFilterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Filter...", None))
-        self.toolButton_2.setText("")
-        self.backButton.setText(QCoreApplication.translate("RelicMainWindow", u"Back", None))
-        self.label_5.setText(QCoreApplication.translate("RelicMainWindow", u"LINKS", None))
-        self.linkFilterButton.setText("")
-        self.linkFilterBox.setPlaceholderText(QCoreApplication.translate("RelicMainWindow", u"Filter...", None))
-        self.toolButton_4.setText("")
-        self.viewScaleLabel.setText(QCoreApplication.translate("RelicMainWindow", u"Scale", None))
+        self.viewScaleLabel.setText(QCoreApplication.translate("RelicMainWindow", u"Scale :", None))
         self.previewCheckBox.setText(QCoreApplication.translate("RelicMainWindow", u"Preview On-Select", None))
-        self.pageDownButton.setText("")
         self.pageSpinBox.setSuffix(QCoreApplication.translate("RelicMainWindow", u"/ 4", None))
         self.pageSpinBox.setPrefix(QCoreApplication.translate("RelicMainWindow", u"Page ", None))
-        self.pageUpButton.setText("")
         self.menuFile.setTitle(QCoreApplication.translate("RelicMainWindow", u"File", None))
         self.menuEdit.setTitle(QCoreApplication.translate("RelicMainWindow", u"Edit", None))
         self.menuHelp.setTitle(QCoreApplication.translate("RelicMainWindow", u"Help", None))

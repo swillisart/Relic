@@ -4,11 +4,12 @@ import subprocess
 from functools import partial
 
 import numpy as np
+import glm
 import oiio.OpenImageIO as oiio
-from extra_types.math import ImageDimensions
-from library.config import (Extension, RELIC_PREFS,
-                            getAssetSourceLocation, log, logFunction, INGEST_PATH)
-from library.objectmodels import BaseFields, relic_asset, temp_asset
+from relic.local import Extension, INGEST_PATH, getAssetSourceLocation
+
+from library.config import (RELIC_PREFS, log, logFunction)
+from relic.local import TempAsset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QMutex, QMutexLocker, QObject, QPoint,
                             QPropertyAnimation, QRect, QRegularExpression,
@@ -27,6 +28,47 @@ from imagine import hdr, libraw
 from imagine.colorchecker_detection import autoExpose
 from imagine.exif import EXIFTOOL
 
+class ImageDimensions(glm.vec2):
+    def __init__(self, width, height, channels=1):
+        super(ImageDimensions, self).__init__(width, height)
+        self.channels = channels
+    
+    @classmethod
+    def fromArray(cls, array):
+        h, w, c = array.shape
+        obj = cls(w, h, channels=c)
+        return obj
+
+    def makeDivisble(self):
+        self.x = self.divisible_width
+
+    @property
+    def divisible_width(self):
+        return self.x - (self.x % 16)
+
+    @property
+    def aspect(self):
+        return self.w / self.h
+
+    @property
+    def aspectReversed(self):
+        return self.h / self.w
+
+    @property
+    def w(self):
+        return int(self.x)
+
+    @w.setter
+    def w(self, value):
+        self.x = value
+
+    @property
+    def h(self):
+        return int(self.y)
+
+    @h.setter
+    def h(self, value):
+        self.y = value
 
 CREATE_NO_WINDOW = 0x08000000
 
@@ -129,7 +171,7 @@ def generatePreviews(img_buf, path):
 def assetFromStill(spec, icon_path, in_img_path):
     icon = QPixmap.fromImage(QImage(str(icon_path)))
     res = '{}x{}x{}'.format(spec.full_width, spec.full_height, spec.nchannels)
-    asset = temp_asset(
+    asset = TempAsset(
         name=in_img_path.stem,
         category=0,
         type=0,
@@ -274,7 +316,7 @@ class ConversionRouter(QObject):
 
     @staticmethod
     def processFILM(in_path, out_path):
-        asset = temp_asset(
+        asset = TempAsset(
             name=in_path.stem,
             category=0,
             type=0,
@@ -422,7 +464,7 @@ class ConversionRouter(QObject):
             out_icon = out_path.suffixed('_icon', ext='.jpg')
             icon.save(str(out_icon))
 
-        asset = temp_asset(
+        asset = TempAsset(
             name=in_path.stem,
             category=5,
             type=0,

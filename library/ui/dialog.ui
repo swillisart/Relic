@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>945</width>
-    <height>474</height>
+    <height>540</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -24,715 +24,7 @@
     <normaloff>:/resources/app/app_icon.svg</normaloff>:/resources/app/app_icon.svg</iconset>
   </property>
   <property name="styleSheet">
-   <string notr="true">
-QMainWindow::separator {
-    width: 0px;
-    height: 0px;
-    border: 2px solid rgb(43,43,43);
-    border-right: 1px solid rgb(108,108,108);
-    border-bottom: 1px solid rgb(108,108,108);
-    border-radius: 0px;
-    margin: 8px;
-    }
-    QMainWindow::separator:hover {
-    border-right: 1px solid rgb(150, 146, 137);
-    border-bottom: 1px solid rgb(150, 146, 137);
-    }
-    
-    interactiveSpinBox {
-        padding: 1px;
-        margin: 1px;
-        border: 1px solid rgb(43, 43, 43);
-    }
-    
-    /* QSlider ---------------------------------------------------------------- */
-    QSlider::add-page:horizontal, 
-    QSlider::sub-page:horizontal,
-    QSlider::add-page:vertical, 
-    QSlider::sub-page:vertical {
-        background: rgb(43, 43, 43);
-    }
-    QSlider::add-page:vertical, 
-    QSlider::sub-page:vertical {
-        margin-left: 4px;
-        margin-right: 4px;
-    }
-    QSlider::add-page:horizontal, 
-    QSlider::sub-page:horizontal {
-        margin-top: 4px;
-        margin-bottom: 4px;
-    }
-    QSlider::handle:vertical {
-        background: #787878;
-        border: 2px solid rgb(43, 43, 43);
-        width: 8px;
-        height: 6px;
-        margin: 0 -8px;
-        border-radius: 4px;
-    }
-    QSlider::handle:horizontal {
-        background: #787878;
-        border: 2px solid rgb(43, 43, 43);
-        margin: -8px 0;
-        width: 6px;
-        height: 8px;
-        border-radius: 4px;
-    }
-    QSlider::groove {
-        background: rgb(43, 43, 43);
-        border: 1px solid rgb(68, 68, 68);
-        border-radius: 4px;
-        margin: 0px;
-    }
-    QSlider::groove:horizontal {
-        height: 4px;
-    }
-    QSlider::groove:vertical {
-        width: 4px;
-    }
-    QSlider::sub-page:vertical:disabled, 
-    QSlider::sub-page:horizontal:disabled {
-        background: #14506E;
-    }
-    
-    
-    QGroupBox {
-        background-color: rgb(68, 68, 68);
-        color: rgb(225, 225, 225);
-        border: 1px solid rgb(43, 43, 43);
-        border-radius: 2px;
-        padding-top: 14px;
-    }
-    QGroupBox:title { 
-        subcontrol-origin: padding;
-        padding-left: 6px;
-        padding-top: 3px;
-        margin-top: -2px;
-    }
-    
-    /* QTabWiget -------------------------------------------------------------- */
-    
-    QTabWidget {
-        padding: 4px;
-        padding-left: 16px;
-        padding-right: 16px;
-        selection-background-color: rgb(68, 68, 68);
-        border: 0;
-    }
-    QTabWidget::tab-bar {
-        alignment: center;
-    }
-    QTabWidget::pane {
-        border: none;
-        margin: 0px;
-    }
-    QTabWidget::pane:selected {
-        background-color: rgb(68, 68, 68);
-    }
-    
-    /* QTabBar ---------------------------------------------------------------- */
-    
-    QTabBar {
-        qproperty-drawBase: 0;
-        border-radius: 3px;
-        margin: 0px;
-        padding: 4px;
-        border: 0;
-        background-color: rgb(68, 68, 68);
-        font: bold 10pt;
-    }
-    
-    QTabBar::tab {
-        border-bottom: 3px solid rgb(55, 55, 55);
-        color: #787878;
-        background-color: rgb(68, 68, 68);
-    }
-    
-    /* QTabBar::tab - selected ----------------------------------------------- */
-    
-    QTabBar::tab:top:selected:disabled {
-        border-bottom: 3px solid #14506E;
-        color: #787878;
-        background-color: rgb(68, 68, 68);
-    }
-    QTabBar::tab:bottom:selected:disabled {
-        border-top: 3px solid #14506E;
-        color: #787878;
-        background-color: rgb(68, 68, 68);
-    }
-    QTabBar::tab:left:selected:disabled {
-        border-left: 3px solid #14506E;
-        color: #787878;
-        background-color: rgb(68, 68, 68);
-    }
-    QTabBar::tab:right:selected:disabled {
-        border-right: 3px solid #14506E;
-        color: #787878;
-        background-color: rgb(68, 68, 68);
-    }
-    
-    /* QTabBar::tab - !selected and disabled ---------------------------------- */
-    
-    QTabBar::tab:disabled {
-        margin: 0; padding: 0; border: none;
-    }
-    QTabBar::tab:top:!selected:disabled {
-        margin-left: 4px;
-        margin-right: 4px;
-        margin-top: 2px;
-        margin-bottom: 1px;
-        padding-left: 10px; 
-        padding-right: 10px;
-        padding-top: 4px;
-        padding-bottom: 4px;
-        min-width: 4px;
-        border-top-left-radius: 3px;
-        border-top-right-radius: 3px;
-        font-weight: normal;
-        border-bottom: 3px solid rgb(68, 68, 68);
-        border-right: 1px solid rgb(68, 68, 68);
-        border-left: 1px solid rgb(68, 68, 68);
-        border-top: 1px solid rgb(68, 68, 68);
-        color: rgb(100, 100, 100);
-    }
-    QTabBar::tab:bottom:!selected:disabled {
-        border-top: 3px solid rgb(43, 43, 43);
-        color: #787878;
-        background-color: rgb(43, 43, 43);
-    }
-    QTabBar::tab:left:!selected:disabled {
-        border-right: 3px solid rgb(43, 43, 43);
-        color: #787878;
-        background-color: rgb(43, 43, 43);
-    }
-    QTabBar::tab:right:!selected:disabled {
-        border-left: 3px solid rgb(43, 43, 43);
-        color: #787878;
-        background-color: rgb(43, 43, 43);
-    }
-    /* QTabBar::tab - selected ----------------------------------------------- */
-    
-    QTabBar::tab {
-        background-color: rgb(55, 55, 55);
-        color: rgb(175, 175, 175);
-        margin-left: 4px;
-        margin-right: 4px;
-        margin-top: 2px;
-        margin-bottom: 1px;
-        padding-left: 18px; 
-        padding-right: 18px;
-        padding-top: 4px;
-        padding-bottom: 4px;
-        min-width: 4px;
-        border-top-left-radius: 3px;
-        border-top-right-radius: 3px;
-        font-weight: normal;
-        border-bottom: 3px solid rgb(43, 43, 43);
-        border-right: 1px solid rgb(43, 43, 43);
-        border-left: 1px solid rgb(43, 43, 43);
-        border-top: 1px solid rgb(43, 43, 43);
-    }
-    
-    QTabBar::tab:selected {
-        color: rgb(220, 220, 220);
-        background-color: qlineargradient(y1: 1, y2: -.5, stop: 0 rgb(55, 105, 140), stop: 0.20 rgb(68, 68, 68));
-        border-bottom: 2px solid rgb(70, 125, 160);
-        border-right: 1px solid rgb(66, 118, 150);
-        border-left: 1px solid rgb(66, 118, 150);
-        border-top-left-radius: 3px;
-        border-top-right-radius: 3px;
-        border-top: 1px solid rgb(43, 43, 43);
-    }
-    
-    QRadioButton::indicator {
-        width:                  8px;
-        height:                 8px;
-        border-radius:          6px;
-    }
-    QRadioButton::indicator:checked {
-        background-color:       gray;
-        border:                 2px solid rgb(43,43,43);
-    }
-    QRadioButton::indicator:unchecked {
-        background-color:       rgb(43,43,43);
-        border:                 2px solid rgb(43,43,43);
-    }
-    QRadioButton:indicator:hover {
-        border: 2px solid rgb(150, 146, 137);
-    }
-    
-    QToolButton {
-        color: rgb(220,220,220);
-        padding: 0px;
-        margin: 0px;
-        border-radius: 3px;
-        border: 1px solid rgb(68, 68, 68);
-    }
-    QToolButton:pressed {
-        background-color: rgb(43, 43, 43);
-        border: 1px solid rgb(150, 149, 147);
-    }
-    QToolButton:checked {
-        background-color: rgb(140, 136, 127);
-        border: 1px solid rgb(150, 146, 137);
-        color: rgb(255, 255, 255);
-    }
-    QToolButton:hover {
-        background-color: rgb(108, 108, 108);
-        color: rgb(250, 250, 250);
-    }
-    
-    QAbstractSpinBox:hover {
-        margin: 0px;
-        border: 1px solid rgb(43, 43, 43);
-    }
-    QToolBox {
-        font-size: 11px;
-        border: 0px;
-        border-radius: 3px;
-        border: 1px solid rgb(43,43,43);
-    }
-    
-    QToolBox::tab {
-        border: 0px solid rgb(108, 108, 108);
-        border-radius: 3px;
-        background-color:rgb(92, 92, 92);
-        margin: 0px;
-        padding: 0px;
-    }
-    QToolBox::tab:selected {
-        border-left: 2px solid rgb(150, 146, 137);
-        background-color:rgb(108,108,108);
-    }
-    QStatusBar {
-        background-color: rgb(68, 68, 68);
-        color: rgb(200, 200, 200);
-        border-top: 1px solid rgb(43, 43, 43);
-        margin-top: 2px;
-        padding-top: 2px;
-    }
-    QLineEdit:focus,
-    QTextEdit:focus,
-    QAbstractSpinBox:focus {
-        border: 1px solid rgb(43, 43, 43);
-        background-color: rgb(55, 55, 55);
-    }
-    QLineEdit,
-    QAbstractSpinBox,
-    QTextEdit {
-        background-color: rgb(43, 43, 43);
-        border-radius: 0px;
-        color: rgb(200, 200, 200);
-        padding: 0px;
-    }
-    QAbstractSpinBox {
-        background-color: rgb(68,68,68);
-        padding-left: 1px;
-    }
-    QDialog,
-    QLabel,
-    QFrame,
-    QPushButton,
-    QCheckBox,
-    QMainWindow,
-    QRadioButton {
-        background-color: rgb(68, 68, 68);
-        color: rgb(220, 220, 220);
-        selection-background-color: rgb(126, 126, 126);
-        selection-color: rgb(250, 250, 250);
-        outline: 0;
-    }
-    QSlider,
-    QFrame,
-    QScrollArea,
-    QVBoxLayout, 
-    QHBoxLayout {
-    background-color: rgb(68, 68, 68);
-    }
-    QDockWidget {
-        background: rgb(32,32,32);
-    }
-    QWidget:item:hover {
-        background-color: rgb(75, 75, 75);
-        color: rgb(250, 250, 250);
-    }
-    QWidget:item:selected {
-        background-color: rgb(140, 136, 127);
-        color: rgb(43, 43, 43);
-    }
-    QWidget:disabled {
-        background-color: rgb(43, 43, 43);
-        color: rgb(92, 92, 92);
-    }
-    
-    QScrollArea {
-        border: 1px solid rgb(57, 57, 57);
-    }
-    
-    /*
-    /* QMenu ------------------------------------------------------------------ */
-    
-    QMenu,
-    QMenuBar {
-        border: 1px solid rgb(68, 68, 68);
-        padding: 1px;
-        selection-color: rgb(250, 250, 250);
-        color: rgb(200, 200, 200);
-    }
-    QMenu::separator {
-        height: 1px;
-        background-color: rgb(92, 92, 92);
-        color: rgb(200, 200, 200);
-        padding-left: 2px;
-        margin-left: 0px;
-        margin-right: 0px;
-    }
-    QMenu::item {
-        padding: 4px;
-        padding-left: 16px;
-        padding-right: 16px;
-        background-color: rgb(68, 68, 68);
-        color: rgb(200, 200, 200);
-    }
-    QMenu::indicator {
-        padding: 6px;
-        margin: -1px;
-        width: 13px;
-        height: 13px;
-        background-color: rgb(57, 57, 57);
-    }
-    QMenu::icon {
-        padding: 4px;
-        margin: 0px;
-        width: 18px;
-        height: 18px;
-        background-color: rgb(57, 57, 57);
-    }
-    QMenu::indicator:non-exclusive:checked {
-        image: url(:/resources/style/checkbox_checked.svg);
-    }
-    QMenu::indicator:non-exclusive:unchecked {
-        image: url(:/resources/style/checkbox.svg);
-    }
-    
-    /* QScrollBar ------------------------------------------------------------- */
-    QScrollBar:horizontal {
-        height: 10px;
-        margin: 0px 16px 0px 16px;
-        border: 1px solid rgb(55, 55, 55);
-        border-radius: 40px;
-        background-color: rgb(55, 55, 55);
-    }
-    QScrollBar::handle:horizontal {
-        background-color: #787878;
-        border: 0px solid rgb(68, 68, 68);
-        border-radius: 4px;
-        min-width: 8px;
-    }
-    QScrollBar::add-line:horizontal:hover,
-    QScrollBar::add-line:horizontal:on,
-    QScrollBar::add-line:horizontal {
-        margin: 0px 3px 0px 0px;
-        border-image: url(:/resources/style/stylesheet-branch-closed.png);
-        height: 10px;
-        width: 6px;
-        subcontrol-position: right;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::sub-line:horizontal:hover,
-    QScrollBar::sub-line:horizontal:on,
-    QScrollBar::sub-line:horizontal {
-        margin: 0px 0px 0px 3px;
-        border-image: url(:/resources/style/stylesheet-branch-closedleft.png);
-        height: 10px;
-        width: 6px;
-        subcontrol-position: left;
-        subcontrol-origin: margin;
-    }
-    QScrollBar:vertical {
-        background-color: rgb(55, 55, 55);
-        width: 10px;
-        margin: 16px 0px 16px 0px;
-        border: 1px solid rgb(55, 55, 55);
-        border-radius: 4px;
-    }
-    QScrollBar::handle:vertical {
-        background-color: #787878;
-        border: 1px solid rgb(68, 68, 68);
-        min-height: 8px;
-        border-radius: 4px;
-    }
-    QScrollBar::sub-line:vertical {
-        margin: 3px 0px 0px 0px;
-        border-image: url(:/resources/style/stylesheet-branch-openup.png);
-        height: 6px;
-        width: 10px;
-        subcontrol-position: top;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::add-line:vertical {
-        margin: 0px 0px 3px 0px;
-        border-image: url(:/resources/style/stylesheet-branch-open.png);
-        height: 6px;
-        width: 10px;
-        subcontrol-position: bottom;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::sub-line:vertical:hover,
-    QScrollBar::sub-line:vertical:on {
-        border-image: url(:/resources/style/stylesheet-branch-openup.png);
-        height: 10px;
-        width: 10px;
-        subcontrol-position: top;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::add-page:horizontal,
-    QScrollBar::sub-page:horizontal,
-    QScrollBar::up-arrow:horizontal,
-    QScrollBar::down-arrow:horizontal,
-    QScrollBar::up-arrow:vertical,
-    QScrollBar::down-arrow:vertical,
-    QScrollBar::add-page:vertical,
-    QScrollBar::sub-page:vertical  {
-        background: none;
-    }
-    QTableCornerButton::section {
-        background-color: rgb(92, 92, 92);
-        border: 1px rgb(43,43,43);
-        border-radius: 0px;
-    }
-    QHeaderView {
-        background-color: rgb(68, 68, 68);
-        border: 0px transparent rgb(68,68,68);
-        padding: 0px;
-        margin: 1px;
-        border-radius: 0px;
-    }
-    QHeaderView::section {
-        background-color: rgb(92, 92, 92);
-        color: rgb(200,200,200);
-        border-bottom: 1px solid rgb(43,43,43);
-        border-right: 1px solid rgb(43,43,43);
-        border-radius: 0px;
-        text-align: center;
-    }
-    QHeaderView::section:vertical,
-    QHeaderView::section:horizontal {
-        padding-left: 6px;
-        margin-top: -2px;
-        margin-left: -3px;
-    }
-    QPushButton {
-        outline: none;
-        padding: 3px;
-        padding-left: 18px;
-        padding-right: 18px;
-        border: none;
-        background-color: rgb(92, 92, 92);
-    }
-    QPushButton:hover {
-        color: rgb(250, 250, 250);
-        background-color: rgb(108, 108, 108);
-    }
-    
-    QAbstractItemView {
-        border: none;
-        alternate-background-color: rgb(75,75,75);
-        background-color: rgb(68, 68, 68);
-    }
-    QAbstractItemView::item {
-        color: rgb(200,200,200);
-        padding: 2px;
-    }
-    QAbstractItemView::item:has-children {
-        background-color: rgb(93, 93, 93);
-        margin-bottom: 2px;
-        color: rgb(250, 250, 250);
-    }
-    QAbstractItemView::item:!has-children {
-        border: none;
-    }
-    QTreeView::item:!has-children {
-        border-right: 1px solid rgb(43,43,43);
-        border-top: 1px solid rgb(64,64,64);
-    }
-    QAbstractItemView::branch {
-        padding: 2px;
-        padding-bottom: 2px;
-        padding-top: 2px;
-        padding-left: 4px;
-        margin-top: 0px;
-        margin-left: 0px;
-    }
-    QAbstractItemView::branch:has-children:!has-siblings:closed,
-    QAbstractItemView::branch:closed:has-children:has-siblings {
-        image: url(:/resources/style/stylesheet-branch-closed.png);
-        background-color: rgb(93, 93, 93);
-        margin-bottom: 2px;
-        padding-bottom: 4px;
-        padding-left: 7px;
-        padding-right: 3px;
-    }
-    QAbstractItemView::branch:open:has-children:!has-siblings,
-    QAbstractItemView::branch:open:has-children:has-siblings  {
-        image: url(:/resources/style/stylesheet-branch-open.png);
-        background-color: rgb(93, 93, 93);
-        width: 12px;
-        height: 12px;
-        margin-bottom: 2px;
-    }
-    QAbstractItemView::branch:has-siblings:!adjoins-item {
-        border-image: url(:/resources/style/stylesheet-vline.png);
-        margin-bottom: 2px;
-    }
-    QAbstractItemView::branch:!has-children:has-siblings:adjoins-item {
-        border-image: url(:/resources/style/stylesheet-branch-more.png);
-        margin: -1px;
-        margin-top: 1px;
-    }
-    QAbstractItemView::branch:!has-children:!has-siblings:adjoins-item {
-        border-image: url(:/resources/style/stylesheet-branch-end.png);
-        margin-bottom: -2px;
-    }
-    
-    /* QCombobox -------------------------------------------------------------- */
-    QComboBox {
-        border: 1px solid rgb(55,55,55);
-        border-radius: 2px;
-        background-color: rgb(92, 92, 92);
-        padding-top: 1px;
-        padding-bottom: 1px;
-        padding-left: 2px;
-        padding-right: 6px;
-        min-width: 75px;
-        color: rgb(200, 200, 200);
-    }
-    QComboBox::drop-down {
-        subcontrol-position: right;
-        width: 18px;
-        border-left-width: 2px;
-        border-left-color: rgb(68, 68, 68);
-        border-left-style: solid;
-        border-top-right-radius: 0px;
-        border-bottom-right-radius: 0px;
-        padding-right: 2px;
-        padding-left: 0px;
-    }
-    QComboBox::down-arrow,
-    QComboBox::down-arrow:on,
-    QComboBox::down-arrow:hover,
-    QComboBox::down-arrow:focus {
-        image: url(:/resources/style/stylesheet-branch-open.png);
-        width: 10px;
-        height: 6px;
-    }
-    
-    /* QCheckBox -------------------------------------------------------------- */
-    QCheckBox {
-        padding-left: -3px;
-        margin: 0px;
-        border: 1px solid transparent;
-    }
-    QCheckBox:hover {
-        border: 1px solid rgb(55,55,55);
-    }
-    QCheckBox::indicator {
-        width: 14px;
-        height: 14px;
-    }
-    QCheckBox::indicator:checked:hover,
-    QAbstractItemView::indicator:checked:hover {
-        image: url(:/resources/style/checkbox_checked_hover.svg);
-        padding-left: 4px;
-        width: 14px;
-        height: 14px;
-    }
-    QCheckBox::indicator:unchecked:hover,
-    QAbstractItemView::indicator:unchecked:hover {
-        image: url(:/resources/style/checkbox_hover.svg);
-        padding-left: 4px;
-        width: 14px;
-        height: 14px;
-    }
-    QCheckBox::indicator:checked,
-    QAbstractItemView::indicator:checked {
-        image: url(:/resources/style/checkbox_checked.svg);
-        padding-left: 4px;
-        width: 14px;
-        height: 14px;
-    }
-    QCheckBox::indicator:checked:hover,
-    QAbstractItemView::indicator:checked:hover {
-        image: url(:/resources/style/checkbox_checked_hover.svg);
-        padding-left: 4px;
-        width: 14px;
-        height: 14px;
-    }
-    QCheckBox::indicator:unchecked,
-    QAbstractItemView::indicator:unchecked {
-        color: rgb(43, 43, 43);
-        image: url(:/resources/style/checkbox.svg);
-        padding-left: 4px;
-        width: 14px;
-        height: 14px;
-    }
-    QListView {
-        background-color: rgb(43, 43, 43);
-        border: 1px solid rgb(43,43,43);
-        margin: 1px;
-    }
-    
-    subcategoryTreeView {
-        border: none;
-        alternate-background-color: rgb(56,56,56);
-        background-color: rgb(43, 43, 43);
-    }
-    subcategoryTreeView::item,
-    subcategoryTreeView::item:has-children {
-        border-top: none;
-        padding-right: 8px;
-        padding-left: 1px;
-        margin-top: 1px;
-        margin-bottom: 1px;
-        margin-left: 1px;
-        padding: 0px;
-    }
-    
-    subcategoryTreeView::branch {
-        border-top: 0px solid rgb(43, 43, 43);
-        border-bottom: 0px solid rgb(43, 43, 43);
-        padding: 4px;
-        margin-top: 2px;
-        margin-bottom: 2px;
-    }
-    subcategoryTreeView::branch:has-siblings:!adjoins-item {
-        border-image: url(:/resources/style/stylesheet-vline.png);
-    }
-    subcategoryTreeView::branch:has-siblings:adjoins-item {
-        border-image: url(:/resources/style/stylesheet-branch-more.png);
-    }
-    subcategoryTreeView::branch:!has-children:!has-siblings:adjoins-item {
-        border-image: url(:/resources/style/stylesheet-branch-end.png);
-    }
-    subcategoryTreeView::branch:!has-children:has-siblings:adjoins-item {
-        border-image: url(:/resources/style/stylesheet-branch-more.png);
-    }
-    subcategoryTreeView::branch:has-children:!has-siblings:closed,
-    subcategoryTreeView::branch:closed:has-children:has-siblings {
-        image: url(:/resources/style/treeExpand.svg);
-        background-color: rgb(43, 43, 43);
-    }
-    subcategoryTreeView::branch:open:has-children:!has-siblings,
-    subcategoryTreeView::branch:open:has-children:has-siblings  {
-        image: url(:/resources/style/treeCollapse.svg);
-        background-color: rgb(43, 43, 43);
-    }
-    scrollAreaWidgetContents {
-    background-color: rgb(68, 68, 68);
-    }
-    categoryScrollAreaWidgetContents {
-    background-color: rgb(68, 68, 68);
-    }</string>
+   <string notr="true"/>
   </property>
   <property name="animated">
    <bool>true</bool>
@@ -1241,6 +533,9 @@ QMainWindow::separator {
         </disabled>
        </palette>
       </property>
+      <property name="autoFillBackground">
+       <bool>true</bool>
+      </property>
       <property name="styleSheet">
        <string notr="true"/>
       </property>
@@ -1251,811 +546,6 @@ QMainWindow::separator {
        <string>Links</string>
       </property>
       <widget class="QWidget" name="attrDockWidgetContents_2"/>
-     </widget>
-    </item>
-    <item>
-     <widget class="QFrame" name="dockTitleFrame">
-      <property name="styleSheet">
-       <string notr="true">QFrame {
-    background-color: rgb(57, 57, 57);
-    border: 2px solid rgb(57,57,57);
-}</string>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_5">
-       <property name="spacing">
-        <number>9</number>
-       </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QFrame" name="dockTitleWidgets">
-         <property name="styleSheet">
-          <string notr="true">border: none;</string>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_7">
-          <property name="spacing">
-           <number>9</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QToolButton" name="toolButton">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">padding: -2px;
-margin-left: 4px;</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_2">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">border:none;</string>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Sunken</enum>
-            </property>
-            <property name="text">
-             <string>CATEGORIES</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QFrame" name="filterFrame">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QFrame {
-	margin: 2px;
-    border: 1px solid rgb(43, 43, 43);
-    background-color: rgb(43, 43, 43);
-    border-radius: 3px;
-}
-QFrame:hover {
-    border: 1px solid rgb(150, 146, 137);
-}</string>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
-             <property name="spacing">
-              <number>0</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <widget class="QPushButton" name="filterButton">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QPushButton {
-    background-color: rgb(57, 57, 57);
-    padding: 0px;
-	border: none;
-}
-QPushButton:hover {
-    background-color: rgb(108, 108, 108);
-}
-QPushButton:checked {
-    background-color: rgb(43, 43, 43);
-}</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="icon">
-                <iconset resource="../../resources.qrc">
-                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>18</width>
-                 <height>18</height>
-                </size>
-               </property>
-               <property name="checkable">
-                <bool>true</bool>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <property name="flat">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="filterBox">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="frame">
-                <bool>false</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Filter...</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <spacer name="horizontalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>10</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QPushButton" name="categoryExpandButton">
-         <property name="styleSheet">
-          <string notr="true">QPushButton {
-    padding: 0px;
-    margin: 1px;
-    background-color: rgb(57, 57, 57);
-	border :none;
-}
-QPushButton:hover {
-    background-color: rgb(92, 92, 92);
-    color: rgb(250, 250, 250);
-}
-</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="../../resources.qrc">
-           <normaloff>:/resources/general/pageArrow.svg</normaloff>
-           <activeon>:/resources/general/pageArrowLeft.svg</activeon>:/resources/general/pageArrow.svg</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>22</width>
-           <height>22</height>
-          </size>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QFrame" name="attributeDockTitle">
-      <property name="styleSheet">
-       <string notr="true">QFrame {
-    background-color: rgb(57, 57, 57);
-    border: 2px solid rgb(57,57,57);
-}</string>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_8">
-       <property name="spacing">
-        <number>9</number>
-       </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QPushButton" name="attrExpandButton">
-         <property name="styleSheet">
-          <string notr="true">QPushButton {
-    padding: 0px;
-    margin: 1px;
-    background-color: rgb(57, 57, 57);
-	border :none;
-}
-QPushButton:hover {
-    background-color: rgb(92, 92, 92);
-    color: rgb(250, 250, 250);
-}
-</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="../../resources.qrc">
-           <normaloff>:/resources/general/pageArrowLeft.svg</normaloff>
-           <activeon>:/resources/general/pageArrow.svg</activeon>:/resources/general/pageArrowLeft.svg</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>22</width>
-           <height>22</height>
-          </size>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QFrame" name="attributeDockTitleWidget">
-         <property name="styleSheet">
-          <string notr="true">border: none;</string>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_9">
-          <property name="spacing">
-           <number>9</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_3">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">border:none;</string>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Sunken</enum>
-            </property>
-            <property name="text">
-             <string>ATTRIBUTES</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QFrame" name="attrFilterFrame">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QFrame {
-	margin: 2px;
-    border: 1px solid rgb(43, 43, 43);
-    background-color: rgb(43, 43, 43);
-    border-radius: 3px;
-}
-QFrame:hover {
-    border: 1px solid rgb(150, 146, 137);
-}</string>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_10">
-             <property name="spacing">
-              <number>0</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <widget class="QPushButton" name="attrFilterButotn">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QPushButton {
-    background-color: rgb(57, 57, 57);
-    padding: 0px;
-	border: none;
-}
-QPushButton:hover {
-    background-color: rgb(108, 108, 108);
-}
-QPushButton:checked {
-    background-color: rgb(43, 43, 43);
-}</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="icon">
-                <iconset resource="../../resources.qrc">
-                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>18</width>
-                 <height>18</height>
-                </size>
-               </property>
-               <property name="checkable">
-                <bool>true</bool>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <property name="flat">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="attrFilterBox">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="frame">
-                <bool>false</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Filter...</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_5">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>10</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QToolButton" name="toolButton_2">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">padding: -2px;
-margin-right: 4px;
-border: none;</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QFrame" name="linkDockTitle">
-      <property name="styleSheet">
-       <string notr="true">QFrame{
-    background-color: rgb(57, 57, 57);
-   /* border: 1px solid rgb(43,43,43);*/
-    border: 2px solid rgb(57,57,57);
-
-}</string>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_14">
-       <property name="spacing">
-        <number>9</number>
-       </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QToolButton" name="backButton">
-         <property name="styleSheet">
-          <string notr="true">QToolButton {
-    padding: 0px;
-    margin: 0px;
-    background-color: rgb(57, 57, 57);
-	border :none;
-    color: rgb(250, 250, 250);
-}
-QToolButton:hover {
-    background-color: rgb(92, 92, 92);
-    color: rgb(250, 250, 250);
-}
-</string>
-         </property>
-         <property name="text">
-          <string>Back</string>
-         </property>
-         <property name="icon">
-          <iconset resource="../../resources.qrc">
-           <normaloff>:/resources/general/backArrow.svg</normaloff>:/resources/general/backArrow.svg</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>22</width>
-           <height>22</height>
-          </size>
-         </property>
-         <property name="toolButtonStyle">
-          <enum>Qt::ToolButtonTextBesideIcon</enum>
-         </property>
-         <property name="arrowType">
-          <enum>Qt::NoArrow</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QFrame" name="linkDockTitleWidget">
-         <property name="styleSheet">
-          <string notr="true">border: none;</string>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_15">
-          <property name="spacing">
-           <number>9</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_5">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">border:none;</string>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Sunken</enum>
-            </property>
-            <property name="text">
-             <string>LINKS</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QFrame" name="linkFilterFrame">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QFrame {
-	margin: 2px;
-    border: 1px solid rgb(43, 43, 43);
-    background-color: rgb(43, 43, 43);
-    border-radius: 3px;
-}
-QFrame:hover {
-    border: 1px solid rgb(150, 146, 137);
-}</string>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_16">
-             <property name="spacing">
-              <number>0</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <widget class="QPushButton" name="linkFilterButton">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QPushButton {
-    background-color: rgb(57, 57, 57);
-    padding: 0px;
-	border: none;
-}
-QPushButton:hover {
-    background-color: rgb(108, 108, 108);
-}
-QPushButton:checked {
-    background-color: rgb(43, 43, 43);
-}</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="icon">
-                <iconset resource="../../resources.qrc">
-                 <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>18</width>
-                 <height>18</height>
-                </size>
-               </property>
-               <property name="checkable">
-                <bool>true</bool>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <property name="flat">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="linkFilterBox">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="frame">
-                <bool>false</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Filter...</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_7">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>10</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QToolButton" name="toolButton_4">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">padding: -2px;
-margin-right: 4px;
-border: none;</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
      </widget>
     </item>
     <item>
@@ -2102,7 +592,7 @@ border: none;</string>
         <item>
          <widget class="QLabel" name="viewScaleLabel">
           <property name="text">
-           <string>Scale</string>
+           <string>Scale :</string>
           </property>
          </widget>
         </item>
@@ -2113,9 +603,6 @@ border: none;</string>
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
           </property>
           <property name="maximum">
            <number>2</number>
@@ -2176,21 +663,7 @@ border: none;</string>
          <number>3</number>
         </property>
         <item>
-         <widget class="QPushButton" name="pageDownButton">
-          <property name="styleSheet">
-           <string notr="true">QPushButton {
-    padding: 2px;
-	border: none;
-    background-color: rgb(68, 68, 68);
-}
-QPushButton:hover {
-    background-color: rgb(92, 92, 92);
-    color: rgb(250, 250, 250);
-}</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
+         <widget class="QToolButton" name="pageDownButton">
           <property name="icon">
            <iconset resource="../../resources.qrc">
             <normaloff>:/resources/general/pageArrowLeft.svg</normaloff>:/resources/general/pageArrowLeft.svg</iconset>
@@ -2205,12 +678,6 @@ QPushButton:hover {
         </item>
         <item>
          <widget class="QSpinBox" name="pageSpinBox">
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
-          <property name="frame">
-           <bool>false</bool>
-          </property>
           <property name="buttonSymbols">
            <enum>QAbstractSpinBox::NoButtons</enum>
           </property>
@@ -2232,21 +699,7 @@ QPushButton:hover {
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pageUpButton">
-          <property name="styleSheet">
-           <string notr="true">QPushButton {
-    padding: 2px;
-	border: none;
-    background-color: rgb(68, 68, 68);
-}
-QPushButton:hover {
-    background-color: rgb(92, 92, 92);
-    color: rgb(250, 250, 250);
-}</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
+         <widget class="QToolButton" name="pageUpButton">
           <property name="icon">
            <iconset resource="../../resources.qrc">
             <normaloff>:/resources/general/pageArrow.svg</normaloff>:/resources/general/pageArrow.svg</iconset>
@@ -2271,7 +724,7 @@ QPushButton:hover {
      <x>0</x>
      <y>0</y>
      <width>945</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -2308,6 +761,9 @@ QPushButton:hover {
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="categoryDock">
+   <property name="autoFillBackground">
+    <bool>true</bool>
+   </property>
    <property name="features">
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
@@ -2342,24 +798,28 @@ QPushButton:hover {
 	alternate-background-color: rgb(56,56,56);
     background-color: rgb(48, 48, 48);
 }
-
 QTreeView::item,
 QTreeView::item:has-children {
-    border-top: none;
-    padding-right: 8px;
-    padding-left: 1px;
-    margin-top: 1px;
-    margin-bottom: 1px;
+    background-color: transparent;
+    border: none;
+    margin: 0px;
     margin-left: 1px;
     padding: 0px;
+    padding-left: 1px;
 }
-
+QTreeView:item:hover {
+        background-color: rgb(75, 75, 75);
+        color: rgb(250, 250, 250);
+}
+QTreeView:item:selected {
+        background-color: rgb(140, 136, 127);
+        color: rgb(43, 43, 43);
+    }
 QTreeView::branch {
     border-top: 0px solid rgb(43, 43, 43);
     border-bottom: 0px solid rgb(43, 43, 43);
     padding: 4px;
-    margin-top: 2px;
-    margin-bottom: 2px;
+    margin: 0px;
 }
 QTreeView::branch:has-siblings:!adjoins-item {
     border-image: url(:/resources/style/stylesheet-vline.png);
@@ -2376,12 +836,12 @@ QTreeView::branch:!has-children:has-siblings:adjoins-item {
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
     image: url(:/resources/style/treeExpand.svg);
-    background-color: rgb(43, 43, 43);
+    background-color: transparent;
 }
 QTreeView::branch:open:has-children:!has-siblings,
 QTreeView::branch:open:has-children:has-siblings  {
     image: url(:/resources/style/treeCollapse.svg);
-    background-color: rgb(43, 43, 43);
+    background-color: transparent;
 }</string>
        </property>
        <property name="widgetResizable">
@@ -2393,7 +853,7 @@ QTreeView::branch:open:has-children:has-siblings  {
           <x>0</x>
           <y>0</y>
           <width>124</width>
-          <height>311</height>
+          <height>401</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="categoryDockLayout">
@@ -2990,9 +1450,6 @@ QFrame:hover {
      </disabled>
     </palette>
    </property>
-   <property name="styleSheet">
-    <string notr="true">b</string>
-   </property>
    <property name="features">
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
@@ -3027,6 +1484,9 @@ QFrame:hover {
          <height>0</height>
         </size>
        </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
        <property name="widgetResizable">
         <bool>true</bool>
        </property>
@@ -3036,7 +1496,7 @@ QFrame:hover {
           <x>0</x>
           <y>0</y>
           <width>353</width>
-          <height>316</height>
+          <height>401</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributesLayout">
@@ -3149,136 +1609,9 @@ QFrame:hover {
  <layoutdefault spacing="6" margin="9"/>
  <resources>
   <include location="../../resources.qrc"/>
+  <include location="../../plugins/Lib27/relic_base/ui/resources.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>pageDownButton</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>pageSpinBox</receiver>
-   <slot>stepDown()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>452</x>
-     <y>450</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>530</x>
-     <y>447</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pageUpButton</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>pageSpinBox</receiver>
-   <slot>stepUp()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>564</x>
-     <y>450</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>530</x>
-     <y>447</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>filterButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>filterBox</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>289</x>
-     <y>359</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>378</x>
-     <y>359</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>categoryExpandButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>dockTitleWidgets</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>566</x>
-     <y>362</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>381</x>
-     <y>362</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>attrFilterButotn</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>attrFilterBox</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>295</x>
-     <y>387</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>397</x>
-     <y>387</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>attrExpandButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>attributeDockTitleWidget</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>171</x>
-     <y>390</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>560</x>
-     <y>390</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionPortal</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>attrExpandButton</receiver>
-   <slot>setChecked(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>171</x>
-     <y>390</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionPortal</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>categoryExpandButton</receiver>
-   <slot>setChecked(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>566</x>
-     <y>362</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>actionAdministration_Mode</sender>
    <signal>toggled(bool)</signal>
@@ -3308,6 +1641,38 @@ QFrame:hover {
     <hint type="destinationlabel">
      <x>558</x>
      <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pageDownButton</sender>
+   <signal>clicked()</signal>
+   <receiver>pageSpinBox</receiver>
+   <slot>stepDown()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>445</x>
+     <y>504</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>499</x>
+     <y>504</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pageUpButton</sender>
+   <signal>clicked()</signal>
+   <receiver>pageSpinBox</receiver>
+   <slot>stepUp()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>553</x>
+     <y>504</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>499</x>
+     <y>504</y>
     </hint>
    </hints>
   </connection>

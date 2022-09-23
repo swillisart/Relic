@@ -25,7 +25,7 @@ class Ui_PreferenceForm(object):
     def setupUi(self, PreferenceForm):
         if not PreferenceForm.objectName():
             PreferenceForm.setObjectName(u"PreferenceForm")
-        PreferenceForm.resize(866, 420)
+        PreferenceForm.resize(866, 413)
         PreferenceForm.setStyleSheet(u"PrefFrame {\n"
 "    background-color: rgb(68, 68, 68);\n"
 "    color: rgb(200, 200, 200);\n"
@@ -38,7 +38,6 @@ class Ui_PreferenceForm(object):
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.PrefFrame = QFrame(PreferenceForm)
         self.PrefFrame.setObjectName(u"PrefFrame")
-        self.PrefFrame.setStyleSheet(u"")
         self.PrefFrame.setFrameShape(QFrame.StyledPanel)
         self.PrefFrame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.PrefFrame)

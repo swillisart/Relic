@@ -9,8 +9,9 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 from relic.scheme import Classification, AssetType, UserType, TagType
-from relic.local import Category, Relational
-from library.objectmodels import temp_asset, alusers, tags, getCategoryConstructor
+from relic.local import Category, Relational, TempAsset
+
+from library.objectmodels import alusers, tags, getCategoryConstructor, Type
 from library.widgets.rating import Rating
 from library.widgets.simple_asset_view import SimpleAssetView
 from qtshared6.utils import polymorphicItem
@@ -85,7 +86,7 @@ class ObjectMulti(QListView):
         field_name = self._field.name
         constructor = getCategoryConstructor(field_name.lower())
 
-        if constructor is not temp_asset:
+        if constructor is not TempAsset:
             self.relation_view.setConstructor(constructor)
             self.relation_view.show()
 
@@ -109,15 +110,16 @@ class ObjectMulti(QListView):
     def removeSelectedItems(self):
         selection = self.selectionModel().selectedIndexes()
         for index in selection:
-            self.setRowHidden(index.row(), True)
             asset = index.data(Qt.UserRole)
             asset.status = ItemState.REMOVE
+            self.setRowHidden(index.row(), True)
 
     def setItems(self, values):
         model = self.model()
         for item in values:
             icon = icon_from_item(item)
-            item.status = ItemState.NONE
+            if item.status is not None:
+                item.status = ItemState.NONE
             item.setIcon(icon)
             model.appendRow(item)
 
@@ -174,6 +176,10 @@ class FieldDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super(FieldDelegate, self).__init__(parent)
 
+        for x in Type:
+            if x.value:
+                x.data = QIcon(x.data)
+
     def createEditor(self, parent, option, index):
         if index.column() != 1:
             return
@@ -203,9 +209,12 @@ class FieldDelegate(QStyledItemDelegate):
         existing = index.model().data(index, Qt.EditRole)
         value = editor._get()
         converted = editor._field.data(value)
-        # only update the data if it actually modified by the editor 
-        if converted.value != existing.value:
-            model.setData(index, converted, Qt.EditRole)
+        # only update the data if it actually modified by the editor
+        if isinstance(converted, ObjectField):
+            pass # The object fields sub-object can change.
+        elif converted.value != existing.value:
+            return
+        model.setData(index, converted, Qt.EditRole)
     
     def paint(self, painter, option, index):
         option.decorationPosition = QStyleOptionViewItem.Left

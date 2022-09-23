@@ -6,23 +6,26 @@ import sys
 from collections import defaultdict
 from functools import partial
 
-# -- First-party --
-import qtshared6.resources
 # -- Third-party --
 from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QThreadPool,
-                            QTimer, Slot)
+                            QTimer, Slot, QSize)
 from PySide6.QtGui import QIcon, QPixmap, Qt
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
                                QSystemTrayIcon, QToolButton, QWidget)
-from qtshared6.delegates import BaseItemDelegate, ItemDispalyModes
+
 from qtshared6.utils import polymorphicItem
 from relic.local import Relational
+from relic.scheme import Table
+from relic.qt.widgets import DockTitle
+from relic.qt.delegates import BaseItemDelegate, ItemDispalyModes
+from relic.qt.util import loadStylesheet
+
 from sequence_path.main import SequencePath as Path
 from strand import server
 
 from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
-from library.objectmodels import (Category, Library, Type, alusers,
+from library.objectmodels import (Library, Type, alusers,
                                   attachLinkToAsset, getCategoryConstructor,
                                   relationships, session, subcategory)
 # -- Module --
@@ -33,7 +36,7 @@ from library.widgets.assets_alt import AssetItemModel, AssetListView
 from library.widgets.metadata_view import MetadataView
 from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.relationshipView import LinkViewWidget
-from library.widgets.subcategoriesViews import CategoryManager, ExpandableTab
+from library.widgets.subcategoriesViews import CategoryManager
 from library.widgets.util import DialogOverlay
 
 CATEGORIES = []
@@ -73,14 +76,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.pageSpinBox.valueChanged.connect(self.updateAssetView)
         self.buttonGroup.buttonClicked.connect(self.updateAssetView)
         self.collectionRadioButton.toggled.connect(self.searchLibrary)
-        self.categoryDock.setTitleBarWidget(self.dockTitleFrame)
-        self.attributeDock.setTitleBarWidget(self.attributeDockTitle)
-        self.linksDock.setTitleBarWidget(self.linkDockTitle)
-        self.linksDock.hide()
-
-        self.attributeDock.setAutoFillBackground(True)
-        self.categoryDock.setAutoFillBackground(True)
-        self.linksDock.setAutoFillBackground(True)
 
         # Creates asset view
         self.assets_view = AssetListView(self)
@@ -98,9 +93,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.attributesLayout.addWidget(self.metadata_view)
         self.linksDock.setWidget(self.links_view)
 
+        self.setupDockTitles()
+
         # Signals / Slots
-        self.filterBox.textChanged.connect(self.category_manager.filterAll)
-        self.linkFilterBox.textChanged.connect(self.links_view.filterAll)
         self.actionPortal.toggled.connect(self.hideDocks)
         self.actionRecurseSubcategory.setChecked(int(RELIC_PREFS.recurse_subcategories))
         self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
@@ -120,7 +115,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
             view.onExecuted.connect(self.open_file)
 
-        self.backButton.clicked.connect(self.assetViewing)
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
         self.description_window.text_browser.assetClicked.connect(self.browseTo) 
         self.scaleView(int(ViewScale[RELIC_PREFS.view_scale]))
@@ -153,6 +147,37 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self._ingester = None
         self.preferences_dialog = None
         self.block_search = False
+
+    def setupDockTitles(self):
+        attribute_expand_icon = QIcon()
+        attribute_expand_icon.addFile(':app/pageArrowLeft.svg', QSize(), QIcon.Normal, QIcon.Off)
+        attribute_expand_icon.addFile(':app/pageArrow.svg', QSize(), QIcon.Active, QIcon.On)
+        category_expand_icon = QIcon()
+        category_expand_icon.addFile(':app/pageArrow.svg', QSize(), QIcon.Normal, QIcon.Off)
+        category_expand_icon.addFile(':app/pageArrowLeft.svg', QSize(), QIcon.Active, QIcon.On)
+        self.attrExpandButton = QToolButton(self)
+        self.attrExpandButton.setIcon(attribute_expand_icon)
+        self.categoryExpandButton = QToolButton(self)
+        self.categoryExpandButton.setIcon(category_expand_icon)
+
+        back_icon = QIcon(':app/backArrow.svg')
+        back_button = QToolButton(self)
+        back_button.setText('Back')
+        back_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        back_button.setIcon(back_icon)
+        back_button.clicked.connect(self.assetViewing)
+
+        links_title = DockTitle('LINKS', back_button, DockTitle.ButtonSide.LEFT, toggle=False, parent=self)
+        attribute_title = DockTitle('ATTRIBUTES', self.attrExpandButton, DockTitle.ButtonSide.LEFT, parent=self)
+        category_title = DockTitle('CATEGORIES', self.categoryExpandButton, DockTitle.ButtonSide.RIGHT, parent=self)
+
+        self.attributeDock.setTitleBarWidget(attribute_title)
+        self.categoryDock.setTitleBarWidget(category_title)
+        self.linksDock.setTitleBarWidget(links_title)
+        self.linksDock.hide()
+
+        category_title.filter_line.textChanged.connect(self.category_manager.filterAll)
+        links_title.filter_line.textChanged.connect(self.links_view.filterAll)
 
     @staticmethod
     def detachLinkedAsset(primary, relation):
@@ -188,6 +213,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     for asset in self.selected_assets: 
                         relation_asset.unlinkTo(asset)
                         self.detachLinkedAsset(asset, item)
+
             self.metadata_view.setAssets(self.selected_assets)
     
         else: # Update the asset field
@@ -229,7 +255,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         for category_name, assets in data.items():
             for fields in assets:
                 asset_obj = subcategory(**fields)
-                category = library_categories.get(int(asset_obj.category))
+                category = library_categories[int(asset_obj.category)]
                 category.tree.onNewSubcategory(asset_obj)
 
     @Slot(int, list)
@@ -273,19 +299,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot()
     def onConnect(self):
-        self.library.categories.fetch()
+        self.library.fetchCategories()
 
     @Slot(list)
     def onCategories(self, data):
-        category_obj = self.library.categories
+        category_list = self.library.categories
+
         # populate categories with subcategory data
         for x in data:
             subcat = subcategory(*x)
-            k = 0 if not subcat.category else subcat.category
+            i = 0 if not subcat.category else subcat.category
             subcat.count = 0 if subcat.count is None else subcat.count
-            assigned = category_obj.get(k)
+            assigned = category_list[i]
             assigned.subcategory_by_id[subcat.id] = polymorphicItem(fields=subcat)
-            category_obj.set(k, assigned)
+            category_list[i] = assigned
 
         category_widgets = self.category_manager.assembleCategories(self.library.categories)
         for index, category in enumerate(category_widgets):
@@ -493,6 +520,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         Re-queries the database if the searchbox or categories have changed
         """
         if self.block_search:
+            QTimer.singleShot(500, self.searchLibrary)
             return
         else:
             self.block_search = True
@@ -512,7 +540,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             session.searchcategories.execute(search_filter)
             
         unblocker = lambda : setattr(self, 'block_search', False)
-        QTimer.singleShot(1000, unblocker)
+        QTimer.singleShot(700, unblocker)
 
     @Slot(dict)
     def onSearchResults(self, search_results):
@@ -561,6 +589,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def onFilterResults(self, filter_results):
         load_icons = True #not self.assets_grid.isVisible()
         item_model = self.asset_item_model
+        category_list = self.library.categories
 
         filter_assets = self.library.assets_filtered
         if len(filter_results) != len(filter_assets):
@@ -575,7 +604,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             #asset_fields.extend([tags, []])
             asset = asset_constructor(*asset_fields)
             asset.category = category
-            category_obj = self.library.categories.get(category)
+            category_obj = category_list[category]
             if category_obj:
                 subcategory = category_obj.subcategory_by_id.get(subcategory)
                 asset.subcategory = subcategory
@@ -676,14 +705,14 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     
         # Map the views by link and attach to the selected primary assets
         selection = self.selected_assets_by_link
-
         for level, mapping in enumerate(link_map):
             for link, values, in mapping.items():
                 categories, ids = values
                 primary_asset = selection[int(link)]
 
                 for index in range(len(ids)):
-                    category_name = Category(categories[index]).name.lower()
+                    category_name = Table(categories[index]).name
+                    print('UNSTABLE', category_name)
                     assets = dependencies.get(category_name)
                     _id = ids[index]
                     upstream = [x for x in assets if x.id == _id]
@@ -817,6 +846,7 @@ def main(args):
     app = qApp or QApplication(sys.argv)
     ctypes.windll.kernel32.SetConsoleTitleW("Relic")
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic")
+    loadStylesheet(app, path=':app_style.qss')
     window = RelicMainWindow()
     # Startup the plugin server
     ingest_server = server.StrandServer('relic')

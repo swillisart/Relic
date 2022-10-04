@@ -6,11 +6,11 @@ from enum import IntEnum
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
 from sequence_path.main import SequencePath as Path
-from strand.client import StrandClient
 from qtshared6.settings import Preferences
 
 from relic.scheme import Classification
 from relic.local import Extension
+from relic.qt.strand.client import StrandClient
 
 PEAK = StrandClient('peak')
 USERPROFILE = os.getenv('userprofile')

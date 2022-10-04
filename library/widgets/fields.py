@@ -212,7 +212,7 @@ class FieldDelegate(QStyledItemDelegate):
         # only update the data if it actually modified by the editor
         if isinstance(converted, ObjectField):
             pass # The object fields sub-object can change.
-        elif converted.value != existing.value:
+        elif converted.value == existing.value:
             return
         model.setData(index, converted, Qt.EditRole)
     
@@ -261,7 +261,8 @@ class FieldDelegate(QStyledItemDelegate):
 class ComboField(object):
     default = 0
 
-    def draw(self, painter, option, index, value):
+    @staticmethod
+    def draw(painter, option, index, value):
         if not option.state & QStyle.State_Selected:
             painter.save()
             style_opt = QStyleOptionComboBox()
@@ -282,9 +283,17 @@ class ComboField(object):
             painter.restore()
 
 
-class CheckField(int):
-    widget = QCheckBox
+class IntField(int):
+    widget = SpinBox
     default = 0
+
+    @property
+    def value(self):
+        return self
+
+
+class CheckField(IntField):
+    widget = QCheckBox
 
     @staticmethod
     def draw(painter, option, index, value):
@@ -304,9 +313,8 @@ class CheckField(int):
         widget_style.drawControl(QStyle.CE_CheckBox, style_opt, painter, widget)
         
 
-class RatingField(int):
+class RatingField(IntField):
     widget = Rating
-    default = 0
     icon = scale_icon(QPixmap(':resources/app/heart.svg'))
     disabled = scale_icon(QPixmap(':resources/app/heart_disabled.svg'))
 
@@ -434,10 +442,6 @@ class LinkField(TextField):
         painter.restore()
 
 
-class IntField(int):
-    widget = SpinBox
-    default = 0
-
 class FileSizeField(IntField):
     def __str__(self):
         return "{:,} MB".format(self / 1000)
@@ -452,7 +456,7 @@ class FramerateField(IntField):
 
 class DateField(date):
     widget = QDateEdit
-    
+    value = None
     def __new__(cls, args):
         if isinstance(args, QDate):
             return date.__new__(cls, args.year(), args.month(), args.day())
@@ -462,7 +466,7 @@ class DateField(date):
 
 class DateTimeField(datetime):
     widget = QDateTimeEdit
-
+    value = None
     def __new__(cls, args):
         if isinstance(args, QDateTime):
             date = args.date()
@@ -483,16 +487,15 @@ def enum_widget_creator(cls, parent):
     [widget.addItem(x.icon, x.name.capitalize()) for x in cls]
     return widget
 
-def assign_enum_icons(obj):
-    prefix = obj.__name__
-    for x in obj:
-        x.icon = QPixmap(f':{prefix}/{x.name}')
-
 def setup_enum_ui(combo_enum):
-    combo_enum.draw = ComboField.draw
+    widget_create = partial(enum_widget_creator, combo_enum)
+    prefix = combo_enum.__name__
+    for x in combo_enum:
+        x.draw = ComboField.draw
+        x.widget = widget_create
+        x.icon = QPixmap(f':{prefix}/{x.name}')
+    combo_enum.widget = widget_create
     combo_enum.default = 0
-    combo_enum.widget = partial(enum_widget_creator, combo_enum)
-    assign_enum_icons(combo_enum)
 
 def icon_from_item(item):
     asset = item.data(role=Qt.UserRole)

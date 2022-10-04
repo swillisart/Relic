@@ -15,13 +15,13 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
 
 from qtshared6.utils import polymorphicItem
 from relic.local import Relational
-from relic.scheme import Table
+from relic.scheme import Table, AssetType, Classification
 from relic.qt.widgets import DockTitle
 from relic.qt.delegates import BaseItemDelegate, ItemDispalyModes
 from relic.qt.util import loadStylesheet
 
 from sequence_path.main import SequencePath as Path
-from strand import server
+from relic.qt.strand import server
 
 from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
@@ -39,7 +39,6 @@ from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.subcategoriesViews import CategoryManager
 from library.widgets.util import DialogOverlay
 
-CATEGORIES = []
 
 class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -66,7 +65,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         empty_widget.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
         self.searchDock.setTitleBarWidget(self.searchDock.widget())
         self.searchDock.setWidget(empty_widget)
-        self.resizeDocks([self.searchDock], [0], Qt.Horizontal) # (QTBUG-65592) fixes dock resize
+        #self.resizeDocks([self.searchDock], [0], Qt.Horizontal) # (QTBUG-65592) fixes dock resize
         self.library = Library()
         self.category_manager = CategoryManager(self)
         self.category_manager.onSelection.connect(self.searchLibrary)
@@ -218,8 +217,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     
         else: # Update the asset field
             for asset in self.selected_assets:
-                setattr(asset, name.lower(), value)
-                asset.update(fields=[name.lower()])
+                attr_name = name.lower()
+                if hasattr(asset, attr_name):
+                    setattr(asset, attr_name, value)
+                    asset.update(fields=[attr_name])
 
     @Slot(QModelIndex)
     def open_file(self, index):
@@ -419,7 +420,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.scaleView(1)
         self.assets_view.hide()
         self.attributeDock.hide()
-        self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.Minimum) 
         self.ingest_form.setCategoryView(self.categoryDock, self.categoryLayout)
         self.category_manager.blockSignals(True)
         DialogOverlay(self, self.ingest_form, modal=False)
@@ -489,9 +489,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.attributeDock.show()
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
         self.category_manager.blockSignals(False)
-        try:
-            self.verticalSpacer.changeSize(0, 0, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding) 
-        except:pass
 
     def hideDocks(self, state):
         self.categoryExpandButton.setChecked(state)
@@ -529,7 +526,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         search_filter = self.library.validateCategories(subcategories)
         # Define the search class mode. 
         use_collections = self.collectionRadioButton.isChecked()
-        search_filter['exclude_type'] = 5 if use_collections else 3
+        if use_collections:
+            exclude_type = AssetType.VARIANT
+        else:
+            exclude_type = AssetType.COLLECTION
+        search_filter['exclude_type'] = exclude_type
         # Split text into list of search term keywords.
         text = self.searchBox.text()
     
@@ -664,10 +665,13 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             return
 
         # Links / Dependencies have already been attached to the assets.
-        assets = [index.data(polymorphicItem.Object) for index in selection.indexes()]        
+        indices = self.assets_view.selectedIndexes()
+        assets = [index.data(polymorphicItem.Object) for index in indices]        
+        self.selected_assets = assets
+        self.selected_assets_by_link = {}
         if not assets:
             return
-        self.selected_assets = assets
+
         self.metadata_view.setAssets(assets)
 
         if self.previewCheckBox.isChecked():
@@ -852,7 +856,7 @@ def main(args):
     ingest_server = server.StrandServer('relic')
     ingest_server.incomingData.connect(window.externalPluginCommand)
     ingest_server.incomingFile.connect(window.browseTo)
-    window.resize(1600, 925)
+    window.resize(1620, 925)
     window.show()
     if args and args.path:
         window.asset_startup_path = args.path

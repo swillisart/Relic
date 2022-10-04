@@ -15,9 +15,10 @@ from PySide6.QtWidgets import *
 from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
 from relic.qt.delegates import ItemDispalyModes, BaseItemModel
 from relic.qt.expandable_group import ExpandableGroup
+from relic.qt.strand.client import StrandClient
+from relic.qt.strand.server import StrandServer
 from sequence_path.main import SequencePath as Path
-from strand.client import StrandClient
-from strand.server import StrandServer
+
 from d3dshot.d3dshot import D3DShot
 import av
 from av.filter import Graph
@@ -843,6 +844,7 @@ if __name__ == "__main__":
 
     # Define our Environment
     os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
+    os.environ['PYAV_LOGGING'] = 'off'
     from strand.client import StrandClient
     client = StrandClient('capture')
     client.sendPayload('')

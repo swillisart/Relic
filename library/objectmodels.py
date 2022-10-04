@@ -172,6 +172,7 @@ class FieldMixin(object):
     def count(self):
         return self.dependencies
 
+TempAsset.INDICATIONS = FieldMixin.INDICATIONS
 
 class Library(QObject):
 

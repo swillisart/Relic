@@ -14,7 +14,7 @@ from relic.qt.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseI
 import library.config as config
 from relic.local import Category, Extension, TempAsset
 from relic.scheme import Classification
-from library.io.ingest import ConversionRouter, remakePreview
+from library.io import ingest
 from library.io.util import LocalThumbnail
 
 from library.objectmodels import subcategory, getCategoryConstructor, Library, Type
@@ -375,7 +375,7 @@ class AssetListView(BaseView):
         self.assetsDeleted.emit(count_data)
 
     def generatePreview(self, action):
-        msg = 'Regenerate previews from source file or ues existing preview?'
+        msg = 'Regenerate previews from source file or use existing preview?'
         message_box = QMessageBox(QMessageBox.Question, 'Choice', msg,
                 QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel, self)
         result = message_box.exec_()
@@ -387,7 +387,7 @@ class AssetListView(BaseView):
                 path = asset.network_path
                 if asset.path == '' or not path.parent.exists():
                     continue
-                remakePreview(path)
+                ingest.generatePreviews(path)
             return
 
         for index in self.selectedIndexes():
@@ -397,18 +397,21 @@ class AssetListView(BaseView):
                 continue
             path.checkSequence()
             if path.sequence_path:
-                ConversionRouter.processSEQ(path, path)
+                ingest.processSEQ(path, path)
             elif path.ext in Extension.LDR:
-                ConversionRouter.processLDR(path, path)
+                ingest.processLDR(path, path)
             elif path.ext in Extension.HDR:
-                ConversionRouter.processHDR(path, path)
+                ingest.processHDR(path, path)
             elif path.ext in Extension.MOVIE:
-                ConversionRouter.processMOV(path, path)
+                ingest.processMOV(path, path)
 
     def browseLocalAsset(self, action):
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
-            winpath = str(asset.network_path.parent).replace('/', '\\')
+            if isinstance(asset, TempAsset):
+                winpath = str(asset.path).replace('/', '\\')
+            else:
+                winpath = str(asset.network_path.parent).replace('/', '\\')
             cmd = 'explorer /select, "{}"'.format(winpath)
             subprocess.Popen(cmd)
     

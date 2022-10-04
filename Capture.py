@@ -9,7 +9,9 @@ args = parser.parse_args()
 if __name__ == '__main__':
     # Define our Environment
     os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
-    from strand.client import StrandClient
+    os.environ['PYAV_LOGGING'] = 'off'
+
+    from relic.qt.strand.client import StrandClient
     client = StrandClient('capture')
     client.sendPayload('')
     if client.errored:

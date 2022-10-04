@@ -116,6 +116,7 @@ class Ui_IngestForm(object):
         self.label_2.setObjectName(u"label_2")
         font = QFont()
         font.setPointSize(10)
+        font.setBold(True)
         font.setUnderline(False)
         font.setKerning(True)
         self.label_2.setFont(font)
@@ -160,7 +161,12 @@ class Ui_IngestForm(object):
         self.gridLayout_2.setContentsMargins(9, 0, 9, 0)
         self.label_7 = QLabel(self.collectTab)
         self.label_7.setObjectName(u"label_7")
-        self.label_7.setFont(font)
+        font1 = QFont()
+        font1.setPointSize(9)
+        font1.setBold(True)
+        font1.setUnderline(False)
+        font1.setKerning(True)
+        self.label_7.setFont(font1)
 
         self.gridLayout_2.addWidget(self.label_7, 0, 0, 1, 1)
 
@@ -212,12 +218,13 @@ class Ui_IngestForm(object):
         self.categorizeTab = QWidget()
         self.categorizeTab.setObjectName(u"categorizeTab")
         self.categorizeTab.setEnabled(False)
-        font1 = QFont()
-        font1.setUnderline(False)
-        font1.setKerning(True)
-        self.categorizeTab.setFont(font1)
+        font2 = QFont()
+        font2.setUnderline(False)
+        font2.setKerning(True)
+        self.categorizeTab.setFont(font2)
         self.horizontalLayout = QHBoxLayout(self.categorizeTab)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(6, -1, 6, 6)
         self.collected_frame = QFrame(self.categorizeTab)
         self.collected_frame.setObjectName(u"collected_frame")
         self.collected_frame.setStyleSheet(u"QFrame#collected_subframe,\n"
@@ -248,12 +255,12 @@ class Ui_IngestForm(object):
 
         self.collectedLabel = QLabel(self.collected_subframe)
         self.collectedLabel.setObjectName(u"collectedLabel")
-        font2 = QFont()
-        font2.setPointSize(12)
-        font2.setBold(False)
-        font2.setUnderline(False)
-        font2.setKerning(True)
-        self.collectedLabel.setFont(font2)
+        font3 = QFont()
+        font3.setPointSize(12)
+        font3.setBold(False)
+        font3.setUnderline(False)
+        font3.setKerning(True)
+        self.collectedLabel.setFont(font3)
 
         self.horizontalLayout_7.addWidget(self.collectedLabel)
 
@@ -297,14 +304,14 @@ class Ui_IngestForm(object):
 
         self.categorizeFrame = QFrame(self.categorizeTab)
         self.categorizeFrame.setObjectName(u"categorizeFrame")
-        self.categorizeFrame.setFont(font1)
+        self.categorizeFrame.setFont(font2)
         self.categorizeFrame.setStyleSheet(u"QFrame#categorizeFrame {background-color: rgb(72, 72, 72);}\n"
 "")
         self.categorizeFrame.setFrameShape(QFrame.StyledPanel)
         self.categorizeFrame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_5 = QVBoxLayout(self.categorizeFrame)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.verticalLayout_5.setContentsMargins(-1, 0, -1, 0)
+        self.verticalLayout_5.setContentsMargins(6, 0, 6, 0)
         self.label_4 = QLabel(self.categorizeFrame)
         self.label_4.setObjectName(u"label_4")
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -312,7 +319,7 @@ class Ui_IngestForm(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
         self.label_4.setSizePolicy(sizePolicy)
-        self.label_4.setFont(font2)
+        self.label_4.setFont(font3)
 
         self.verticalLayout_5.addWidget(self.label_4)
 
@@ -325,17 +332,17 @@ class Ui_IngestForm(object):
 
         self.label_5 = QLabel(self.categorizeFrame)
         self.label_5.setObjectName(u"label_5")
-        font3 = QFont()
-        font3.setPointSize(8)
-        font3.setUnderline(False)
-        font3.setKerning(True)
-        self.label_5.setFont(font3)
+        font4 = QFont()
+        font4.setPointSize(8)
+        font4.setUnderline(False)
+        font4.setKerning(True)
+        self.label_5.setFont(font4)
 
         self.verticalLayout_5.addWidget(self.label_5)
 
         self.existingNamesList = AssetNameListView(self.categorizeFrame)
         self.existingNamesList.setObjectName(u"existingNamesList")
-        self.existingNamesList.setFont(font1)
+        self.existingNamesList.setFont(font2)
 
         self.verticalLayout_5.addWidget(self.existingNamesList)
 
@@ -380,7 +387,7 @@ class Ui_IngestForm(object):
 
         self.newAssetsLabel = QLabel(self.processed_subframe)
         self.newAssetsLabel.setObjectName(u"newAssetsLabel")
-        self.newAssetsLabel.setFont(font2)
+        self.newAssetsLabel.setFont(font3)
 
         self.horizontalLayout_8.addWidget(self.newAssetsLabel)
 

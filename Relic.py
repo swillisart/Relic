@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     if args.path:
         # Attempt to use existing session
-        from strand.client import StrandClient
+        from relic.qt.strand.client import StrandClient
         client = StrandClient('relic')
         client.sendPayload(args.path)
         if client.errored:

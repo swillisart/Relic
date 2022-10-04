@@ -12,7 +12,7 @@ from PySide6.QtCore import (QSignalBlocker, QItemSelection, QItemSelectionModel,
                             QRect, QSignalBlocker, QSize, Signal, Slot, QEvent)
 from PySide6.QtGui import (QCursor, QFont, QIcon, QPainter, QStandardItem,
                            QStandardItemModel, Qt, QTextDocument, QPixmap)
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox,
+from PySide6.QtWidgets import (QAbstractItemView,
                                QFrame, QGridLayout, QLabel, QListView, QMenu,
                                QSizePolicy, QSpacerItem, QSpinBox,
                                QStyledItemDelegate, QStyleOptionViewItem,

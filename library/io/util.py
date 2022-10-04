@@ -1,5 +1,8 @@
 import av
 import io
+import glm
+from oiio.OpenImageIO import ImageSpec
+
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtCore import QRunnable
 from sequence_path.main import SequencePath as Path
@@ -42,3 +45,68 @@ class LocalThumbnail(QRunnable):
             self.callback(frames)
         if self.item:
             self.item.emitDataChanged()
+
+
+class ImageDimensions(glm.vec2):
+    def __init__(self, width, height, channels=3):
+        super(ImageDimensions, self).__init__(width, height)
+        self.channels = channels
+
+    def __str__(self):
+        return f'{self.w}x{self.h}x{self.channels}'    
+
+    @classmethod
+    def fromArray(cls, array):
+        h, w, c = array.shape
+        obj = cls(w, h, channels=c)
+        return obj
+
+    @classmethod
+    def fromSpec(cls, spec):
+        obj = cls(spec.full_width, spec.full_height, spec.nchannels)
+        return obj
+
+    @classmethod
+    def fromQImage(cls, qimage):
+        w, h = qimage.size().toTuple()
+        channels = 3
+        if qimage.isGrayscale():
+            channels = 1
+        elif qimage.hasAlphaChannel():
+            channels = 4
+        obj = cls(w, h, channels)
+        return obj
+
+    def makeDivisble(self):
+        self.x = self.divisible_width
+
+    @property
+    def divisible_width(self):
+        return self.x - (self.x % 16)
+
+    @property
+    def aspect(self):
+        return self.w / self.h
+
+    @property
+    def aspectReversed(self):
+        return self.h / self.w
+
+    @property
+    def w(self):
+        return int(self.x)
+
+    @w.setter
+    def w(self, value):
+        self.x = value
+
+    @property
+    def h(self):
+        return int(self.y)
+
+    @h.setter
+    def h(self, value):
+        self.y = value
+
+    def asSpec(self, ptype):
+        return ImageSpec(self.w, self.h, self.channels, ptype)

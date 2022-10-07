@@ -15,7 +15,7 @@ from PySide2.QtWidgets import *
 from PySide2.QtOpenGL import QGLWidget
 
 # -- First-party --
-from sequence_path.main import SequencePath as Path
+from sequence_path.main import Path
 
 # -- Module --
 from relic_base import asset_classes, asset_views, config

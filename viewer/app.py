@@ -3,11 +3,14 @@ import ctypes
 import os
 import sys
 import json
-import subprocess
 import shutil
+from fractions import Fraction
+
 from functools import partial
 from collections import defaultdict
-from operator import itemgetter
+import av
+from av.filter import Graph
+from av import VideoFrame
 
 # -- Third-party --
 import numpy as np
@@ -25,7 +28,6 @@ from sequence_path.main import Path
 from strand.server import StrandServer
 from enum import Enum
 
-#import relic_base
 
 # -- Module --
 import resources_rc
@@ -760,28 +762,42 @@ class PlayerAppWindow(QMainWindow):
         if exporter == ExportExtension.edl:
            self.translateEDL(file_name)
         elif exporter == ExportExtension.mp4:
-           self.translateMP4(file_name, [x[1] for x in self.timeline.graph.iterateSequences()])
+            clips = [x[1] for x in self.timeline.graph.iterateSequences()]
+            self.translateMP4(file_name, clips)
+
 
     def translateMP4(self, out_file, clips, in_file=None):
+        w, h, c = clips[0].geometry.shape
+        out_container = av.open(str(out_file), "w")
+        out_stream = out_container.add_stream('h264')
+        out_stream.options = {'crf': '25', 'pix_fmt': 'yuv422p'}
+        out_stream.width = w
+        out_stream.height = h
+        time_base = Fraction(1, 24)
+        out_stream.time_base = time_base
         for clip in clips:
-            tc_frame = clip.start_timecode * clip.framerate
-            head = ((clip.first + tc_frame) / clip.framerate) * 1000
-            tail = ((clip.last + tc_frame) / clip.framerate) * 1000
+            if isinstance(clip, MovClip):
+                pass
+            else:
+                continue # TODO: images and sequences
 
-            cmd = [
-                'ffmpeg',
-                '-loglevel', 'error',
-                '-i', in_file or str(clip.path),
-                '-y', # Always Overwrite
-                '-ss', f'{int(head)}ms',
-                '-to', f'{int(tail)}ms',
-                out_file,
-            ]
-            subprocess.call(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-            )
+            in_container = av.open(in_file or str(clip.path))
+            v_stream = in_container.streams.video[0]
+
+            timeline_offset = clip.start_timecode * clip.framerate
+            head = (timeline_offset + clip.first)
+            seek_timestamp = ((head / float(v_stream.rate)) / v_stream.time_base) + v_stream.start_time
+            in_container.seek(int(seek_timestamp), stream=v_stream, any_frame=True)
+            count = clip.duration
+            for frame_number, frame in enumerate(in_container.decode(video=0)):
+                frame.time_base = time_base
+                frame.pts = frame_number
+                out_container.mux(out_stream.encode(frame))
+                if frame_number > count:
+                    break
+            in_container.close()
+        out_container.mux(out_stream.encode())
+        out_container.close()
 
     def translateEDL(self, file_name):
         out_file = open(file_name, 'w')

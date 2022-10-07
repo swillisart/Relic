@@ -1,6 +1,7 @@
-$env:PYTHONPATH="P:/Code/Relic/plugins/Lib27"
-$env:PYTHONPATH="P:/Code/Relic/plugins/LibShared"
+killapp nuke
+$env:PYTHONPATH="P:/Code/Relic/plugins/Lib27;"
+$env:PYTHONPATH+="P:/Code/Relic/plugins/LibShared;"
 $env:NUKE_PATH="P:/Code/Relic/plugins/relicNuke"
 $env:show="Sandbox"
 clear
-& 'E:/Program Files/Nuke11.3v5/Nuke11.3.exe' --nukex
+& 'C:/Program Files/Nuke12.2v11/Nuke12.2.exe'

@@ -77,12 +77,18 @@ class ImageDimensions(glm.vec2):
         obj = cls(w, h, channels)
         return obj
 
-    def makeDivisble(self):
+    def makeDivisble(self, height=False):
         self.x = self.divisible_width
+        if height:
+            self.y = self.divisible_height
 
     @property
-    def divisible_width(self):
-        return self.x - (self.x % 16)
+    def divisible_width(self, height=False):
+        return int(self.x) - (int(self.x) % 16)
+
+    @property
+    def divisible_height(self, height=False):
+        return int(self.y) - (int(self.y) % 16)
 
     @property
     def aspect(self):

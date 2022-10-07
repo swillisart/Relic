@@ -1,5 +1,6 @@
 import os
 import subprocess
+from fractions import Fraction
 from collections import deque
 from functools import partial
 import traceback
@@ -7,6 +8,10 @@ import traceback
 import numpy as np
 import oiio.OpenImageIO as oiio
 from imagine import hdr, libraw
+import av
+from av.filter import Graph
+from av import VideoFrame
+
 #from imagine.colorchecker_detection import autoExpose
 from imagine.exif import EXIFTOOL
 from library.config import RELIC_PREFS, log
@@ -20,6 +25,8 @@ from relic.local import (INGEST_PATH, Extension, TempAsset,
 from relic.scheme import Class
 from sequence_path.main import SequencePath as Path
 
+av.logging.set_level(av.logging.CRITICAL)
+
 CREATE_NO_WINDOW = 0x08000000
 
 THUMBNAIL_SIZE = ImageDimensions(288, 192)
@@ -30,10 +37,105 @@ EXE_ICON_CMD = """Add-Type -AssemblyName System.Drawing;
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon('{}');
 $icon.ToBitmap().Save('{}')"""
 
-def getMovInfo(fpath):
-    MOV_EXIF_META = ['-Duration#', '-ImageSize', '-VideoFrameRate']
-    mov_metadata = EXIFTOOL.getFields(str(fpath), MOV_EXIF_META, {})
-    return mov_metadata
+
+class FakeImageStream:
+    def __init__(self, width, height, time_base):
+        self.width =  width
+        self.height = height
+        self.time_base = time_base
+
+
+class Encoder:
+    __slots__ = ('container', 'stream', 'graph', 'time_base')
+    FFMPEG_ARGS = {
+        'pix_fmt': 'yuv422p',
+        'crf': '26',
+        'preset': 'medium',
+        'tune': 'fastdecode',
+    }
+    def __init__(self, container, size, time_base, input_stream):
+        self.container = container
+        self.stream = self.createStream(container, size, time_base)
+        self.graph = self.createScaleGraph(input_stream, size)
+        self.time_base = time_base
+
+    def createStream(self, container, size, time_base):
+        video_stream = container.add_stream('h264', rate=24, options=Encoder.FFMPEG_ARGS)
+        video_stream.width = size.w
+        video_stream.height = size.h
+        video_stream.time_base = time_base
+        return video_stream
+
+    def createScaleGraph(self, stream, dimensions):
+        graph = Graph()
+        w =  dimensions.w
+        h = dimensions.h
+        input_buffer = graph.add_buffer(
+            width=stream.width, height=stream.height, format='yuv422p', time_base=stream.time_base,
+        )
+        scaler = f'w={w}:h={h}:force_original_aspect_ratio=decrease'
+        padder = f'{w}:{h}:(ow-iw)/2:(oh-ih)/2'
+        
+        size_filter = graph.add('scale', scaler)
+        pad_filter = graph.add('pad', padder)
+        buffersink = graph.add('buffersink')
+
+        input_buffer.link_to(size_filter)
+        size_filter.link_to(pad_filter)
+        pad_filter.link_to(buffersink)
+        graph.configure()
+        return graph
+
+
+class VidOut:
+    def __init__(self, path, input_stream):
+        # Ensure 16x16 compatible format for h264 proxies
+        proxy_size = ImageDimensions(input_stream.width, input_stream.height)
+        proxy_size.makeDivisble(height=True)
+
+        # Preview stream for thumbnail media is always 24fps.
+        time_base = Fraction(1, 24)
+        icon_container = av.open(str(path.suffixed('_icon', ext='.mp4')), "w")
+        preview = Encoder(icon_container, THUMBNAIL_SIZE, time_base, input_stream)
+        
+        # Make the proxy stream as compressed
+        proxy_container = av.open(str(path.suffixed('_proxy', ext='.mp4')), "w")
+        proxy = Encoder(proxy_container, proxy_size, input_stream.time_base, input_stream)
+
+        self.encodePreview = partial(VidOut.encodePreview,
+            preview.container, preview.stream, preview.graph, preview.time_base)
+        self.encodeProxy = partial(VidOut.encodeProxy,
+            proxy.container, proxy.stream, proxy.graph)
+        self.proxy = proxy
+        self.preview = preview
+
+    @staticmethod
+    def encodePreview(container, stream, graph, time_base, frame_number, frame):
+        graph.push(frame)
+        icon_frame = graph.pull()
+        icon_frame.time_base = time_base
+        icon_frame.pts = frame_number / 10
+        container.mux(stream.encode(icon_frame))
+        return icon_frame
+
+    @staticmethod
+    def encodeProxy(container, stream, graph, frame):
+        # Encode full-res proxy
+        graph.push(frame)
+        proxy_frame = graph.pull()
+        container.mux(stream.encode(proxy_frame))
+        return proxy_frame
+
+    def __enter__(self):
+        return self
+        
+    def __exit__(self, *exc):
+        # close the input & output containers
+        self.proxy.container.mux(self.proxy.stream.encode())
+        self.proxy.container.close()
+        self.preview.container.mux(self.preview.stream.encode())
+        self.preview.container.close()
+        return True
 
 def getRawInfo(fpath):
     """Gets Exif metadata from Canon cameras raw .cr2.
@@ -56,51 +158,6 @@ def getRawInfo(fpath):
     result = EXIFTOOL.getFields(str(fpath), RAW_EXIF_META, {})
     return result
 
-def generatePreviews(path, img_buf=None):
-    """Makes Proxy & Icon previews from an OpenImageIO image buffer"""
-    if not img_buf:
-        img_buf = oiio.ImageBuf(str(path))
-
-    spec = img_buf.spec()
-    size = ImageDimensions(spec.width, spec.height, channels=3)
-    size.makeDivisble() # ensure divisible width for jpeg 16x16 blocks
-
-    proxy_spec = oiio.ImageSpec(size.w, size.h, size.channels, oiio.UINT8)
-    proxy_spec['compression'] = 'jpeg:70'
-    proxy_buf = oiio.ImageBuf(proxy_spec)
-
-    icon_spec = THUMBNAIL_SIZE.asSpec(oiio.UINT8)
-    icon_spec['compression'] = 'jpeg:50'
-    icon_buf = oiio.ImageBuf(icon_spec)
-
-    oiio.ImageBufAlgo.resize(proxy_buf, img_buf, filtername='cubic')
-    oiio.ImageBufAlgo.fit(icon_buf, proxy_buf, filtername='cubic', exact=True)
-
-
-    # Composite icon image over constant grey
-    bg = oiio.ImageBuf(icon_buf.spec())
-    oiio.ImageBufAlgo.fill(bg, (0.247, 0.247, 0.247, 1.0))
-    comp = oiio.ImageBufAlgo.over(icon_buf, bg)
-    
-    # Write to disk
-    icon_path = path.suffixed('_icon', ext='.jpg')
-    proxy_path = path.suffixed('_proxy', ext='.jpg')
-    icon_buf.write(str(icon_path))
-    proxy_buf.write(str(proxy_path))
-    return icon_path
-
-def assetFromStill(spec, icon_path, in_path):
-    icon = QPixmap.fromImage(QImage(str(icon_path)))
-    asset = TempAsset(
-        name=in_path.stem,
-        category=0,
-        type=0,
-        duration=0,
-        resolution=str(ImageDimensions.fromSpec(spec)),
-        path=in_path,
-        icon=icon,
-    )
-    return asset
 
 def tempAssetFromImage(in_path, out_path, src_img):
     icon_img = makeImagePreview(src_img)
@@ -137,8 +194,9 @@ def makeImagePreview(source_img):
     resized = source_img.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
     # calculate size offset image to center it.
     width_diff = int((w - resized.width()) / 2)
+    height_diff = int((h - resized.height()) / 2)
 
-    painter.drawImage(width_diff, 0, resized)
+    painter.drawImage(width_diff, height_diff, resized)
     painter.end()
     return out_img
 
@@ -182,151 +240,103 @@ def processTOOL(in_path, out_path, flag):
     )
     return asset
 
-def processMOV(in_path, out_path):
-    #""">>> ['5.292', '912x899', '24']"""
-    log.debug(str(in_path))
-    mov_metadata = getMovInfo(in_path)
-    log.debug(str(mov_metadata))
-    duration = float(mov_metadata.get('Duration'))
-    framerate = float(mov_metadata.get('VideoFrameRate'))
-    pts = (((duration * framerate) * 24) / 100) / 24
-    width, height = mov_metadata.get('ImageSize', '0x0').split('x')
 
-    icon_path = out_path.suffixed('_icon', ext='.jpg')
-    w, h = THUMBNAIL_SIZE.w, THUMBNAIL_SIZE.h
-    FILTER_GRAPH_ICON = [
-        f'setpts=PTS/{pts}',
-        f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
-        f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
+def processMOV(in_path, out_path, flag):
+    input_container = av.open(str(in_path))
+    input_stream = input_container.streams.video[0]
+    input_stream.thread_type = "AUTO"
 
-    ow = int(width) + (int(width) % 16)
-    oh = int(height) - (int(height) % 16)
+    framerate = float(input_stream.rate)
+    duration = input_stream.duration * float(input_stream.time_base)
+    middle_frame = int((duration * framerate) / 2 )
 
-    FILTER_GRAPH_PROXY = [
-        f'scale=w={ow}:h={oh}:force_original_aspect_ratio=decrease',
-        f'pad={ow}:{oh}:(ow-iw)/2:(oh-ih)/2'
-    ]
+    # decode and encode streams
+    with VidOut(out_path, input_stream) as vidout:
+        for frame_number, frame in enumerate(input_container.decode(video=0)):
+            # Only encode the preview every 10th frame to speed it up.
+            if frame_number % 10 == 0:
+                icon_frame = vidout.encodePreview(frame_number, frame)
+            if frame_number == middle_frame:
+                array = icon_frame.to_rgb().to_ndarray()
+            vidout.encodeProxy(frame)
 
-    cmd = [
-        'ffmpeg',
-        '-loglevel', 'error',
-        '-y',
-        '-i', str(in_path),
-        '-pix_fmt', 'yuv422p',
-        '-vcodec', 'h264',
-        '-crf', '26',
-        '-preset', 'medium',
-        '-tune', 'fastdecode',
-        '-movflags', '+faststart',
-        '-vf', ','.join(FILTER_GRAPH_PROXY),
-        str(out_path.suffixed('_proxy', ext='.mp4')),
-        '-r', '24',
-        '-vf', ','.join(FILTER_GRAPH_ICON),
-        '-an',  # Flag to not try linking audio file
-        '-pix_fmt', 'yuv422p',
-        '-vcodec', 'h264',
-        '-tune', 'fastdecode',
-        '-movflags', '+faststart',
-        str(out_path.suffixed('_icon', ext='.mp4')),
-        '-vf', 'select=gte(n\,1),{}'.format(','.join(FILTER_GRAPH_ICON[1:])),
-        '-vframes', '1',
-        str(icon_path),
-    ]
-    subprocess.call(cmd, stdout=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
-
-    spec = oiio.ImageSpec(int(width), int(height), 3, oiio.UINT8)
-    asset = assetFromStill(spec, icon_path, in_path)
-    asset.duration = int(duration)
-    asset.framerate = framerate
-
+    input_container.close()
+    ih, iw, _ = array.shape
+    src_img = QImage(array, iw, ih, QImage.Format_RGB888)
+    icon_img = makeImagePreview(src_img)
+    icon_img.save(str(out_path.suffixed('_icon', ext='.jpg')))
+    asset = TempAsset(
+        name=in_path.stem,
+        category=0,
+        type=0,
+        duration=int(duration),
+        framerate=int(framerate),
+        resolution=f'{input_stream.width}x{input_stream.height}x3',
+        path=in_path,
+        icon=QPixmap.fromImage(icon_img),
+    )
+    setattr(asset, 'class', flag)
     return asset
-
 
 def processSEQ(in_path, out_path, flag):
     frames = sorted(in_path.frames)
     frame_count = len(frames)
     if frame_count == 1:
         return processHDR(in_path, out_path, flag)
-    a_input = oiio.ImageInput.open(frames[0])
-    spec = a_input.spec()
-    a_input.close()
-    pts = ((frame_count * 24) / 100) / 24
-    w, h = THUMBNAIL_SIZE.w, THUMBNAIL_SIZE.h
-    width = spec.full_width
-    height = spec.full_height 
-    FILTER_GRAPH_ICON = [
-        f'setpts=PTS/{pts}', 
-        f'scale=w={w}:h={h}:force_original_aspect_ratio=decrease',
-        f'pad={w}:{h}:(ow-iw)/2:(oh-ih)/2']
+    img_input = oiio.ImageInput.open(str(frames[0]))
+    spec = img_input.spec()
+    img_input.close()
+    w, h, c = spec.full_width, spec.full_height, spec.nchannels
 
-    ow = width + (width % 16)
-    oh = height - (height % 16)
+    # Ensure 16x16 compatible format for h264
+    proxy_size = ImageDimensions(w, h)
+    proxy_size.makeDivisble(height=True)
 
-    FILTER_GRAPH_PROXY = [
-        f'scale=w={ow}:h={oh}:force_original_aspect_ratio=decrease',
-        f'pad={ow}:{oh}:(ow-iw)/2:(oh-ih)/2'
-    ]
+    middle_frame = int(frame_count / 2)
 
-    command = [
-        'ffmpeg',
-        '-loglevel', 'error',
-        '-y',
-        '-f', 'rawvideo',
-        '-vcodec', 'rawvideo',
-        '-s', f'{width}x{height}',
-        '-pix_fmt', 'rgb24',
-        '-i', '-',  # Input comes from a pipe
-        '-r', '24',  # fps
-        '-an', # Flag to not try linking audio file
-        '-pix_fmt', 'yuv422p',
-        '-vcodec', 'h264',
-        '-crf', '25',
-        '-preset', 'medium',
-        '-tune', 'fastdecode',
-        '-movflags', '+faststart',
-        '-vf', ','.join(FILTER_GRAPH_PROXY),
-        str(out_path.suffixed('_proxy', ext='.mp4')),
-        '-vf', ','.join(FILTER_GRAPH_ICON),
-        '-an',  # Flag to not try linking audio file
-        '-vcodec', 'h264',
-        '-tune', 'fastdecode',
-        '-movflags', '+faststart',
-        str(out_path.suffixed('_icon', ext='.mp4'))
-    ]
+    input_stream = FakeImageStream(w, h, Fraction(1, 24))
+    with VidOut(out_path, input_stream) as vidout:
+        for frame_number, frame in enumerate(frames):
+            buf = oiio.ImageBuf(str(frame))
+            buf = oiio.ImageBufAlgo.colorconvert(buf, "Linear", "sRGB")
 
-    pipe = subprocess.PIPE
-    pr = subprocess.Popen(
-        command,
-        stdout=subprocess.DEVNULL,
-        stdin=pipe,
-        creationflags=CREATE_NO_WINDOW)
+            # Exr's may have bounding box regions of interest.
+            spec = buf.spec()
+            r = spec.roi
+            img_data = buf.get_pixels(format=oiio.UINT8)
+            has_bbox = spec.height != spec.full_height or spec.width != spec.full_width
+            if has_bbox:
+                full_pixels = np.zeros((spec.full_height, spec.full_width, 3), dtype=np.uint8)
+                full_pixels[r.ybegin:r.yend, r.xbegin:r.xend, :] = img_data[:, :, :3]
+                array = full_pixels
+            else:
+                array = img_data[:, :, :3]
 
-    i = 0
-    while frames:
-        frame = frames.pop(0)
-        i += 1
-        buf = oiio.ImageBuf(str(frame))
-        spec = buf.spec()
-        r = spec.roi
+            # Write Icon from center of range
+            if frame_number == middle_frame:
+                ih, iw, _ = array.shape
+                src_img = QImage(array, iw, ih, QImage.Format_RGB888)
+                icon_img = makeImagePreview(src_img)
+                icon_img.save(str(out_path.suffixed('_icon', ext='.jpg')))
 
-        buf = oiio.ImageBufAlgo.colorconvert(buf, "Linear", "sRGB")
-        # Write Icon from center of range
-        if i == int(frame_count / 2):
-            icon_path = generatePreviews(out_path, buf)
+            video_frame = VideoFrame.from_ndarray(array)
+            # Only encode the preview every 10th frame to speed it up.
+            if frame_number % 10 == 0:
+                vidout.encodePreview(frame_number, video_frame)
 
-        data = buf.get_pixels(format=oiio.UINT8)
+            vidout.encodeProxy(video_frame)
 
-        if spec.height != spec.full_height or spec.width != spec.full_width:
-            full_pixels = np.zeros((spec.full_height, spec.full_width, 3), dtype=np.uint8)
-            full_pixels[r.ybegin:r.yend, r.xbegin:r.xend, :] = data[:, :, :3]
-            data = full_pixels
-
-        pr.stdin.write(data[:, :, :3].tobytes())
-        pr.stdin.flush()
-
-    pr.stdin.close()
-    asset = assetFromStill(spec, icon_path, in_path)
-    asset.duration = int(frame_count/24)
+    asset = TempAsset(
+        name=in_path.stem,
+        category=0,
+        type=0,
+        duration=int(frame_count/24),
+        framerate=24,
+        resolution=f'{w}x{h}x{c}',
+        path=in_path,
+        icon=QPixmap.fromImage(icon_img),
+    )
+    setattr(asset, 'class', flag)
     return asset
 
 def processRAW(in_path, out_path, flag):
@@ -639,6 +649,7 @@ class IngestionThread(QThread):
         super(IngestionThread, self).start()
 
     def run(self):
+        #TODO This function is too big and hard to read.
         while True:
             #self.mutex.lock()
             migrate_files = partial(IngestionThread.applyFileOperator, self.file_op)

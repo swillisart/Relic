@@ -2,6 +2,7 @@ import ctypes
 import os
 import sys
 import operator
+import subprocess
 
 from datetime import datetime
 from functools import partial, cached_property
@@ -66,23 +67,27 @@ def video_to_gif(path):
     in_container = av.open(str(path))
     in_stream = in_container.streams.video[0]
     in_stream.thread_type = "AUTO"
-
-    out_container = av.open(str(out_path), "w")
-    out_stream = out_container.add_stream('gif', rate=24)
-    out_stream.pix_fmt = 'rgb8'
-    out_stream.width = in_stream.width
-    out_stream.height = in_stream.height
-    out_stream.time_base = Fraction(1, 1000)
+    temp_path = str(path.suffixed('.%04d.', ext='png'))
 
     try:
-        for frame in in_container.decode(video=0):
-            out_packet = out_stream.encode(frame)
-            out_container.mux(out_packet)
+        frame_count = 0
+        for frame_number, frame in enumerate(in_container.decode(video=0)):
+            if frame_number % 2 == 0:
+                array = frame.to_rgb().to_ndarray()
+                h, w, c = array.shape
+                img = QImage(array, w, h, QImage.Format_RGB888)
+                img.save(temp_path % frame_count)
+                frame_count += 1
     except Exception as exerr:
         print(exerr)
+    finally:
+        in_container.close()
 
-    in_container.close()
-    out_container.close()
+    png_frames = temp_path.replace('.%04d.', '.*.') 
+    cmd = f'gifski -o {out_path} --fps 15 {png_frames}'
+    subprocess.call(cmd)
+    [os.remove(temp_path % i) for i in range(frame_count)]
+
     return out_path
 
 
@@ -117,7 +122,6 @@ class Recorder(QObject):
     def createContainer(self, out_path):
         # PyAv container and streams
         container = av.open(out_path, "w")
-        #time_base = Fraction(1, 24)
         args = {'tune': 'zerolatency', 'bitrate': '4000',  'bufsize': '166', 'maxrate': '4000', 'crf': '32'}
         # Video
         video_stream = container.add_stream('libx264', rate=24, options=args)

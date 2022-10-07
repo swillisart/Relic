@@ -2,7 +2,7 @@
 -- USAGE --
 import maya.cmds as cmds
 cmds.loadPlugin('relicMayaPlugin')
-cmds.loadPlugin('P:/Code/Relic/library/plugins/relicMaya/relicMayaPlugin.py')
+cmds.loadPlugin('P:/Code/Relic/plugins/relicMaya/relicMayaPlugin.py')
 """
 
 import sys

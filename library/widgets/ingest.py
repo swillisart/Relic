@@ -5,10 +5,7 @@ from functools import partial
 
 from imagine.colorchecker_detection import detectColorChecker
 from library.config import RELIC_PREFS, peakPreview
-from library.io.ingest import (ConversionRouter, IngestionThread, TaskRunner,
-                               applyImageModifications, blendRawExposures,
-                               processIMAGE, processLIGHT, processMOV,
-                               processRAW, processTOOL)
+from library.io import ingest 
 from library.objectmodels import (Type, alusers, getCategoryConstructor,
                                   relationships, session, tags)
 from library.ui.ingestion import Ui_IngestForm
@@ -62,15 +59,11 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.next_enabled = partial(self.nextButton.setEnabled, True)
         self.next_disabled = partial(self.nextButton.setEnabled, False)
         self.collectedListView.onDeleted.connect(self.removeIngestFiles)
-        self.actionGetMatrix = QAction('Get Color Matrix', self)
-        self.actionBlendExposures = QAction('Align And Blend Exposures', self)
-        self.actionReprocessImage = QAction('Process Image', self)
-        self.actionReprocessImage.triggered.connect(self.reprocessImage)
-        self.actionGetMatrix.triggered.connect(self.getColorMatrix)
-        self.actionBlendExposures.triggered.connect(self.alignBlendExposures)
-
-        self.collectedListView.additional_actions.extend(
-            [self.actionGetMatrix, self.actionReprocessImage, self.actionBlendExposures])
+        self.collectedListView.additional_actions.extend([
+            QAction('Detect Color Matrix', self, triggered=self.getColorMatrix),
+            QAction('Align & Blend Exposures', self, triggered=self.alignBlendExposures),
+            QAction('Process Image', self, triggered=self.reprocessImage),
+            ])
 
         self.collect_item_model = AssetItemModel()
         self.new_asset_item_model = AssetItemModel()
@@ -85,7 +78,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedListView.assetsDeleted.connect(self.updateLabelCounts)
         self.existingNamesList.newItem.connect(self.onNewItem)
         self.existingNamesList.linkItem.connect(self.onLinkItem)
-        self.ingest_thread = IngestionThread(self)
+        self.ingest_thread = ingest.IngestionThread(self)
         self.ingest_thread.itemDone.connect(self.assetIngested)
         self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
         self.loading_movie = QMovie(':resources/general/load_wheel_24.webp')
@@ -103,6 +96,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         session.retrieveassetnames.callback.connect(self.onAssetNameRetrieval)
         session.initializeprimaryasset.callback.connect(self.createVariations)
         session.createassets.callback.connect(self.ingestAssets)
+        self.collectedListView.onExecuted.connect(self.previewLocal)
         self.collectedListView.doubleClicked.connect(self.previewLocal)
         self.working = False
         self.current_category_id = None
@@ -119,18 +113,27 @@ class IngestForm(Ui_IngestForm, QDialog):
             return
 
         classification = 0
+        category_filter = set()
         for index in selection:
             asset = index.data(Qt.UserRole)
-            classifier = getattr(asset, 'class')
-            classification |= classifier.value
-
+            classifier = Class(getattr(asset, 'class'))
+            classification |= classifier
+            # If the category is provided use that as a secondary filter
+            if asset.category is not None:
+                category_filter.add(Category(int(asset.category)))
+        
+        # Consider all categories if none are provided by the selection
+        if not category_filter:
+            [category_filter.add(x) for x in Category]
+        # Filter by categories and classification
         for x in Category:
             category_expander = category_widgets[int(x)]
-            if classification & x.data.classifier:
+            if x.data.classifier & classification and x in category_filter:
                 category_expander.show()
+                category_expander.expandState()
             else:
+                category_expander.collapseState()
                 category_expander.hide()
-
 
     def previewLocal(self, index):
         temp_path, temp_asset = self.getCollectedPath(index)
@@ -190,8 +193,9 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.categorizeTab.setEnabled(True)
         self.ingestTabWidget.setCurrentIndex(1)
         self.kept_original_name = True
-        self.todo = len(assets)
-        self.updateLabelCounts(len(assets)-1)
+        self.updateLabelCounts(len(assets))
+        # always copy and never move any plugin data.
+        self.ingest_thread.file_op = ingest.IngestionThread.copyOp
         item_model = self.collect_item_model
         for fields in assets:
             asset = TempAsset(**fields)
@@ -218,23 +222,22 @@ class IngestForm(Ui_IngestForm, QDialog):
         subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
         category_id = self.current_category_id
         asset_constructor = getCategoryConstructor(category_id)
+
         # If a selection contains multiple switch the creation mode
         # to make a collection and link all created Assets as Variants.
         total = len(selection)
         self.increment = 0
+        asset = asset_constructor(
+            name=name,
+            path=f'{subcategory.name}/{name}',
+            links=(subcategory.relationMap, subcategory.id)
+        )
         if total > 1:
-            primary_asset = asset_constructor(
-                name=name,
-                path=f'{subcategory.name}/{name}',
-                links=(subcategory.relationMap, subcategory.id),
-                type=int(Type.COLLECTION))
-            primary_data = {primary_asset.categoryName: primary_asset.export}
+            asset.type = int(Type.COLLECTION)
+            primary_data = {asset.categoryName: asset.export}
             session.initializeprimaryasset.execute(primary_data)
         else:
-            asset = asset_constructor(
-                name=name,
-                links=(subcategory.relationMap, subcategory.id),
-                type=int(Type.ASSET))
+            asset.type = int(Type.ASSET)
             asset_data = {asset.categoryName: [asset.export]}
             session.createassets.execute(asset_data)
 
@@ -314,9 +317,9 @@ class IngestForm(Ui_IngestForm, QDialog):
         asset_constructor = getCategoryConstructor(category_id)
         ingester = self.ingest_thread
         if self.copyCheckBox.checkState():
-            ingester.file_op = IngestionThread.copyOp
+            ingester.file_op = ingest.IngestionThread.copyOp
         else:
-            ingester.file_op = IngestionThread.moveOp
+            ingester.file_op = ingest.IngestionThread.moveOp
 
         item_model = self.new_asset_item_model
         for num, index in enumerate(selection):
@@ -408,7 +411,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         ingest_map = self.getIngestionMap()
 
         self.collect_thread = QThread(self)
-        self.router = ConversionRouter(ingest_map)
+        self.router = ingest.ConversionRouter(ingest_map)
         self.router.moveToThread(self.collect_thread)
         self.router.finished.connect(self.collectionComplete)
         self.router.progress.connect(self.receiveAsset)
@@ -473,31 +476,31 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     def getIngestionMap(self):
         """Setup an file-extension based conversion map
-        to pass to a 'ConversionRouter()' ingestion thread.
+        to pass to a 'ingest.ConversionRouter()' ingestion thread.
 
         Returns
         -------
         dict
             the extensions as keys and functions in string form
-            >>> {'.exr' : processIMAGE, '.mov' : 'processMOV'}
+            >>> {'.exr' : ingest.processIMAGE, '.mov' : 'ingest.processMOV'}
         """
         ingest_map = {}
         flags = 0
         if self.moviesCheckBox.checkState():
             _flag = Class.MOVIE
-            ingest_map.update(self._filterFlag(processMOV, _flag, flags))
+            ingest_map.update(self._filterFlag(ingest.processMOV, _flag, flags))
         if self.texturesReferencesCheckBox.checkState():
             _flag = Class.IMAGE | Class.ELEMENT
-            ingest_map.update(self._filterFlag(processIMAGE, _flag, flags))
+            ingest_map.update(self._filterFlag(ingest.processIMAGE, _flag, flags))
         if self.rawCheckBox.checkState():
             _flag = Class.PHOTO | Class.PLATE
-            ingest_map.update(self._filterFlag(processRAW, _flag, flags))
+            ingest_map.update(self._filterFlag(ingest.processRAW, _flag, flags))
         if self.toolsCheckBox.checkState():
             _flag = ClassGroup.SOFTWARE
-            ingest_map.update(self._filterFlag(processTOOL, _flag, flags))
+            ingest_map.update(self._filterFlag(ingest.processTOOL, _flag, flags))
         if self.lightsCheckBox.checkState():
             _flag = ClassGroup.EMISSIVE
-            ingest_map.update(self._filterFlag(processLIGHT, _flag, flags))
+            ingest_map.update(self._filterFlag(ingest.processLIGHT, _flag, flags))
 
         return ingest_map
         #TODO: add standalone conversions for these:
@@ -517,10 +520,17 @@ class IngestForm(Ui_IngestForm, QDialog):
         # make all category widgets visible again
         [category.show() for category in self.category_widgets]
         self.beforeClose.emit(self.category_dock)
+
+        # remove any leftover / abandoned temp ingest files 
+        collect_model = self.collect_item_model
+        for i in range(collect_model.rowCount()):
+            self.removeIngestFiles(collect_model.index(i, 0))
+
         # Clear the models.
-        self.collect_item_model.clear()
+        collect_model.clear()
         self.new_asset_item_model.clear()
         self.collectPathTextEdit.clear()
+        # Close all the thread resources
         #self.ingest_thread.stop()
         #self.ingest_thread.quit()
         #if hasattr(self, 'collect_thread'):
@@ -584,6 +594,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             self.completedLabel.show()
         index = self.collect_item_model.index(asset.id, 0)
         self.collect_item_model.dataChanged.emit(index, index, [Qt.UserRole])
+        self.collectedListView.update()
 
     def getCollectedPath(self, index):
         temp_asset = index.data(polymorphicItem.Object)
@@ -601,7 +612,7 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     def setupTask(self, asset, func):
         asset.status = int(Statuses.Syncing)
-        worker = TaskRunner(func)
+        worker = ingest.TaskRunner(func)
         worker.signals.completed.connect(self.onTaskCompleted)
         return worker
 
@@ -610,7 +621,7 @@ class IngestForm(Ui_IngestForm, QDialog):
     def reprocessImage(self):
         for index in self.collectedListView.selectedIndexes():
             temp_path, temp_asset = self.getCollectedPath(index)
-            func = partial(applyImageModifications, temp_path, temp_asset)
+            func = partial(ingest.applyImageModifications, temp_path, temp_asset)
             worker = self.setupTask(temp_asset, func)
             self.pool.start(worker)
 
@@ -658,10 +669,12 @@ class IngestForm(Ui_IngestForm, QDialog):
 
         # Pack the data by path key.
         assets_by_file = {k:v for k, v in map(self.getCollectedPath, indices)}
+        # remove the temp previews 
+        [self.removeIngestFiles(x) for x in indices]
         # Hide the extra bracketed exposure assets.
         [self.collectedListView.setRowHidden(x.row(), True) for x in indices[1:]]
         self.updateLabelCounts(None)
         primary_asset = indices[0].data(polymorphicItem.Object)
-        func = partial(blendRawExposures, assets_by_file)
+        func = partial(ingest.blendRawExposures, assets_by_file)
         worker = self.setupTask(primary_asset, func)
         self.pool.start(worker)

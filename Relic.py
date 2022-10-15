@@ -13,8 +13,8 @@ if __name__ == '__main__':
 
     if args.path:
         # Attempt to use existing session
-        from relic.qt.strand.client import StrandClient
-        client = StrandClient('relic')
+        from intercom import Client
+        client = Client('relic')
         client.sendPayload(args.path)
         if client.errored:
             library.app.main(args)

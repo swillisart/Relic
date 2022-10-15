@@ -77,7 +77,7 @@ class FieldMixin(object):
         relation = relationships(
             category_map=self.relationMap,
             category_id=self.id,
-            link=downstream.links,
+            links=downstream.links,
         )
         relation.create()
 
@@ -85,7 +85,7 @@ class FieldMixin(object):
         relation = relationships(
             category_map=self.relationMap,
             category_id=self.id,
-            link=asset.links,
+            links=asset.links,
         )
         relationships.removeAll([relation.export])
 
@@ -209,7 +209,7 @@ class category(object):
 class subcategory(Subcategory, FieldMixin):
     """
     >>> repr(subcategory(name='test', category=0))
-    "subcategory(name='test', id=None, category=0, link=None, count=None, )"
+    "subcategory(name='test', id=None, category=0, links=None, count=None, )"
     """
 
     LINK_CALLBACK = None 
@@ -234,8 +234,7 @@ class subcategory(Subcategory, FieldMixin):
 
         if new_parent:
             data[new_parent.id] = self.count
-
-        self.update(fields=['link'])
+        self.update(fields=['links'])
         session.updatesubcategorycounts.execute(data)
     
     def relink(self):
@@ -246,17 +245,21 @@ class subcategory(Subcategory, FieldMixin):
         session.linksubcategories.execute([relation.export])
 
     def unlink(self):
+        """Clears the subcategory "link" field (setting to 0 to make top level).
+        Removes the subcategory->subcategory relationship entries.
+        """
+
         relation = relationships(
             category_map=self.relationMap,
             category_id=self.upstream,
-            link=self.link,
+            links=self.links,
         )
         relationships.removeAll([relation.export])
-        self.link = 0
+        self.links = 0
 
     @staticmethod
-    def _onRelink(obj, link, old_parent=None, new_parent=None):
-        obj.link = link
+    def _onRelink(obj, links, old_parent=None, new_parent=None):
+        obj.links = links
         obj.relocate(old_parent, new_parent)
 
     @classmethod
@@ -264,10 +267,7 @@ class subcategory(Subcategory, FieldMixin):
         if cls.LINK_CALLBACK:
             for link in links:
                 cls.LINK_CALLBACK(link)
-        cls.LINK_CALLBACK = None
-
-    #def reparentSubcategoryToRoot(self, current, old_parent):
-        # Set subcategory link to zero if making top level.
+            cls.LINK_CALLBACK = None
 
 class tags(Tags, FieldMixin):
 
@@ -290,12 +290,8 @@ class alusers(Alusers, FieldMixin):
 class relationships(Relationships, FieldMixin):
 
     def create(self):
-        relation = [self.category_map, self.category_id, self.link]
+        relation = [self.category_map, self.category_id, self.links]
         session.createrelationships.execute([relation])
-
-    @staticmethod
-    def removeAll(relations):
-        session.removerelationships.execute(relations)
 
 
 class references(References, FieldMixin):

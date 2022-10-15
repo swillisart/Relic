@@ -15,7 +15,7 @@ from library.objectmodels import alusers, tags, getCategoryConstructor, Type
 from library.widgets.rating import Rating
 from library.widgets.simple_asset_view import SimpleAssetView
 from qtshared6.utils import polymorphicItem
-
+from sequence_path.main import FileSize
 
 class SpinBox(QSpinBox):
     def __init__(self, *args, **kwargs):
@@ -444,7 +444,7 @@ class LinkField(TextField):
 
 class FileSizeField(IntField):
     def __str__(self):
-        return "{:,} MB".format(self / 1000)
+        return str(FileSize(self << 10)) # usually in kilobytes not bytes
 
 class DurationField(IntField):
     def __str__(self):

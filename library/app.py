@@ -21,7 +21,7 @@ from relic.qt.delegates import BaseItemDelegate, ItemDispalyModes
 from relic.qt.util import loadStylesheet
 
 from sequence_path.main import SequencePath as Path
-from relic.qt.strand import server
+from intercom import Server
 
 from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
@@ -38,6 +38,21 @@ from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.subcategoriesViews import CategoryManager
 from library.widgets.util import DialogOverlay
+
+
+@Slot(QModelIndex)
+def open_file(index):
+    asset = index.data(Qt.UserRole)
+    if not asset:
+        return
+    filepath = asset.network_path
+    if filepath.ext.lower() == '.exe':
+        # Launch software executable
+        with open(str(filepath), 'r') as fp:
+            subprocess.Popen('"{}"'.format(fp.read()))
+        return
+    else:
+        peakPreview(filepath)
 
 
 class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
@@ -108,11 +123,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         self.assets_view.selectionModel().selectionChanged.connect(self.loadAssetData)
         self.assets_view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
-        self.assets_view.onExecuted.connect(self.open_file)
+        self.assets_view.onExecuted.connect(open_file)
 
         for view in self.links_view.all_views:
             view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
-            view.onExecuted.connect(self.open_file)
+            view.onExecuted.connect(open_file)
 
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
         self.description_window.text_browser.assetClicked.connect(self.browseTo) 
@@ -190,51 +205,39 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot(str, object)
     def updateAssetFromField(self, name, value):
+        selected_assets = self.selected_assets
+        if not selected_assets:
+            return
         if name in Relational.__members__.keys():
             # Update asset relationship mappings
             for item in value:
-                relation_asset = item.data(polymorphicItem.Object)
+                relation_asset = item.data(Qt.UserRole)
                 if relation_asset.status == ItemState.NEW:
                     # CREATE relation asset
                     id_mapping = []
-                    for asset in self.selected_assets:
+                    for asset in selected_assets:
                         id_mapping.append([relation_asset.relationMap, asset.links])
                     relation_asset.createNew(id_mapping)
                 elif relation_asset.status == ItemState.LINK:
                     # LINK existing relation asset
                     relations = []
-                    for asset in self.selected_assets: 
+                    for asset in selected_assets: 
                         relation = [relation_asset.relationMap, relation_asset.id, asset.links]
                         relations.append(relation)
                         attachLinkToAsset(asset, item) # UI atttachment
                     session.createrelationships.execute(relations)
                 elif relation_asset.status == ItemState.REMOVE:
-                    for asset in self.selected_assets: 
+                    for asset in selected_assets:
                         relation_asset.unlinkTo(asset)
                         self.detachLinkedAsset(asset, item)
-
-            self.metadata_view.setAssets(self.selected_assets)
+            self.metadata_view.setAssets(selected_assets)
     
         else: # Update the asset field
-            for asset in self.selected_assets:
+            for asset in selected_assets:
                 attr_name = name.lower()
                 if hasattr(asset, attr_name):
                     setattr(asset, attr_name, value)
                     asset.update(fields=[attr_name])
-
-    @Slot(QModelIndex)
-    def open_file(self, index):
-        asset = index.data(polymorphicItem.Object)
-        if asset:
-            filepath = asset.network_path
-            ext = filepath.ext.lower()
-            if ext == '.exe':
-                # Launch software executable
-                with open(str(filepath), 'r') as fp:
-                    subprocess.Popen('"{}"'.format(fp.read()))
-                return
-            else:
-                peakPreview(filepath)
 
     @Slot(bytes)
     def setVideo(self, data):
@@ -533,13 +536,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         search_filter['exclude_type'] = exclude_type
         # Split text into list of search term keywords.
         text = self.searchBox.text()
-    
         if text:
             search_filter['keywords'] = text.split(' ')
             session.searchkeywords.execute(search_filter)
         else:
             session.searchcategories.execute(search_filter)
-            
+        
         unblocker = lambda : setattr(self, 'block_search', False)
         QTimer.singleShot(700, unblocker)
 
@@ -652,7 +654,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         search_data = search_data[offset:(offset+limit)]
         [matched_categories[category].append(_id) for category, _id in search_data if _id]
-
         self.library.assets_filtered = assets_filtered[offset:(offset+limit)]
         session.retrieveassets.execute(matched_categories)
 
@@ -853,7 +854,7 @@ def main(args):
     loadStylesheet(app, path=':app_style.qss')
     window = RelicMainWindow()
     # Startup the plugin server
-    ingest_server = server.StrandServer('relic')
+    ingest_server = Server('relic')
     ingest_server.incomingData.connect(window.externalPluginCommand)
     ingest_server.incomingFile.connect(window.browseTo)
     window.resize(1620, 925)

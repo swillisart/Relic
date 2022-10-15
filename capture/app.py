@@ -16,8 +16,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
 from relic.qt.delegates import ItemDispalyModes, BaseItemModel
 from relic.qt.expandable_group import ExpandableGroup
-from relic.qt.strand.client import StrandClient
-from relic.qt.strand.server import StrandServer
+from intercom import Client, Server
 from sequence_path.main import SequencePath as Path
 
 from d3dshot.d3dshot import D3DShot
@@ -122,7 +121,7 @@ class Recorder(QObject):
     def createContainer(self, out_path):
         # PyAv container and streams
         container = av.open(out_path, "w")
-        args = {'tune': 'zerolatency', 'bitrate': '4000',  'bufsize': '166', 'maxrate': '4000', 'crf': '32'}
+        args = {'tune': 'zerolatency', 'bitrate': '6000', 'bufsize': '166', 'maxrate': '6000', 'crf': '28'}
         # Video
         video_stream = container.add_stream('libx264', rate=24, options=args)
         video_stream.pix_fmt = 'yuv420p'
@@ -469,7 +468,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         try: os.mkdir(OUTPUT_PATH + '/previews')
         except: pass
-        self.strand_client = StrandClient('peak')
+        self.intercom_client = Client('peak')
         self.recorder = Recorder()
         self.recording_thread = QThread(self)
         self.recorder.moveToThread(self.recording_thread)
@@ -608,8 +607,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def openInViewer(self, index):
         capture_obj = index.data(Qt.UserRole)
         if isinstance(capture_obj, CaptureItem):
-            self.strand_client.sendPayload(str(capture_obj.path))
-            if self.strand_client.errored:
+            self.intercom_client.sendPayload(str(capture_obj.path))
+            if self.intercom_client.errored:
                 cmd = f'start peak://{capture_obj.path}'
                 os.system(cmd)
 
@@ -835,7 +834,7 @@ def main(args):
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic-capture")
     app.processEvents()
     window.show()
-    server = StrandServer('capture')
+    server = Server('capture')
     server.incomingFile.connect(window.perform_screenshot)
     sys.exit(app.exec())
 
@@ -849,8 +848,8 @@ if __name__ == "__main__":
     # Define our Environment
     os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
     os.environ['PYAV_LOGGING'] = 'off'
-    from strand.client import StrandClient
-    client = StrandClient('capture')
+    from intercom import Client
+    client = Client('capture')
     client.sendPayload('')
     if client.errored:
         import capture

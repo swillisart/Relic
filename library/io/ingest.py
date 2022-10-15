@@ -19,12 +19,13 @@ from library.io.util import ImageDimensions
 from PySide6.QtCore import (Property, QDir, QDirIterator, QMutex, QMutexLocker,
                             QObject, QRunnable, Qt, QThread, QWaitCondition,
                             Signal, Slot)
-from PySide6.QtGui import QColor, QImage, QPainter, QPixmap, Qt, QImageWriter 
+from PySide6.QtGui import QColor, QImage, QPainter, QPixmap, Qt, QImageWriter, QImageReader
 from relic.local import (INGEST_PATH, Extension, TempAsset,
                         FileType, getAssetSourceLocation)
 from relic.scheme import Class
 from sequence_path.main import SequencePath as Path
 
+QImageReader.setAllocationLimit(0)
 av.logging.set_level(av.logging.CRITICAL)
 
 CREATE_NO_WINDOW = 0x08000000
@@ -275,7 +276,7 @@ def processMOV(in_path, out_path, flag):
         path=in_path,
         icon=QPixmap.fromImage(icon_img),
     )
-    setattr(asset, 'class', flag)
+    setattr(asset, 'class', flag.value)
     return asset
 
 def processSEQ(in_path, out_path, flag):
@@ -336,7 +337,7 @@ def processSEQ(in_path, out_path, flag):
         path=in_path,
         icon=QPixmap.fromImage(icon_img),
     )
-    setattr(asset, 'class', flag)
+    setattr(asset, 'class', flag.value)
     return asset
 
 def processRAW(in_path, out_path, flag):
@@ -346,7 +347,7 @@ def processRAW(in_path, out_path, flag):
     src_img = QImage()
     src_img.loadFromData(img_bytes)
     asset = tempAssetFromImage(in_path, out_path, src_img)
-    setattr(asset, 'class', flag)
+    setattr(asset, 'class', flag.value)
     return asset
 
 def processLDR(in_path, out_path, flag):
@@ -406,7 +407,7 @@ def processIMAGE(in_path, out_path, flag):
     elif flag & (FileType.HDR | FileType.EXR):
         # Linear image will get a nice tonemapping applied to the previews.
         asset = processHDR(in_path, out_path, flag)
-    setattr(asset, 'class', flag)
+    setattr(asset, 'class', flag.value)
     return asset
 
 def processLIGHT(in_path, out_path, flag):
@@ -513,10 +514,10 @@ def applyImageModifications(img_path, temp_asset):
     # Apply color changes before denoise.
     if temp_asset.colormatrix:
         img_buf = oiio.ImageBufAlgo.colormatrixtransform(img_buf, temp_asset.colormatrix)
-    elif is_raw or temp_asset.aces:
+    elif is_raw:
         #img_buf = autoExpose(img_buf)
+        print(f'converting {img_path} to ACEScg...')
         img_buf = hdr.acesToCG(img_buf)
-        temp_asset.aces = False
 
     # Denoise the full image before cropping.
     if temp_asset.denoise or int(RELIC_PREFS.denoise):
@@ -553,7 +554,7 @@ def applyImageModifications(img_path, temp_asset):
     writeImagePreviews(src_img, icon_img, temp_asset.path)
     dimensions = ImageDimensions.fromQImage(src_img)
     
-    setattr(temp_asset, 'class', FileType.EXR)
+    setattr(temp_asset, 'class', FileType.EXR.value)
     temp_asset.resolution = str(dimensions)
     temp_asset.icon = QPixmap.fromImage(icon_img)
     if is_raw: # Clean up
@@ -568,7 +569,6 @@ def blendRawExposures(assets_by_file):
     out_file = primary_path.suffixed('', ext='.exr')
     hdr.blendExposures(assets_by_file.keys(), out_file, align=True)
     primary_asset.path = out_file
-    primary_asset.aces = True
     img_buf = oiio.ImageBuf(str(out_file))
     raw_meta = reassignExifMetadata(primary_path, img_buf)
     [os.remove(str(x)) for x in assets_by_file.keys()]
@@ -605,15 +605,14 @@ class IngestionThread(QThread):
         self.ingest_path.mkdir(parents=True, exist_ok=True)
         self.stopped = False
         self.queue = deque()
-        self.file_op = IngestionThread.moveOp
 
     @staticmethod
     def copyOp(src, dst):
-        src.copyTo(dst)
+        src.copyTo(Path.cleanPath(dst))
 
     @staticmethod
     def moveOp(src, dst):
-        src.moveTo(dst)
+        src.moveTo(Path.cleanPath(dst))
 
     @staticmethod
     def applyFileOperator(file_op, files_map):
@@ -723,7 +722,7 @@ class IngestionThread(QThread):
 
                 # Calculate the final hash and size of the asset on network storage.
                 item.filehash = out_path.parent.hash
-                item.filesize = out_path.parent.size
+                item.filesize = out_path.parent.size.kilobytes
 
                 self.queue.popleft()
                 self.itemDone.emit(item)

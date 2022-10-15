@@ -16,8 +16,8 @@ if __name__ == '__main__':
 
     if args.path:
         # Attempt to use existing session
-        from strand.client import StrandClient
-        client = StrandClient('peak')
+        from intercom import Client
+        client = Client('peak')
         client.sendPayload(args.path)
         if client.errored:
             viewer.app.main(args)

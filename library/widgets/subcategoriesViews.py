@@ -13,7 +13,7 @@ from qtshared6.utils import polymorphicItem
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             QPoint, QRegularExpression, QSize,
                             QSortFilterProxyModel, Signal, Slot)
-from PySide6.QtGui import (QAction, QColor, QCursor, QIcon,
+from PySide6.QtGui import (QAction, QColor, QCursor, QIcon, QDropEvent,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
                                QMessageBox, QStyledItemDelegate, QTreeView,
@@ -64,7 +64,7 @@ class subcategoryDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         super(subcategoryDelegate, self).paint(painter, option, index)
         name_text = index.data(Qt.DisplayRole)
-        data = index.data(polymorphicItem.Object)
+        data = index.data(Qt.UserRole)
 
         fm = painter.fontMetrics()
         lh = fm.lineSpacing() + 18
@@ -98,8 +98,8 @@ class subcategoryTreeView(QTreeView):
         self.setDefaultDropAction(Qt.CopyAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._createContextMenus)
-        self.setMouseTracking(True)
+        self.customContextMenuRequested.connect(self.showContextMenu)
+        self.setMouseTracking(False)
         self.setItemDelegate(subcategoryDelegate())
 
         # Setup model and proxy for sorting
@@ -123,26 +123,31 @@ class subcategoryTreeView(QTreeView):
         self.drag_item = None
         self.new_item_parent = None
         self.counts = {}
+
         # Actions
-        self.actionCreate = QAction('Create New', self)
-        self.actionCreate.triggered.connect(self.listViewNewMode)
-        self.actionRename = QAction('Rename Selected', self)
-        self.actionRename.triggered.connect(self.listViewRenameMode)
-        self.actionDelete = QAction('Remove Selected', self)
-        self.actionDelete.triggered.connect(self.removeSubcategory)
-        self.actionRecount = QAction('Re-synchronize Count', self)
-        self.actionRecount.triggered.connect(self.resyncSubcategoryCount)
+        self.main_actions = [
+            QAction('Expand All', self, triggered=self.expandAll),
+            QAction('Collapse All', self, triggered=self.collapseAll), 
+        ]
+        self.edit_actions = [
+            QAction('Re-synchronize Count', self, triggered=self.resyncCount),
+            QAction('Move to Top (Reparent To Root)', self, triggered=self.reparentToRoot),
+            QAction('Create New', self, triggered=self.listViewNewMode),
+            QAction('Delete', self, triggered=self.deleteSubcategory),
+            QAction('Rename', self, triggered=self.listViewRenameMode),
+        ]
         self.folder_icon = QIcon(':resources/general/folder.svg')
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
-        pop = index in self.selectedIndexes()
+        self.pop = index in self.selectedIndexes()
         super(subcategoryTreeView, self).mousePressEvent(event)
-        if not index.isValid():
-            self.selection_model.clearSelection()
 
-        if pop and event.buttons() == Qt.LeftButton:
-            self.selection_model.select(index, QItemSelectionModel.Deselect)
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.pop:
+                self.selection_model.select(self.indexAt(event.pos()), QItemSelectionModel.Deselect)
+        super(subcategoryTreeView, self).mouseReleaseEvent(event)
 
     def resizeToSel(self):
         self.resizeColumnToContents(0)
@@ -241,18 +246,12 @@ class subcategoryTreeView(QTreeView):
                 if found := self.recurseFindTreeItem(attr, child_item, variable):
                     return found
 
-    def _createContextMenus(self, value):
+    @Slot(QPoint)
+    def showContextMenu(self, point: QPoint):
         context_menu = QMenu(self)
-        expand = context_menu.addAction("Expand All")
-        expand.triggered.connect(self.expandAll)
-        collapse = context_menu.addAction("Collapse All")
-        collapse.triggered.connect(self.collapseAll)
-        
+        context_menu.addActions(self.main_actions)
         if bool(int(RELIC_PREFS.edit_mode)):
-            context_menu.addAction(self.actionRecount)
-            context_menu.addAction(self.actionCreate)
-            context_menu.addAction(self.actionRename)
-            context_menu.addAction(self.actionDelete)
+            context_menu.addActions(self.edit_actions)
 
         context_menu.exec(QCursor.pos())
 
@@ -273,7 +272,7 @@ class subcategoryTreeView(QTreeView):
         )
         if selection:
             item = self.indexToItem(selection[-1])
-            new_item.link = (self.category.id, item.id)
+            new_item.links = (self.category.id, item.id)
             self.new_item_parent = item
         new_item.createNew()
 
@@ -300,7 +299,7 @@ class subcategoryTreeView(QTreeView):
         self.modifications.emit(True)
 
     @Slot()
-    def resyncSubcategoryCount(self):
+    def resyncCount(self):
         """Removes the treeView's selected category
         """
         selection = self.selectedIndexes()
@@ -309,18 +308,18 @@ class subcategoryTreeView(QTreeView):
         if not ok:
             return
 
-        for i, index in enumerate(selection):
+        for index in selection:
             item = self.indexToItem(index)
             difference = new_count - item.count
             self.category.count += difference
-            asset = index.data(polymorphicItem.Object)
+            asset = index.data(Qt.UserRole)
             asset.count = new_count
             asset.update(fields=['count'])
             self.updateSubcategoryCounts(item)
         self.modifications.emit(True)
 
     @Slot()
-    def removeSubcategory(self):
+    def deleteSubcategory(self):
         """Removes the treeView's selected category
         """
         selection = self.selectedIndexes()
@@ -395,7 +394,7 @@ class subcategoryTreeView(QTreeView):
     def dragMoveEvent(self, event):
         super(subcategoryTreeView, self).dragMoveEvent(event)
         index = self.indexAt(event.pos())
-        if not index.isValid() or index in self.selectedIndexes():
+        if index in self.selectedIndexes(): # not index.isValid()
             event.ignore()
         elif event.mimeData().hasUrls():
             self.setFocus()
@@ -407,12 +406,6 @@ class subcategoryTreeView(QTreeView):
 
         if index.isValid():
             destination = self.indexToItem(index)
-
-            #drop_indicator_position = self.getItemRelativePosition(
-            #    drop_position, self.visualRect(index))
-            # Drop indications for mouse areas which aren't fully over the Item.
-            #if drop_indicator_position in (self.AboveItem, self.BelowItem):
-            #   destination = destination.parent()
         else:
             destination = None
 
@@ -431,7 +424,8 @@ class subcategoryTreeView(QTreeView):
                 self.externalFilesDrop.emit(self.category.id, paths)
                 self.selection_model.select(self.indexAt(event.pos()), QItemSelectionModel.ClearAndSelect)
                 return
-            elif destination_item: # Drag and drop re-categorization (from the asset list view)
+            # Drag and drop re-categorization (from the asset list view)
+            elif destination_item: 
                 accepted_item, ok = QInputDialog.getItem(self,
                     'Re-parent Asset',
                     'Move the assets subcategory into "{}"?'.format(destination_item.name),
@@ -444,47 +438,76 @@ class subcategoryTreeView(QTreeView):
             self.onAssetDrop.emit(destination_item)
             return
         
-        drag_item = self.drag_item
-        item_parent = drag_item.parent()
-        current = drag_item.data(polymorphicItem.Object)
+        source_item = self.drag_item
+        source_asset = source_item.data(Qt.UserRole)
+        source_parent = source_item.parent()
 
         # Re-parenting a subcategory check if user wants to move.
         dst = destination_item.name if destination_item else 'Root'
         accepted_item, ok = QInputDialog.getItem(self,
             'Re-parent Subcategory',
-            'Move the item from "{}" to "{}"?'.format(drag_item.name, dst),
-            [drag_item.name], True)
+            'Move the item from "{}" to "{}"?'.format(source_asset.name, dst),
+            [source_asset.name], True)
         if not ok:
             return
 
         if destination_item:
-            new_parent = destination_item.data(polymorphicItem.Object)
-
+            new_parent = destination_item.data(Qt.UserRole)
             # Check if current drag item had a parent relation (link) created.
-            if item_parent:
-                current.unlink()
-                old_parent = item_parent.data(polymorphicItem.Object)
+            # These callbacks rely on 'reassignDroppedData' to reassign the original
+            # source asset data to the new destination drop item copy.
+            if source_parent:
+                old_parent = source_parent.data(Qt.UserRole)
                 # Unlink from old parent subcategory.
+                source_asset.unlink()
                 subcategory.LINK_CALLBACK = partial(subcategory._onRelink,
-                    current, old_parent=old_parent, new_parent=new_parent)
+                    source_asset, old_parent=old_parent, new_parent=new_parent)
             else:
                 subcategory.LINK_CALLBACK = partial(subcategory._onRelink,
-                    current, new_parent=new_parent)
+                    source_asset, new_parent=new_parent)
 
             # generate relationship with new upstream link
-            current.upstream = new_parent.id
-            current.relink()
-        else:
-            if item_parent: # Item has parent and not already in root. 
-                old_parent = item_parent.data(polymorphicItem.Object)
-                # Unlink from old parent subcategory.
-                current.unlink()
-                # Relocate the subcategory from old to root.
-                current.relocate(old_parent)
-                #self.reparentSubcategoryToRoot(current, old_parent)             
+            source_asset.upstream = new_parent.id
+            source_asset.relink()
+        # Item has a parent but not a destination; moving to root.
+        elif source_parent:
+            old_parent = source_parent.data(Qt.UserRole)
+            # Unlink from old parent subcategory.
+            source_asset.unlink()
+            # Relocate the subcategory from old to root.
+            source_asset.relocate(old_parent=old_parent)
 
-        self.drag_item.setData('', role=Qt.DisplayRole)
         super(subcategoryTreeView, self).dropEvent(event)
+        self.reassignDroppedData(source_item, destination_item) # Important!
+
+    def reassignDroppedData(self, source_item, destination_item):
+        # transfer the original asset reference after dropEvent.
+        source_parent = source_item.parent() or self.model.invisibleRootItem()
+        dst_item = destination_item or self.model.invisibleRootItem()
+        removed_items = source_parent.takeRow(source_item.index().row())
+        if not removed_items:
+            return
+        old_asset = removed_items[0].data(Qt.UserRole)
+        # New item was created within the dropped children, find and replace it.
+        for i in range(dst_item.rowCount()):
+            child_item = dst_item.child(i, 0)
+            new_asset = child_item.data(Qt.UserRole)
+            if new_asset.name == old_asset.name:
+                child_item.setData(old_asset, Qt.UserRole)
+
+    def reparentToRoot(self):
+        # Reparents an item moving to root.
+        root = self.model.invisibleRootItem()
+        for index in self.selectedIndexes():
+            subcategory_item = self.indexToItem(index)
+            selected_parent = subcategory_item.parent()
+            if not selected_parent:
+                continue
+            asset = subcategory_item.data(Qt.UserRole)
+            parent_asset = selected_parent.data(Qt.UserRole)
+            asset.unlink()
+            asset.relocate(old_parent=parent_asset)
+        #self.largeChange.emit()
 
     @staticmethod
     def _subcategoryRelinkDefault(data, subcategories=None):
@@ -502,7 +525,6 @@ class subcategoryTreeView(QTreeView):
         self._onSubcategoryRelink(data)
         self._onSubcategoryRelink = self._onSubcategoryRelinkDefault
 
-
     def updateSubcategoryCounts(self, item, offset=None):
         """Updates related subcategory tree using the base items
         count attribute or a direct offset.
@@ -510,29 +532,17 @@ class subcategoryTreeView(QTreeView):
         Parameters
         ----------
         item : QStandardItem.
-            The base QItemd to modify hierarchically. 
+            The base QItem to modify hierarchically. 
         offset : int, optional
             if subtracting put a negative offset, by default None
         """
         item_parent = item.parent()
-        if item_parent: # Apply additions or subtractions to related subcategories.
+        # Apply additions or subtractions to related subcategories.
+        if item_parent: 
             self.getCounts(item_parent)
             offset = offset or item.count
             self.counts = {k: offset for k, v in self.counts.items()}
             self.updateCounts()
-
-    def getItemRelativePosition(self, pos, rect):
-        r = QAbstractItemView.OnViewport
-        # margin*2 must be smaller than row height, or the drop onItem rect won't show
-        margin = 4
-        if pos.y() - rect.top() < margin:
-            r = QAbstractItemView.AboveItem
-        elif rect.bottom() - pos.y() < margin:
-            r = QAbstractItemView.BelowItem
-        elif pos.y() - rect.top() > margin and rect.bottom() - pos.y() > margin:
-            r = QAbstractItemView.OnItem
-
-        return r
 
     def updateCounts(self, counts=None):
         """
@@ -606,7 +616,6 @@ class CategoryManager(QObject):
         self.selected_subcategories = {}
         self.all_categories = []
 
-
     @staticmethod
     def iterateTreeItems(tree_item):
         if not tree_item:
@@ -619,22 +628,27 @@ class CategoryManager(QObject):
 
     @Slot(dict)
     def receiveNewCounts(self, count_data):
+        set_counter = self.setCountData
+        iterate_tree = self.iterateTreeItems
         for cat in self.all_categories:
             tree_view = cat.tree
             item_model = tree_view.model
+            full_count = 0
             for row in range(item_model.rowCount()):
                 index = item_model.index(row, 0)
                 root_item = item_model.itemFromIndex(index)
-                self.setCountData(root_item, tree_view, cat, count_data)
-                for tree_item in self.iterateTreeItems(root_item):
-                    self.setCountData(tree_item, tree_view, cat, count_data)
-            cat.tab.countSpinBox.setValue(cat.count)
+                set_counter(root_item, tree_view, count_data)
+                for tree_item in iterate_tree(root_item):
+                    set_counter(tree_item, tree_view, count_data)
+                item_model.dataChanged.emit(index, index, [Qt.UserRole])
+                full_count += root_item.count
+            cat.tab.countSpinBox.setValue(full_count)
 
     @staticmethod
-    def setCountData(tree_item, tree_view, cat, count_data):
+    def setCountData(tree_item, tree_view, count_data):
         new_count = count_data.get(str(tree_item.id))
         if new_count is not None:
-            cat.count += (new_count - tree_item.count)
+            asset = tree_item.data(Qt.UserRole)
             tree_item.count = new_count
             tree_view.update(tree_item.index())
 
@@ -703,7 +717,6 @@ class CategoryManager(QObject):
         regex = QRegularExpression(text, QRegularExpression.CaseInsensitiveOption)
         tree.proxyModel.setFilterRegularExpression(regex)
         tree.expandAll()
-
 
 
 class ExpandableTab(ExpandableGroup):

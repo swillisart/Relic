@@ -12,7 +12,7 @@ from relic.qt.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseI
 
 # -- Module --
 import library.config as config
-from relic.local import Category, Extension, TempAsset
+from relic.local import Category, TempAsset, FileType
 from relic.scheme import Classification
 from library.io import ingest
 from library.io.util import LocalThumbnail
@@ -26,8 +26,8 @@ from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPo
 from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
                            QPainterPath, QPen, QPixmap, QRegion,
                            QStandardItemModel, Qt, QImage, QMouseEvent)
-from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog,
-                               QListView, QMenu, QStyle, QStyledItemDelegate,
+from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabel,
+                               QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
                                QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
 #unimageable_types = {
 #    '.r3d': QPixmap(':resources/general/RedLogo.png')
@@ -89,7 +89,6 @@ class AssetItemModel(BaseItemModel):
         mime_data.setData('application/x-relic', itemData)
         url = QUrl.fromLocalFile(protocol + str(payload))
         mime_data.setUrls([url])
-
         # Tacks back in serializable data
         for i, obj in enumerate(objs):
             obj.icon = unhashable['icon'][i]
@@ -140,18 +139,27 @@ class AssetListView(BaseView):
         self.lastIndex = None
         self.drag_select = False
         # Actions
+        self.main_actions = [
+            QAction(QIcon(':resources/general/folder.svg'), 'Open File Location', self, triggered=self.browseLocalAsset),
+        ]
+        self.edit_actions = [
+            QAction('Generate Preview', self, triggered=self.generatePreview),
+            QAction('Remove', self, triggered=self.deleteAsset),
+        ]
+        self.unlink_action = QAction('Unlink', self, triggered=self.unlinkAsset)
 
-        #self.actionPreview = QAction('Peak Preview', self)
-        #self.actionPreview.triggered.connect(self.assetPreview)
-        self.actionExploreLocation = QAction('Browse File Location', self)
-        self.actionExploreLocation.triggered.connect(self.browseLocalAsset)
-        self.actionDelete = QAction('Delete', self)
-        self.actionDelete.triggered.connect(self.deleteAsset)
-        self.actionUnlink = QAction('Unlink', self)
-        self.actionUnlink.triggered.connect(self.unlinkAsset)
-        self.actionGeneratePreview =  QAction('Generate Preview', self)
-        self.actionGeneratePreview.triggered.connect(self.generatePreview)
+        self.advanced_label = QLabel(' Advanced')
+        self.advanced_label.setStyleSheet('background-color: rgb(68,68,68); color: rgb(150, 150, 150);')
         self.additional_actions = []
+
+    def dragMoveEvent(self, event):
+        super(AssetListView, self).dragMoveEvent(event)
+        index = self.indexAt(event.pos())
+        if not index.isValid() or index in self.selectedIndexes():
+            event.ignore()
+        elif event.mimeData().hasUrls():
+            self.setFocus()
+            event.acceptProposedAction()
 
     def leaveEvent(self, event):
         super(AssetListView, self).leaveEvent(event)
@@ -202,12 +210,11 @@ class AssetListView(BaseView):
         if not int(config.RELIC_PREFS.edit_mode) or not clip_img:
             return
         if asset := self.getSelectedAsset():
+            out_img = ingest.makeImagePreview(clip_img)
             out_path = asset.network_path.suffixed('_icon', ext='.jpg')
-            resize_img = clip_img.scaled(288, 192, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
-            out_img = resize_img.scaled(288, 192, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
             out_path.path.parent.mkdir(parents=True, exist_ok=True)
             out_img.save(str(out_path))
-            #asset.fetchIcon()
+            asset.icon = QPixmap.fromImage(out_img) # fromImageInPlace
 
     def groupSelectedItems(self):
         """Creates a new collection asset and links all the selected
@@ -324,33 +331,40 @@ class AssetListView(BaseView):
 
         primary_asset.update(fields=['dependencies'])
 
-
-    @Slot()
-    def showContextMenus(self, val):
+    @Slot(QPoint)
+    def showContextMenus(self, point: QPoint):
         """Populates a context menu based on the current application index.
         """
-        sender = self.sender()
         context_menu = QMenu(self)
-        context_menu.addAction(self.actionExploreLocation)
-        #context_menu.addAction(self.actionPreview)
-    
-        if int(config.RELIC_PREFS.edit_mode):
-            context_menu.addAction(self.actionDelete)
-            context_menu.addAction(self.actionGeneratePreview)
-            context_menu.addAction(self.actionUnlink)
+        context_menu.addActions(self.main_actions)
 
-        for action in self.additional_actions:
-            context_menu.addAction(action)
+        is_temp = [isinstance(x, TempAsset) for x in self.selectedAssets()]
+
+        if int(config.RELIC_PREFS.edit_mode):
+            context_menu.addActions(self.edit_actions)
+            if not any(is_temp):
+                context_menu.addAction(self.unlink_action)
+
+        if self.additional_actions:
+            advanced_action = QWidgetAction(self)
+            advanced_action.setDefaultWidget(self.advanced_label)
+            context_menu.addAction(advanced_action)
+            context_menu.addSeparator()
+            context_menu.addActions(self.additional_actions)
 
         context_menu.exec(QCursor.pos())
 
+    def selectedAssets(self):
+        for i in self.selectedIndexes():
+            yield i.data(Qt.UserRole)
+
     @Slot()
-    def unlinkAsset(self, action):
+    def unlinkAsset(self):
         for index in self.selectedIndexes():
             self.onLinkRemove.emit(index)
 
     @Slot()
-    def deleteAsset(self, action):
+    def deleteAsset(self):
         """Asset deletion. Iterates selected items to delete,
         and updates the items parent subcategory counts.
         """
@@ -374,20 +388,12 @@ class AssetListView(BaseView):
         # Update the subcategories with new counts
         self.assetsDeleted.emit(count_data)
 
-    def generatePreview(self, action):
-        msg = 'Regenerate previews from source file or use existing preview?'
+    def generatePreview(self):
+        msg = 'Regenerate previews from source file? \nThis will remake proxies and previews.'
         message_box = QMessageBox(QMessageBox.Question, 'Choice', msg,
-                QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel, self)
+                QMessageBox.Yes|QMessageBox.No, self)
         result = message_box.exec_()
-        if result == QMessageBox.Cancel:
-            return
-        elif result == QMessageBox.No:
-            for index in self.selectedIndexes():
-                asset = index.data(polymorphicItem.Object)
-                path = asset.network_path
-                if asset.path == '' or not path.parent.exists():
-                    continue
-                ingest.generatePreviews(path)
+        if result == QMessageBox.No:
             return
 
         for index in self.selectedIndexes():
@@ -395,17 +401,22 @@ class AssetListView(BaseView):
             path = asset.network_path
             if asset.path == '' or not path.parent.exists():
                 continue
-            path.checkSequence()
-            if path.sequence_path:
-                ingest.processSEQ(path, path)
-            elif path.ext in Extension.LDR:
-                ingest.processLDR(path, path)
-            elif path.ext in Extension.HDR:
-                ingest.processHDR(path, path)
-            elif path.ext in Extension.MOVIE:
-                ingest.processMOV(path, path)
+            # Reuse the ingest methods to make preview media.
+            found_type = FileTypes[asset.path.ext]
+            classifiy = found_type.value
+            is_image = classifiy & Classification.IMAGE
+            if path.isSequence() and is_image:
+                new = ingest.processSEQ(path, path)
+            elif found_type & FileTypes.exr:
+                new = ingest.processHDR(path, path)
+            elif is_image:
+                new = ingest.processLDR(path, path)
+            elif classifiy in Classification.MOVIE:
+                new = ingest.processMOV(path, path)
 
-    def browseLocalAsset(self, action):
+            asset.icon = new.icon
+
+    def browseLocalAsset(self):
         for index in self.selectedIndexes():
             asset = index.data(polymorphicItem.Object)
             if isinstance(asset, TempAsset):
@@ -415,8 +426,7 @@ class AssetListView(BaseView):
             cmd = 'explorer /select, "{}"'.format(winpath)
             subprocess.Popen(cmd)
     
-    def assetPreview(self, action):
+    def assetPreview(self):
         index = self.selectedIndexes()[-1]
         asset = index.data(polymorphicItem.Object)
         config.peakPreview(asset.network_path)
-

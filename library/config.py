@@ -10,9 +10,9 @@ from qtshared6.settings import Preferences
 
 from relic.scheme import Classification
 from relic.local import Extension
-from relic.qt.strand.client import StrandClient
+from intercom import Client
 
-PEAK = StrandClient('peak')
+PEAK = Client('peak')
 USERPROFILE = os.getenv('userprofile')
 
 def peakLoad(path):

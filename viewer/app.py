@@ -25,7 +25,7 @@ from qtshared6.widgets import (CompactTitleBar, HoverTintButton,
                               InteractiveSpinBox)
 # -- First-Party -- 
 from sequence_path.main import Path
-from strand.server import StrandServer
+from intercom import Server
 from enum import Enum
 
 
@@ -1063,7 +1063,7 @@ def main(args):
     #watcher.watch(window, 'P:/Code/Relic/viewer/style.qss')
     window.resize(1024, 512)
     window.show()
-    server = StrandServer('peak')
+    server = Server('peak')
     server.incomingFile.connect(window.addClipFromFile)
     app.processEvents() # draw the initial ui before loading stuff
     if args and args.path:

@@ -121,11 +121,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
 
-        self.assets_view.selectionModel().selectionChanged.connect(self.loadAssetData)
-        self.assets_view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
-        self.assets_view.onExecuted.connect(open_file)
-
-        for view in self.links_view.all_views:
+        for view in self.links_view.all_views + [self.assets_view]:
+            view.selectionModel().selectionChanged.connect(self.loadAssetData)
             view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
             view.onExecuted.connect(open_file)
 
@@ -144,7 +141,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         session.retrieveassets.callback.connect(self.onFilterResults)
         session.socket.connected.connect(self.onConnect)
         session.getcategories.callback.connect(self.onCategories)
-        session.retrievelinks.callback.connect(self.onAssetsLoaded)
+        session.retrievelinks.callback.connect(self.onLinksResults)
         session.retrievedependencies.callback.connect(self.onDependencyResults)
         session.createsubcategory.callback.connect(self.recieveNewSubcategory)
         session.moveassets.callback.connect(self.category_manager.receiveNewCounts)
@@ -622,7 +619,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 self.pool.start(worker)
             item_model.appendRow(item)
             link_ids.append(asset.links)
-
         session.retrievelinks.execute(link_ids)
         self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
         self.block_search = False
@@ -664,9 +660,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         if sender.parent().drag_select:
             # Better multi-select performance
             return
-
         # Links / Dependencies have already been attached to the assets.
-        indices = self.assets_view.selectedIndexes()
+        view = sender.parent()
+        indices = view.selectedIndexes()
         assets = [index.data(polymorphicItem.Object) for index in indices]        
         self.selected_assets = assets
         self.selected_assets_by_link = {}
@@ -717,15 +713,15 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
                 for index in range(len(ids)):
                     category_name = Table(categories[index]).name
-                    print('UNSTABLE', category_name)
                     assets = dependencies.get(category_name)
                     _id = ids[index]
                     upstream = [x for x in assets if x.id == _id]
+                    print('UNSTABLE', category_name, primary_asset, upstream)
                     for asset in upstream:
                         attachLinkToAsset(primary_asset, asset)
 
     @Slot(dict)
-    def onAssetsLoaded(self, data):
+    def onLinksResults(self, data):
         if not data:
             return
 
@@ -742,7 +738,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 linked_asset = polymorphicItem(fields=asset_obj)
                 linked_assets.append(linked_asset)
         assets = []
-        model = self.assets_view.model
         link_map = []
         for i in range(len(links)):
             _map = maps[i]
@@ -751,7 +746,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 link_item_asset = link_item.data(polymorphicItem.Object)
                 if link_item_asset.id == _id and link_item_asset.relationMap == _map:
                     link_map.append(link_item)
-
+        main_view = self.assets_view
+        model = main_view.model if main_view.isVisible() else self.links_view.model
         for i in range(model.rowCount()):
             asset = model.index(i, 0).data(polymorphicItem.Object)
             for index, link in enumerate(links):
@@ -764,7 +760,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             return
         # copy upstream icons on empty collections
         for asset in assets:
-            if asset.type == Type.COLLECTION:
+            if asset.type == Type.COLLECTION and asset.upstream:
                 icon_path = asset.network_path.suffixed('_icon', '.jpg')
                 if not icon_path.exists():
                     copyRelatedIcon(asset)
@@ -803,9 +799,17 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             indices = self.links_view.getAllSelectedIndexes()
 
         linked_assets = []
+        link_ids = []
         for index in indices:
-            asset = index.data(polymorphicItem.Object)
-            linked_assets.extend(asset.upstream or [])
+            asset = index.data(Qt.UserRole)
+            upstream = asset.upstream or []
+            for x in upstream:
+                if x.traversed:
+                    continue
+                else:
+                    x.traversed = True
+                link_ids.append(x.links)
+            linked_assets.extend(upstream)
         if not linked_assets:
             return
         if self.assets_view.isVisible():
@@ -815,6 +819,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.links_view.updateGroups(linked_assets, clear=True)
         if not self.linksDock.isVisible():
             self.linksDock.show()
+
+        # Fetch the upstream asset sub-links
+        session.retrievelinks.execute(link_ids)
 
     @Slot(QSystemTrayIcon.ActivationReason)
     def toggleVisibility(self, reason, force=False):
@@ -838,13 +845,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
 def copyRelatedIcon(asset):
     # TODO: Re-assess if this is really needed.
-    if asset.upstream:
-        for item in asset.upstream:
-            linked_asset = item.data(polymorphicItem.Object)
-            related_icon = linked_asset.network_path.suffixed('_icon', '.jpg')
-            asset_icon = asset.network_path.suffixed('_icon', '.jpg')
-            related_icon.copyTo(asset_icon)
-            break
+    for item in asset.upstream:
+        linked_asset = item.data(polymorphicItem.Object)
+        related_icon = linked_asset.network_path.suffixed('_icon', '.jpg')
+        asset_icon = asset.network_path.suffixed('_icon', '.jpg')
+        related_icon.copyTo(asset_icon)
+        break
 
 
 def main(args):

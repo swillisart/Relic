@@ -1,5 +1,4 @@
-"""
--- USAGE --
+"""USAGE
 import maya.cmds as cmds
 cmds.loadPlugin('relicMayaPlugin')
 cmds.loadPlugin('P:/Code/Relic/plugins/relicMaya/relicMayaPlugin.py')
@@ -21,26 +20,30 @@ import shiboken2
 import maya.OpenMayaUI as omui
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
-import maya.utils as utils
 import maya.mel as mel
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
+# -- First-party --
+from relic_base import (asset_classes, asset_views)
+from relic.local import (Nuketools, Category, FileType, TempAsset, INGEST_PATH, getAssetSourceLocation)
+from relic.scheme import (AssetType, TagType, UserType)
+from sequence_path import Path
+from intercom import Client
+
+# -- Module --
+from relicDrop import RelicDropCallback
+from relicTranslator import getSelectionDependencies
 
 # -- Globals --
 MENU_NAME = 'Relic'
 ANUM_REGEX = re.compile(r"[^A-Za-z0-9]")
 IGNORE_PLUGINS = ['stereoCamera']
+RELIC_CLIENT = Client('relic')
 if not 'relicMixinWindow' in globals():
     relicMixinWindow = None
 
-# -- Module --
-from relic_base import asset_views, asset_classes
-from sequence_path.main import SequencePath as Path
-from relic_base.config import INGEST_PATH, RELIC_CLIENT
 #from OpenGL.GL import *
 #from gltfExporterFloat import GLTFExport
-from relicDrop import RelicDropCallback
-from relicTranslator import getSelectionDependencies
 
 def maya_useNewAPI():
     # Using the Maya Python API 2.0.
@@ -77,7 +80,7 @@ def exportSelection(asset_type):
         return
 
     for selected in original_selection:
-        asset = asset_classes.tempasset()
+        asset = TempAsset()
         asset.name = selected.replace('|', '')
         asset.path = INGEST_PATH / asset.name / (asset.name + '.mb')
         asset.path.createParentFolders()
@@ -276,12 +279,13 @@ def removeRelicMenus():
 def createRelicMenus():
     removeRelicMenus()
     relicMenu = cmds.menu(MENU_NAME, parent='MayaWindow', tearOff=True, label=MENU_NAME)
-    cmds.menuItem(parent=relicMenu, label='Relic Scene Assets', command=DockableWidgetUIScript)
-    export_cmd = lambda x : exportSelection(1)
+    cmds.menuItem(parent=relicMenu, label='Scene Assets Panel', command=DockableWidgetUIScript)
+    export_cmd = lambda x : exportSelection(AssetType.ASSET)
     cmds.menuItem(parent=relicMenu, label='Export Asset', command=export_cmd)
-    variation_cmd = lambda x : exportSelection(5)
+    variation_cmd = lambda x : exportSelection(AssetType.VARIANT)
     cmds.menuItem(parent=relicMenu, label='Export Variation', command=variation_cmd)
-
+    archive_cmd = lambda x : archiveScene()
+    cmds.menuItem(parent=relicMenu, label='Archive Scene', command=archive_cmd)
 
 def initializePlugin(obj):
     plugin = om.MFnPlugin(obj)

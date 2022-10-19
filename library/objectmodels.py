@@ -1,5 +1,5 @@
 import sys
-from collections import Sequence
+from collections import Sequence, UserString
 from enum import IntEnum
 
 from extra_types.enums import AutoEnum
@@ -123,12 +123,11 @@ class FieldMixin(object):
         indexed_attributes = {}
         for i, x in enumerate(self.__slots__):
             attr = getattr(self, x)
-
             # Convert to id if morphic object.
             # Only allow json serializable data.
             if attr is None:
                 continue
-            elif isinstance(attr, (str, Path)):
+            elif isinstance(attr, (str, Path, UserString)):
                 attr = str(attr)
             elif isinstance(attr, int):
                 attr = int(attr)

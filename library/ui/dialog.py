@@ -202,54 +202,8 @@ class Ui_RelicMainWindow(object):
         sizePolicy2.setHeightForWidth(self.linksDock.sizePolicy().hasHeightForWidth())
         self.linksDock.setSizePolicy(sizePolicy2)
         palette = QPalette()
-        brush = QBrush(QColor(200, 200, 200, 255))
-        brush.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.WindowText, brush)
-        brush1 = QBrush(QColor(32, 32, 32, 255))
-        brush1.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.Button, brush1)
-        palette.setBrush(QPalette.Active, QPalette.Text, brush)
-        palette.setBrush(QPalette.Active, QPalette.ButtonText, brush)
-        palette.setBrush(QPalette.Active, QPalette.Base, brush1)
-        palette.setBrush(QPalette.Active, QPalette.Window, brush1)
-        brush2 = QBrush(QColor(126, 126, 126, 255))
-        brush2.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.Highlight, brush2)
-        brush3 = QBrush(QColor(250, 250, 250, 255))
-        brush3.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette.setBrush(QPalette.Active, QPalette.PlaceholderText, brush)
-#endif
-        palette.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Button, brush1)
-        palette.setBrush(QPalette.Inactive, QPalette.Text, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.ButtonText, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Base, brush1)
-        palette.setBrush(QPalette.Inactive, QPalette.Window, brush1)
-        palette.setBrush(QPalette.Inactive, QPalette.Highlight, brush2)
-        palette.setBrush(QPalette.Inactive, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette.setBrush(QPalette.Inactive, QPalette.PlaceholderText, brush)
-#endif
-        brush4 = QBrush(QColor(92, 92, 92, 255))
-        brush4.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Disabled, QPalette.WindowText, brush4)
-        brush5 = QBrush(QColor(43, 43, 43, 255))
-        brush5.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Disabled, QPalette.Button, brush5)
-        palette.setBrush(QPalette.Disabled, QPalette.Text, brush4)
-        palette.setBrush(QPalette.Disabled, QPalette.ButtonText, brush4)
-        palette.setBrush(QPalette.Disabled, QPalette.Base, brush5)
-        palette.setBrush(QPalette.Disabled, QPalette.Window, brush5)
-        palette.setBrush(QPalette.Disabled, QPalette.Highlight, brush2)
-        palette.setBrush(QPalette.Disabled, QPalette.HighlightedText, brush3)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush4)
-#endif
         self.linksDock.setPalette(palette)
         self.linksDock.setAutoFillBackground(True)
-        self.linksDock.setStyleSheet(u"")
         self.linksDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.attrDockWidgetContents_2 = QWidget()
         self.attrDockWidgetContents_2.setObjectName(u"attrDockWidgetContents_2")
@@ -378,57 +332,6 @@ class Ui_RelicMainWindow(object):
         self.categoryScrollArea = QScrollArea(self.dockWidgetContents)
         self.categoryScrollArea.setObjectName(u"categoryScrollArea")
         self.categoryScrollArea.setMinimumSize(QSize(288, 0))
-        self.categoryScrollArea.setStyleSheet(u"QTreeView {\n"
-"    border: none;\n"
-"	alternate-background-color: rgb(56,56,56);\n"
-"    background-color: rgb(48, 48, 48);\n"
-"}\n"
-"QTreeView::item,\n"
-"QTreeView::item:has-children {\n"
-"    background-color: transparent;\n"
-"    border: none;\n"
-"    margin: 0px;\n"
-"    margin-left: 1px;\n"
-"    padding: 0px;\n"
-"    padding-left: 1px;\n"
-"}\n"
-"QTreeView:item:hover {\n"
-"        background-color: rgb(75, 75, 75);\n"
-"        color: rgb(250, 250, 250);\n"
-"}\n"
-"QTreeView:item:selected {\n"
-"        background-color: rgb(140, 136, 127);\n"
-"        color: rgb(43, 43, 43);\n"
-"    }\n"
-"QTreeView::branch {\n"
-"    border-top: 0px solid rgb(43, 43, 43);\n"
-"    border-bottom: 0px solid rgb(43, 43, 43);\n"
-"    padding: 4px;\n"
-"    margin: 0px;\n"
-"}\n"
-"QTreeView::branch:has-siblings:!adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-vline.png);\n"
-"}\n"
-"QTreeView::branch:has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
-"}\n"
-"QTr"
-                        "eeView::branch:!has-children:!has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-branch-end.png);\n"
-"}\n"
-"QTreeView::branch:!has-children:has-siblings:adjoins-item {\n"
-"    border-image: url(:/resources/style/stylesheet-branch-more.png);\n"
-"}\n"
-"QTreeView::branch:has-children:!has-siblings:closed,\n"
-"QTreeView::branch:closed:has-children:has-siblings {\n"
-"    image: url(:/resources/style/treeExpand.svg);\n"
-"    background-color: transparent;\n"
-"}\n"
-"QTreeView::branch:open:has-children:!has-siblings,\n"
-"QTreeView::branch:open:has-children:has-siblings  {\n"
-"    image: url(:/resources/style/treeCollapse.svg);\n"
-"    background-color: transparent;\n"
-"}")
         self.categoryScrollArea.setWidgetResizable(True)
         self.categoryScrollAreaWidgetContents = QWidget()
         self.categoryScrollAreaWidgetContents.setObjectName(u"categoryScrollAreaWidgetContents")

@@ -1,6 +1,6 @@
 import time
 from functools import partial
-from collections import UserList
+from collections import UserList, UserString
 from datetime import date, datetime
 from enum import IntEnum
 
@@ -407,15 +407,13 @@ class ObjectField(UserList):
         )
 
 
-class TextField(object):
+class TextField(UserString):
     widget = QLineEdit
     default = ''
 
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return str(self.value)
+    @property
+    def value(self):
+        return self
 
 class LinkField(TextField):
 

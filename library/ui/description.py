@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
     QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QSizePolicy, QSpacerItem, QSplitter,
-    QVBoxLayout, QWidget)
+    QTextEdit, QVBoxLayout, QWidget)
 
 from library.widgets.description import (TextBrowser, TextEdit)
 import resources_rc
@@ -27,7 +27,7 @@ class Ui_DescriptionDialog(object):
     def setupUi(self, DescriptionDialog):
         if not DescriptionDialog.objectName():
             DescriptionDialog.setObjectName(u"DescriptionDialog")
-        DescriptionDialog.resize(607, 710)
+        DescriptionDialog.resize(800, 900)
         icon = QIcon()
         icon.addFile(u":/resources/general/markdown.png", QSize(), QIcon.Normal, QIcon.Off)
         DescriptionDialog.setWindowIcon(icon)
@@ -156,14 +156,24 @@ class Ui_DescriptionDialog(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.text_edit = TextEdit(self.editor_frame)
         self.text_edit.setObjectName(u"text_edit")
+        self.text_edit.setMinimumSize(QSize(260, 0))
+        font2 = QFont()
+        font2.setPointSize(10)
+        self.text_edit.setFont(font2)
+        self.text_edit.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        self.text_edit.setLineWrapColumnOrWidth(720)
+        self.text_edit.setCursorWidth(4)
 
         self.verticalLayout_7.addWidget(self.text_edit)
 
         self.splitter.addWidget(self.editor_frame)
         self.text_browser = TextBrowser(self.splitter)
         self.text_browser.setObjectName(u"text_browser")
-        self.text_browser.setStyleSheet(u"background-color: rgb(80,80,80);\n"
-"padding-left: 24px;")
+        self.text_browser.setMinimumSize(QSize(260, 0))
+        self.text_browser.setFont(font2)
+        self.text_browser.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        self.text_browser.setLineWrapColumnOrWidth(720)
+        self.text_browser.setCursorWidth(4)
         self.text_browser.setOpenLinks(False)
         self.splitter.addWidget(self.text_browser)
 

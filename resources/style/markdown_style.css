@@ -1,179 +1,77 @@
 <style type="text/css">
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-html, body {
-	font-family: var(--markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, "Ubuntu", "Droid Sans", sans-serif);
-	font-size: var(--markdown-font-size, 14px);
-	padding: 0 26px;
-	line-height: var(--markdown-line-height, 22px);
-	word-wrap: break-word;
-}
-
-body {
-	padding-top: 1em;
-}
-
 /* Reset margin top for elements */
 h1, h2, h3, h4, h5, h6,
 p, ol, ul, pre {
-	margin-top: 0;
+	margin: 0;
 }
-
-h2, h3, h4, h5, h6 {
+h1, h2, h3, h4, h5, h6, p {
 	font-weight: normal;
-	margin-bottom: 0.2em;
+	margin-bottom: 0.25em;
+	margin-left: 12px;
+	margin-right: 12px;
+}
+ol,
+ul {
+	margin-bottom: 8px;
+}
+ol li,
+ul li {
+	margin: 3px;
 }
 
-body.scrollBeyondLastLine {
-	margin-bottom: calc(100vh - 22px);
-}
-
-ul ul,
-ul ol,
-ol ul,
-ol ol {
-	margin-bottom: 0;
-}
-blockquote {
-    background-color: rgb(68,68,68);
-	margin: 0 7px 0 5px;
-	padding: 0 16px 0 10px;
-	border-left-width: 5px;
-	border-left-style: solid rgb(43, 83, 190);
-}
-img {
-	max-width: 100%;
-	max-height: 100%;
-}
-
-a {
-	text-decoration: none;
-}
-
-a:hover {
-	text-decoration: underline;
-}
-
-a:focus,
-input:focus,
-select:focus,
-textarea:focus {
-	outline: 1px solid -webkit-focus-ring-color;
-	outline-offset: -1px;
-}
-
-p {
-	margin-bottom: 0.7em;
-}
-
-ul,
-ol {
-	margin-bottom: 0.7em;
-}
-
-hr {
-	border: 0;
-	height: 2px;
-	border-bottom: 2px solid;
-}
-
-h1 {
-	padding-bottom: 0.3em;
-	line-height: 1.2;
-	border-bottom-width: 1px;
-	border-bottom-style: solid;
-	font-weight: normal;
-}
-
+/* Tables */
 table {
 	border-collapse: collapse;
+	margin-top: 0.7em;
 	margin-bottom: 0.7em;
+	margin-left: 12px;
+	margin-right: 12px;
 }
-
-th {
-	text-align: left;
-	border-bottom: 1px solid;
+table > tbody > tr > td {
+	border: 1px solid rgb(32,32,32);
 }
-
+/* th = "Table Header", td = "Table Data" (cell) */
 th,
 td {
-	padding: 5px 10px;
+	padding: 5px 8px;
 }
-
-table > tbody > tr + tr > td {
-	border-top: 1px solid;
-}
-
-
-code {
-	font-family: var("SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);
-	font-size: 1em;
-	line-height: 1.357em;
-	white-space: pre-wrap;
-}
-
-pre {
-	white-space: normal;
-    background-color: rgb(32, 32, 32);
-}
-
-div {
-	padding: 16px;
-	border-radius: 3px;
-	overflow: auto;
-    background-color: rgb(80, 80, 80);
-}
-
-code {
-	color: rgb(203, 174, 130);
-	tab-size: 4;
-	padding: 4px;
-	border-radius: 3px;
-	overflow: auto;
-    background-color: rgb(48, 48, 48);
-}
-
-/** Theming */
-
 th {
-	border-color: rgba(255, 255, 255, 0.69);
+	text-align: left;
+	border: 1px solid rgb(32, 32, 32);
+	background-color: rgb(68, 68, 68);
+}
+/* Indented code */
+code {
+	color: rgb(223, 184, 145);
+    background-color: rgb(48, 48, 48);
+	margin: 8px;
+}
+pre {
+    background-color: rgb(48, 48, 48);
+	margin-left: 12px;
+	margin-right: 12px;
+}
+/* Horizontal line*/
+hr {
+	margin: 0.0em;
+	margin-left: 12px;
+	margin-right: 12px;
 }
 
-h1,
-hr,
-td {
-	border-color: rgba(255, 255, 255, 0.18);
-}
-
-body {
-    background-color: rgb(80, 80, 80);
-    color: rgb(240, 240, 240);
-	padding-left: 64px;
-}
+/* Links & Media */
 a:link {
   color: rgb(25, 153, 245);
   background-color: transparent;
-  text-decoration: none;
+  text-decoration: underline;
 }
-
-a:visited {
-  color: rgb(25, 153, 245);
-  background-color: transparent;
-  text-decoration: none;
-}
-
 a:hover {
-  color: rgb(25, 153, 245);
-  background-color: transparent;
-  text-decoration: underline;
+  color: rgb(125, 153, 245);
 }
 
-a:active {
-  color: yellow;
-  background-color: transparent;
-  text-decoration: underline;
+blockquote {
+    background-color: rgb(68,68,68);
+	margin: 0 3px 0 3px;
+	padding: 0 3px 0 3px;
 }
+
 </style>

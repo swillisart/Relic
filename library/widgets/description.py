@@ -5,7 +5,7 @@ from functools import partial
 import markdown
 
 from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream, QEvent, QObject, QTimer
-from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor
+from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor, QFontMetrics
 from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit, QWidget, QAbstractButton, QDialog
 
 from library.config import peakLoad, RELIC_PREFS
@@ -21,13 +21,18 @@ style_sheet = QTextStream(style_file)
 MARKDOWN_STYLE = style_sheet.readAll()
 
 MARKDOWN = markdown.Markdown(
-    extensions = ['codehilite', 'tables'], #, 'meta'
+    extensions = ['codehilite', 'tables', 'nl2br', 'toc', 'sane_lists', 'admonition', 'fenced_code'],
     output_format="html5"
     )
 
 image_template = "![Image Url](./{})"
 
 class TextEdit(QTextEdit):
+
+    def __init__(self, *args, **kwargs):
+        super(TextEdit, self).__init__(*args, **kwargs)
+        font_width = QFontMetrics(self.currentCharFormat().font()).averageCharWidth()
+        self.setTabStopDistance(4 * font_width)
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -86,6 +91,9 @@ class TextBrowser(QTextBrowser):
 
     def __init__(self, *args, **kwargs):
         super(TextBrowser, self).__init__(*args, **kwargs)
+        font_width = QFontMetrics(self.currentCharFormat().font()).averageCharWidth()
+        self.setTabStopDistance(2 * font_width)
+
         self.movies = {}
         self.anchorClicked.connect(self.handleLink)
         self.search_matches = []
@@ -93,7 +101,6 @@ class TextBrowser(QTextBrowser):
 
         self.movie_timer = QTimer()
         self.movie_timer.setInterval(1000/24) # 24 fps in milliseconds
-        #self.capsnap.setTimerType(Qt.PreciseTimer)
         self.movie_timer.timeout.connect(self.updateMovieFrames)
 
     def updateMovieFrames(self):
@@ -119,7 +126,7 @@ class TextBrowser(QTextBrowser):
         paths = map(root_append, matcher)
         list(map(self.addAnimation, paths))
         # Set the modified markdown using HTML.
-        self.setHtml(MARKDOWN_STYLE + gen_html)
+        self.setHtml(MARKDOWN_STYLE + gen_html + '<br>'*3)
 
     @Slot(QUrl)
     def handleLink(self, url):

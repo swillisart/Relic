@@ -13,11 +13,11 @@ from qtshared6.utils import polymorphicItem
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             QPoint, QRegularExpression, QSize,
                             QSortFilterProxyModel, Signal, Slot)
-from PySide6.QtGui import (QAction, QColor, QCursor, QIcon, QDropEvent,
-                           QRegularExpressionValidator, QStandardItemModel, Qt)
+from PySide6.QtGui import (QAction, QColor, QCursor, QIcon, QDropEvent, QDrag,
+                           QRegularExpressionValidator, QStandardItemModel, Qt, QPainter, QBrush)
 from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
                                QMessageBox, QStyledItemDelegate, QTreeView,
-                               QWidget, QInputDialog, QLineEdit)
+                               QWidget, QInputDialog, QLineEdit, QApplication, QStyle)
 
 
 class recursiveTreeFilter(QSortFilterProxyModel):
@@ -65,11 +65,13 @@ class subcategoryDelegate(QStyledItemDelegate):
         super(subcategoryDelegate, self).paint(painter, option, index)
         name_text = index.data(Qt.DisplayRole)
         data = index.data(Qt.UserRole)
-
+        
         fm = painter.fontMetrics()
         lh = fm.lineSpacing() + 18
         text_width = fm.horizontalAdvance(name_text) + lh
-        painter.setPen(QColor(108, 108, 108))
+        selected = option.state & QStyle.State_Selected
+        color = QColor(56, 56, 56) if selected else QColor(108, 108, 108)
+        painter.setPen(color)
         painter.drawText(
             option.rect.x() + text_width,
             option.rect.y(),
@@ -411,36 +413,41 @@ class subcategoryTreeView(QTreeView):
 
         return destination
 
+    def onExternalDrop(self, event):
+        mime = event.mimeData()
+        destination_item = self.getDropDestinationItem(event)
+        urls = mime.urls()
+        # Filesystem drop.
+        if urls[0].toString().startswith('file:///'):
+            paths = [x.toLocalFile() for x in urls]
+            self.externalFilesDrop.emit(self.category.id, paths)
+            self.selection_model.select(self.indexAt(event.pos()), QItemSelectionModel.ClearAndSelect)
+        # Drag & Drop (from Assets View) re-categorization 
+        elif destination_item:
+            accepted_item, ok = QInputDialog.getItem(self,
+                'Re-parent Asset',
+                'Move the assets subcategory into "{}"?'.format(destination_item.name),
+                ['Move Assets'], True)
+            if ok:
+                self.onAssetDrop.emit(destination_item)
+
+        event.setDropAction(Qt.IgnoreAction)
+        event.accept()
+        self.update(destination_item.index())
+        return
+
     def dropEvent(self, event):
         if not int(RELIC_PREFS.edit_mode):
             return
-        mime = event.mimeData()
-        destination_item = self.getDropDestinationItem(event)
 
-        if mime.hasUrls():
-            # External filesystem drop.
-            if mime.urls()[0].toString().startswith('file:///'):
-                paths = [x.toLocalFile() for x in mime.urls()]
-                self.externalFilesDrop.emit(self.category.id, paths)
-                self.selection_model.select(self.indexAt(event.pos()), QItemSelectionModel.ClearAndSelect)
-                return
-            # Drag and drop re-categorization (from the asset list view)
-            elif destination_item: 
-                accepted_item, ok = QInputDialog.getItem(self,
-                    'Re-parent Asset',
-                    'Move the assets subcategory into "{}"?'.format(destination_item.name),
-                    ['Move Assets'], True)
-                if not ok:
-                    return
+        if event.mimeData().hasUrls():
+            self.onExternalDrop(event)
+            return super(subcategoryTreeView, self).dropEvent(event)
 
-            event.setDropAction(Qt.MoveAction)
-            event.accept()
-            self.onAssetDrop.emit(destination_item)
-            return
-        
         source_item = self.drag_item
         source_asset = source_item.data(Qt.UserRole)
         source_parent = source_item.parent()
+        destination_item = self.getDropDestinationItem(event)
 
         # Re-parenting a subcategory check if user wants to move.
         dst = destination_item.name if destination_item else 'Root'

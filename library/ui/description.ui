@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>607</width>
-    <height>710</height>
+    <width>800</width>
+    <height>900</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -257,6 +257,26 @@ QPushButton:checked {
        </property>
        <item>
         <widget class="TextEdit" name="text_edit">
+         <property name="minimumSize">
+          <size>
+           <width>260</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="lineWrapMode">
+          <enum>QTextEdit::FixedPixelWidth</enum>
+         </property>
+         <property name="lineWrapColumnOrWidth">
+          <number>720</number>
+         </property>
+         <property name="cursorWidth">
+          <number>4</number>
+         </property>
          <property name="placeholderText">
           <string>Add description text (Markdown) here...</string>
          </property>
@@ -265,9 +285,25 @@ QPushButton:checked {
       </layout>
      </widget>
      <widget class="TextBrowser" name="text_browser">
-      <property name="styleSheet">
-       <string notr="true">background-color: rgb(80,80,80);
-padding-left: 24px;</string>
+      <property name="minimumSize">
+       <size>
+        <width>260</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="lineWrapMode">
+       <enum>QTextEdit::FixedPixelWidth</enum>
+      </property>
+      <property name="lineWrapColumnOrWidth">
+       <number>720</number>
+      </property>
+      <property name="cursorWidth">
+       <number>4</number>
       </property>
       <property name="openLinks">
        <bool>false</bool>

@@ -20,7 +20,6 @@ import shiboken2
 import maya.OpenMayaUI as omui
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
-import maya.mel as mel
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # -- First-party --
@@ -33,6 +32,8 @@ from intercom import Client
 # -- Module --
 from relicDrop import RelicDropCallback
 from relicTranslator import getSelectionDependencies
+from relicArchive import archiveScene
+from relicUtilities import setMeshMetadata, generateThumbnails
 
 # -- Globals --
 MENU_NAME = 'Relic'
@@ -85,7 +86,7 @@ def exportSelection(asset_type):
         asset.path = INGEST_PATH / asset.name / (asset.name + '.mb')
         asset.path.createParentFolders()
         asset.type = asset_type
-        asset.category = 1 # Modeling
+        asset.category = Category.MODELING.index
 
         setMeshMetadata(selected, asset)
         generateThumbnails(selected, asset.path)
@@ -133,72 +134,9 @@ def exportSelection(asset_type):
             #GLTFExport(str(asset.path.suffixed('_preview', '.gltf')))
 
         asset.path = str(asset.path)
-        results.append(asset.__dict__)
+        results.append(asset.asDict())
 
-    RELIC_CLIENT.sendPayload(json.dumps(results))
-
-    return results
-
-
-def generateThumbnails(selection, file_path):
-    # Make turntable orbit camera
-    orbitCameraShape = cmds.createNode("camera")
-    cmds.setAttr(orbitCameraShape + '.focalLength', 55)
-    orbitCamera = cmds.listRelatives(orbitCameraShape, p=True)[0]
-    cmds.rename(orbitCamera, "orbitCam")
-    mel.eval("lookThroughModelPanel orbitCam modelPanel4;")
-    cmds.setAttr("hardwareRenderingGlobals.multiSampleEnable", 1)
-    cmds.viewFit(selection, f=0.9)
-    center = cmds.objectCenter(selection, gl=True)
-    cmds.move(
-        center[0], center[1], center[2], "orbitCam.rotatePivot", absolute=True
-    )
-    cmds.setKeyframe('orbitCam', at="rotate", t=['1'], ott="linear", itt="linear")
-    rotateY = cmds.getAttr('orbitCam.ry') + 360
-    cmds.setKeyframe(
-        'orbitCam', at="rotateY", t=['36'], ott="linear", itt="linear", v=rotateY
-    )
-
-    # Create turntable and single thumbnail
-    cmds.displayPref(wsa="none")
-    mel.eval("lookThroughModelPanel orbitCam modelPanel4;")
-    #captureViewport(save=icon_path)
-    mel.eval(
-        'playblast -st 1 -et 1 -format image -compression jpg \
-        -percent 100 -quality 100 -cf "{}" -w 288 -h 192 -fp false \
-        -viewer false -offScreen -showOrnaments 0 -forceOverwrite;'.format(
-            file_path.suffixed('_icon', '.jpg')
-        )
-    )
-    mov_path = file_path.suffixed('_icon', '.mov')
-    mel.eval(
-        'playblast -st 1 -et 36 -format qt -compression "H.264" \
-        -percent 100 -quality 100 -f "{}" -w 288 -h 192 -fp false \
-        -viewer false -offScreen -showOrnaments 0 -forceOverwrite;'.format(
-            mov_path
-        )
-    )
-    os.rename(str(mov_path), str(file_path.suffixed('_icon', '.mp4')))
-    # Cleanup
-    cmds.displayPref(wsa="full")
-    cmds.delete('orbitCam')
-
-
-def setMeshMetadata(selection, asset):
-    meshes = []
-    # Set the poly count
-    if cmds.nodeType(selection) == "transform":
-        meshes.extend(cmds.listRelatives(
-            selection, allDescendents=True, type="mesh", fullPath=1))
-
-    cmds.select(meshes, r=True)
-    asset.polycount = cmds.polyEvaluate(face=True)
-
-    # set the bounding box
-    size3 = []
-    for axis in cmds.polyEvaluate(boundingBox=1):
-        size3.append(str(round(abs(axis[0]) + axis[1], 2)))
-    asset.resolution = ' x '.join(size3)
+    return json.dumps(results)
 
 
 def captureViewport(save=False):
@@ -211,7 +149,6 @@ def captureViewport(save=False):
     #if save:
     #    icon_img = file_io.makeIconQt(data, w, h)
     #    icon_img.save(save)
-
 
 class RelicPanel(MayaQWidgetDockableMixin, asset_views.RelicSceneForm):
     def __init__(self, parent=None):
@@ -278,13 +215,14 @@ def removeRelicMenus():
 
 def createRelicMenus():
     removeRelicMenus()
+    payback = RELIC_CLIENT.sendPayload
     relicMenu = cmds.menu(MENU_NAME, parent='MayaWindow', tearOff=True, label=MENU_NAME)
     cmds.menuItem(parent=relicMenu, label='Scene Assets Panel', command=DockableWidgetUIScript)
-    export_cmd = lambda x : exportSelection(AssetType.ASSET)
+    export_cmd = lambda x : payback(exportSelection(AssetType.ASSET))
     cmds.menuItem(parent=relicMenu, label='Export Asset', command=export_cmd)
-    variation_cmd = lambda x : exportSelection(AssetType.VARIANT)
+    variation_cmd = lambda x : payback(exportSelection(AssetType.VARIANT))
     cmds.menuItem(parent=relicMenu, label='Export Variation', command=variation_cmd)
-    archive_cmd = lambda x : archiveScene()
+    archive_cmd = lambda x : payback(archiveScene())
     cmds.menuItem(parent=relicMenu, label='Archive Scene', command=archive_cmd)
 
 def initializePlugin(obj):
@@ -300,7 +238,6 @@ def initializePlugin(obj):
         relicMixinWindow = None
         sys.stderr.write("Failed to register RelicMayaPlugin\n")
         raise
-
 
 def uninitializePlugin(obj):
     plugin = om.MFnPlugin(obj)

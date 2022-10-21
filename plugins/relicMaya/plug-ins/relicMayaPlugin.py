@@ -33,7 +33,7 @@ from intercom import Client
 from relicDrop import RelicDropCallback
 from relicTranslator import getSelectionDependencies
 from relicArchive import archiveScene
-from relicUtilities import setMeshMetadata, generateThumbnails
+from relicUtilities import setMeshMetadata, generateThumbnails, UndoThis, clearAllShading
 
 # -- Globals --
 MENU_NAME = 'Relic'
@@ -50,31 +50,11 @@ def maya_useNewAPI():
     # Using the Maya Python API 2.0.
     pass
 
-class UndoThis(object):
-    """Convenience Undo chunk context manager
-    """
-    def __enter__(self):
-        # Create an undo chunk.
-        cmds.undoInfo(openChunk=True)
-
-    def __exit__(self, x_type, x_value, x_tb):
-        # Close the chunk and undo everything.
-        cmds.undoInfo(closeChunk=True)
-        cmds.undo()
-
-def clearShading():
-    """Removes all objects from Maya's shading groups / engines.
-    """
-    sel = cmds.ls(type='shadingEngine')
-    for item in sel:
-        if item not in ['initialShadingGroup', 'initialParticleSE']:
-            cmds.sets(e=1, clear=item)
-
 def exportSelection(asset_type):
     """Exports an asset/component from maya's selection into the library
     """
     results = []
-    original_selection = cmds.ls(selection=1)
+    original_selection = cmds.ls(selection=True)
     if not original_selection:
         cmds.confirmDialog(title="Make Selection", 
             message="Requires an object selection")
@@ -126,7 +106,7 @@ def exportSelection(asset_type):
             materialx_path = asset.path.suffixed('', '.mtlx')
             cmds.file(str(materialx_path), exportSelected=1, type='MaterialX')
 
-            clearShading()
+            clearAllShading()
             cmds.select(selected, r=True)
             # Export the asset file.
             cmds.file(str(asset.path), force=1, options="v=0;", type="mayaBinary",

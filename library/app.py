@@ -116,6 +116,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.actionIngest.triggered.connect(self.beginIngest)
         self.actionPreferences.triggered.connect(self.showPreferences)
         self.actionDocumentation.triggered.connect(self.browseDocumentation)
+        readme = lambda x : self.description_window.showMarkdown(Path('./README.md'))
+        self.actionAbout.triggered.connect(readme)
         self.actionReconnect.triggered.connect(session.rebind)
 
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)

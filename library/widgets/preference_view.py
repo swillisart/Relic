@@ -63,12 +63,7 @@ class UserPrefs(object):
             value = user_settings.value(key)
             if isinstance(value, str) and value.isnumeric():
                 value = int(value)
-            try:
-                pref_value = UserPrefs.Fields[key].data(value)
-            except:
-                pref_value = UserPrefs.Fields[key].data[value]
-
-            setattr(self, key, pref_value)
+            setattr(self, key, getPref(key, value))
 
         site_settings = RELIC_PREFS.getSiteSettings()
         site_keys = site_settings.childKeys()
@@ -77,10 +72,14 @@ class UserPrefs(object):
             value = site_settings.value(key)
             if isinstance(value, str) and value.isnumeric():
                 value = int(value)
+            setattr(self, key, getPref(key, value))
+
+    def getPref(self, key, value):
+        try:
             pref_value = UserPrefs.Fields[key].data(value)
-
-            setattr(self, key, pref_value)
-
+        except:
+            pref_value = UserPrefs.Fields[key].data[value]
+        return pref_value
 
 class PreferencesView(QWidget):
     def __init__(self, *args, **kwargs):

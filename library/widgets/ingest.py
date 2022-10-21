@@ -195,7 +195,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.kept_original_name = True
         self.updateLabelCounts(len(assets))
         # always copy and never move any plugin data.
-        self.ingest_thread.file_op = ingest.IngestionThread.copyOp
+        self.copyCheckBox.setChecked(True)
         item_model = self.collect_item_model
         for fields in assets:
             asset = TempAsset(**fields)

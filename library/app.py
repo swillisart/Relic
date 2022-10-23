@@ -69,7 +69,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.statusbar.addPermanentWidget(self.edit_status, 0)
 
         self.description_window = description.Window(self)
-        self.app_icon = QIcon(':/resources/app/app_icon.svg')
+        self.app_icon = QIcon(':/resources/app/relic.svg')
         self.tray = QSystemTrayIcon(self.app_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
@@ -754,8 +754,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             asset = model.index(i, 0).data(polymorphicItem.Object)
             for index, link in enumerate(links):
                 if asset.links == link:
-                    link_item = link_map[index]
-                    attachLinkToAsset(asset, link_item)
+                    try:
+                        link_item = link_map[index]
+                        attachLinkToAsset(asset, link_item)
+                    except IndexError as exerr:
+                        print('failed to attach link to asset', 'Link:', len(links), len(link_map))
             assets.append(asset)
 
         if not assets:

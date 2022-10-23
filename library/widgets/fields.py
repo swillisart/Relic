@@ -315,8 +315,8 @@ class CheckField(IntField):
 
 class RatingField(IntField):
     widget = Rating
-    icon = scale_icon(QPixmap(':resources/app/heart.svg'))
-    disabled = scale_icon(QPixmap(':resources/app/heart_disabled.svg'))
+    icon = scale_icon(QPixmap(':app/heart.svg'))
+    disabled = scale_icon(QPixmap(':app/heart_disabled.svg'))
 
     def draw(self, painter, option, index, value):
         widget = option.widget 
@@ -332,8 +332,8 @@ class RatingField(IntField):
 
 
 class QualityField(RatingField):
-    icon = scale_icon(QPixmap(':resources/app/star.svg'))
-    disabled = scale_icon(QPixmap(':resources/app/star_disabled.svg'))
+    icon = scale_icon(QPixmap(':app/star.svg'))
+    disabled = scale_icon(QPixmap(':app/star_disabled.svg'))
 
 
 class ObjectField(UserList):
@@ -396,7 +396,7 @@ class ObjectField(UserList):
             dropdown.state = QStyle.State_Enabled | QStyle.State_Raised
             dropdown.toolButtonStyle = Qt.ToolButtonIconOnly
             dropdown.subControls = QStyle.SC_ToolButton
-            dropdown.icon = QIcon(':resources/style/stylesheet-branch-open.png')
+            dropdown.icon = QIcon(':style/stylesheet-branch-open.png')
             dropdown.iconSize = QSize(8, 8)
             widget_style.drawComplexControl(QStyle.CC_ToolButton, dropdown, painter, widget)
         # Draw counts in bottom right corner

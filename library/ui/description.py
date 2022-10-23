@@ -16,9 +16,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
-    QFrame, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
-    QTextEdit, QVBoxLayout, QWidget)
+    QFrame, QHBoxLayout, QLabel, QSizePolicy,
+    QSpacerItem, QSplitter, QTextEdit, QVBoxLayout,
+    QWidget)
 
 from library.widgets.description import (TextBrowser, TextEdit)
 import resources_rc
@@ -29,7 +29,7 @@ class Ui_DescriptionDialog(object):
             DescriptionDialog.setObjectName(u"DescriptionDialog")
         DescriptionDialog.resize(800, 900)
         icon = QIcon()
-        icon.addFile(u":/resources/general/markdown.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/resources/style/markdown.png", QSize(), QIcon.Normal, QIcon.Off)
         DescriptionDialog.setWindowIcon(icon)
         self.verticalLayout = QVBoxLayout(DescriptionDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -61,80 +61,16 @@ class Ui_DescriptionDialog(object):
 
         self.horizontalLayout_17.addItem(self.horizontalSpacer_9)
 
-        self.filterFrame_2 = QFrame(self.descriptionDockTitle)
-        self.filterFrame_2.setObjectName(u"filterFrame_2")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.filterFrame_2.sizePolicy().hasHeightForWidth())
-        self.filterFrame_2.setSizePolicy(sizePolicy1)
-        self.filterFrame_2.setStyleSheet(u"QFrame#filterFrame_2 {\n"
-"	margin: 2px;\n"
-"    border: 1px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame#filterFrame_2:hover {\n"
-"    border: 1px solid rgb(150, 146, 137);\n"
-"}")
-        self.filterFrame_2.setFrameShape(QFrame.StyledPanel)
-        self.filterFrame_2.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout_11 = QHBoxLayout(self.filterFrame_2)
-        self.horizontalLayout_11.setSpacing(0)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.horizontalLayout_11.setContentsMargins(1, 0, 0, 0)
-        self.filterButton_2 = QPushButton(self.filterFrame_2)
-        self.filterButton_2.setObjectName(u"filterButton_2")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.filterButton_2.sizePolicy().hasHeightForWidth())
-        self.filterButton_2.setSizePolicy(sizePolicy2)
-        self.filterButton_2.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(57, 57, 57);\n"
-"    padding: 0px;\n"
-"	border: none;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: rgb(108, 108, 108);\n"
-"}\n"
-"QPushButton:checked {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"}")
-        icon1 = QIcon()
-        icon1.addFile(u":/resources/general/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.filterButton_2.setIcon(icon1)
-        self.filterButton_2.setIconSize(QSize(18, 18))
-        self.filterButton_2.setCheckable(True)
-        self.filterButton_2.setChecked(True)
-        self.filterButton_2.setFlat(False)
-
-        self.horizontalLayout_11.addWidget(self.filterButton_2)
-
-        self.filter_box = QLineEdit(self.filterFrame_2)
-        self.filter_box.setObjectName(u"filter_box")
-        sizePolicy3 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.filter_box.sizePolicy().hasHeightForWidth())
-        self.filter_box.setSizePolicy(sizePolicy3)
-        self.filter_box.setMinimumSize(QSize(128, 0))
-        font1 = QFont()
-        font1.setPointSize(8)
-        self.filter_box.setFont(font1)
-        self.filter_box.setFrame(False)
-        self.filter_box.setClearButtonEnabled(True)
-
-        self.horizontalLayout_11.addWidget(self.filter_box)
-
-
-        self.horizontalLayout_17.addWidget(self.filterFrame_2)
-
+        self.filter_layout = QHBoxLayout()
+        self.filter_layout.setObjectName(u"filter_layout")
+        self.filter_layout.setContentsMargins(3, 3, 3, 3)
         self.found_results_label = QLabel(self.descriptionDockTitle)
         self.found_results_label.setObjectName(u"found_results_label")
-        self.found_results_label.setStyleSheet(u"background-color: transparent;")
 
-        self.horizontalLayout_17.addWidget(self.found_results_label)
+        self.filter_layout.addWidget(self.found_results_label)
+
+
+        self.horizontalLayout_17.addLayout(self.filter_layout)
 
         self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
@@ -157,9 +93,9 @@ class Ui_DescriptionDialog(object):
         self.text_edit = TextEdit(self.editor_frame)
         self.text_edit.setObjectName(u"text_edit")
         self.text_edit.setMinimumSize(QSize(260, 0))
-        font2 = QFont()
-        font2.setPointSize(10)
-        self.text_edit.setFont(font2)
+        font1 = QFont()
+        font1.setPointSize(10)
+        self.text_edit.setFont(font1)
         self.text_edit.setLineWrapMode(QTextEdit.FixedPixelWidth)
         self.text_edit.setLineWrapColumnOrWidth(720)
         self.text_edit.setCursorWidth(4)
@@ -170,7 +106,7 @@ class Ui_DescriptionDialog(object):
         self.text_browser = TextBrowser(self.splitter)
         self.text_browser.setObjectName(u"text_browser")
         self.text_browser.setMinimumSize(QSize(260, 0))
-        self.text_browser.setFont(font2)
+        self.text_browser.setFont(font1)
         self.text_browser.setLineWrapMode(QTextEdit.FixedPixelWidth)
         self.text_browser.setLineWrapColumnOrWidth(720)
         self.text_browser.setCursorWidth(4)
@@ -195,8 +131,6 @@ class Ui_DescriptionDialog(object):
     def retranslateUi(self, DescriptionDialog):
         DescriptionDialog.setWindowTitle(QCoreApplication.translate("DescriptionDialog", u"Description ", None))
         self.descriptionTitle.setText(QCoreApplication.translate("DescriptionDialog", u"Description", None))
-        self.filterButton_2.setText("")
-        self.filter_box.setPlaceholderText(QCoreApplication.translate("DescriptionDialog", u"Find...", None))
         self.found_results_label.setText(QCoreApplication.translate("DescriptionDialog", u"1 / 2", None))
         self.text_edit.setPlaceholderText(QCoreApplication.translate("DescriptionDialog", u"Add description text (Markdown) here...", None))
     # retranslateUi

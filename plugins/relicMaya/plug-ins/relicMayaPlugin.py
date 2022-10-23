@@ -43,7 +43,6 @@ RELIC_CLIENT = Client('relic')
 if not 'relicMixinWindow' in globals():
     relicMixinWindow = None
 
-#from OpenGL.GL import *
 #from gltfExporterFloat import GLTFExport
 
 def maya_useNewAPI():
@@ -118,14 +117,14 @@ def exportSelection(asset_type):
 
     return json.dumps(results)
 
-
 def captureViewport(save=False):
     cmds.getPanel(withFocus=True)
     view = omui.M3dView.active3dView()
     view.display()
-    glReadBuffer(GL_FRONT)
-    w, h = view.portWidth(), view.portHeight()
-    data = glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE)
+    #glPixelStorei(GL_PACK_ALIGNMENT, 1) # copied recently FROM NUKE 
+    #glReadBuffer(GL_FRONT)
+    #w, h = view.portWidth(), view.portHeight()
+    #data = glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE)
     #if save:
     #    icon_img = file_io.makeIconQt(data, w, h)
     #    icon_img.save(save)

@@ -871,9 +871,13 @@ class Viewport(InteractiveGLView):
 
     def setColorConfig(self, file_path=None):
         if not file_path:
-            backup_config = '{}/config.ocio'.format(os.path.dirname(__file__))
-            file_path = os.getenv('ocio') or backup_config
-        self.color_config = ocio.Config().CreateFromFile(str(file_path))
+            file_path = os.getenv('ocio') or ':config.ocio'
+
+        config_file = QFile(file_path)
+        config_file.open(QFile.ReadOnly | QFile.Text)
+        stream = QTextStream(config_file)
+        self.color_config = ocio.Config().CreateFromStream(stream.readAll())
+        #self.color_config = ocio.Config().CreateFromFile(str(file_path))
         try:
             self.color_views = self.color_config.getViews('default')
         except:

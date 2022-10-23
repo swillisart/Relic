@@ -17,6 +17,7 @@ Lib
 Scripts
 resources.py
 resources_rc.py
+tests/data
 plugins/LibShared
 plugins/Lib39
 plugins/Lib37

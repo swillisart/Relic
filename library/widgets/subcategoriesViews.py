@@ -138,7 +138,7 @@ class subcategoryTreeView(QTreeView):
             QAction('Delete', self, triggered=self.deleteSubcategory),
             QAction('Rename', self, triggered=self.listViewRenameMode),
         ]
-        self.folder_icon = QIcon(':resources/general/folder.svg')
+        self.folder_icon = QIcon(':app/folder.svg')
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())

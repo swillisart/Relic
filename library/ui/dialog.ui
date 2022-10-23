@@ -21,7 +21,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../../resources.qrc">
-    <normaloff>:/resources/app/app_icon.svg</normaloff>:/resources/app/app_icon.svg</iconset>
+    <normaloff>:/resources/app/relic.svg</normaloff>:/resources/app/relic.svg</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -124,8 +124,8 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../resources.qrc">
-              <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
+             <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+              <normaloff>:/app/searchLight.svg</normaloff>:/app/searchLight.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -391,8 +391,8 @@
            <string>Preview On-Select</string>
           </property>
           <property name="icon">
-           <iconset resource="../../resources.qrc">
-            <normaloff>:/resources/app/kohai.svg</normaloff>:/resources/app/kohai.svg</iconset>
+           <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+            <normaloff>:/app/peak.svg</normaloff>:/app/peak.svg</iconset>
           </property>
          </widget>
         </item>
@@ -422,8 +422,8 @@
         <item>
          <widget class="QToolButton" name="pageDownButton">
           <property name="icon">
-           <iconset resource="../../resources.qrc">
-            <normaloff>:/resources/general/pageArrowLeft.svg</normaloff>:/resources/general/pageArrowLeft.svg</iconset>
+           <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+            <normaloff>:/app/pageArrowLeft.svg</normaloff>:/app/pageArrowLeft.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -458,8 +458,8 @@
         <item>
          <widget class="QToolButton" name="pageUpButton">
           <property name="icon">
-           <iconset resource="../../resources.qrc">
-            <normaloff>:/resources/general/pageArrow.svg</normaloff>:/resources/general/pageArrow.svg</iconset>
+           <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+            <normaloff>:/app/pageArrow.svg</normaloff>:/app/pageArrow.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -726,8 +726,8 @@ QDockWidget::title {
           <string>Collections</string>
          </property>
          <property name="icon">
-          <iconset resource="../../resources.qrc">
-           <normaloff>:/resources/asset_types/collection.svg</normaloff>:/resources/asset_types/collection.svg</iconset>
+          <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+           <normaloff>:/AssetType/COLLECTION</normaloff>:/AssetType/COLLECTION</iconset>
          </property>
          <property name="checked">
           <bool>true</bool>
@@ -761,8 +761,8 @@ QDockWidget::title {
           <string>Variations</string>
          </property>
          <property name="icon">
-          <iconset resource="../../resources.qrc">
-           <normaloff>:/resources/asset_types/variant.svg</normaloff>:/resources/asset_types/variant.svg</iconset>
+          <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+           <normaloff>:/AssetType/VARIANT</normaloff>:/AssetType/VARIANT</iconset>
          </property>
          <attribute name="buttonGroup">
           <string notr="true">buttonGroup</string>
@@ -858,8 +858,8 @@ QFrame:hover {
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../resources.qrc">
-            <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
+           <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+            <normaloff>:/app/searchLight.svg</normaloff>:/app/searchLight.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -1003,8 +1003,8 @@ QFrame:hover {
   </action>
   <action name="actionExit">
    <property name="icon">
-    <iconset resource="../../resources.qrc">
-     <normaloff>:/resources/style/close.svg</normaloff>:/resources/style/close.svg</iconset>
+    <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+     <normaloff>:/style/close.svg</normaloff>:/style/close.svg</iconset>
    </property>
    <property name="text">
     <string>Exit</string>
@@ -1025,8 +1025,8 @@ QFrame:hover {
   </action>
   <action name="actionIngest">
    <property name="icon">
-    <iconset resource="../../resources.qrc">
-     <normaloff>:/resources/general/folder.svg</normaloff>:/resources/general/folder.svg</iconset>
+    <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+     <normaloff>:/app/folder.svg</normaloff>:/app/folder.svg</iconset>
    </property>
    <property name="text">
     <string>Ingest</string>
@@ -1080,7 +1080,7 @@ QFrame:hover {
  <layoutdefault spacing="6" margin="9"/>
  <resources>
   <include location="../../resources.qrc"/>
-  <include location="../../plugins/Lib27/relic_base/ui/resources.qrc"/>
+  <include location="../../plugins/LibShared/relic/qt/resources/resources.qrc"/>
  </resources>
  <connections>
   <connection>

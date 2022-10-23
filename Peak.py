@@ -1,9 +1,8 @@
 import sys
 import os
 import argparse
-parser = argparse.ArgumentParser(description='Viewer for 3D or 2D Assets')
+parser = argparse.ArgumentParser(description='Viewer for 3D & 2D Assets')
 parser.add_argument('--annotate', action='store_true')
-parser.add_argument('--capture', action='store_true')
 parser.add_argument('--path', nargs='?', metavar='')
 
 args = parser.parse_args()

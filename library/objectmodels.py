@@ -200,7 +200,7 @@ class category(object):
         self.name = name.capitalize()
         self.id = id
         self.count = 0
-        self.icon = ':/resources/categories/{}.svg'.format(name.lower())
+        self.icon = f':/Category/{name}'
         self.subcategory_by_id = {}
         self.tree = None # QTreeView
         self.tab = None # TabWidget

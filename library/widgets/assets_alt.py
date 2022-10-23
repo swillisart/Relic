@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabe
                                QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
                                QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
 #unimageable_types = {
-#    '.r3d': QPixmap(':resources/general/RedLogo.png')
+#    '.r3d': QPixmap(':app/RedLogo.png')
 #} 
 THREAD_POOL = QThreadPool.globalInstance()
 
@@ -140,7 +140,7 @@ class AssetListView(BaseView):
         self.drag_select = False
         # Actions
         self.main_actions = [
-            QAction(QIcon(':resources/general/folder.svg'), 'Open File Location', self, triggered=self.browseLocalAsset),
+            QAction(QIcon(':app/folder.svg'), 'Open File Location', self, triggered=self.browseLocalAsset),
         ]
         self.edit_actions = [
             QAction('Generate Preview', self, triggered=self.generatePreview),
@@ -311,7 +311,7 @@ class AssetListView(BaseView):
         msg = f'Link selected assets to <b>{dst_name}</b>?\n'
         message_box = QMessageBox(QMessageBox.Information, 'Are you sure?', msg,
                 QMessageBox.Yes|QMessageBox.No, self)
-        link_ico = QPixmap(':/resources/general/folder_link.svg')
+        link_ico = QPixmap(':app/folder_link.svg')
         message_box.setIconPixmap(link_ico.scaled(64, 64, mode=Qt.SmoothTransformation))
 
         if QMessageBox.No == message_box.exec_():

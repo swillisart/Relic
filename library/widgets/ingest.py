@@ -81,7 +81,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.ingest_thread = ingest.IngestionThread(self)
         self.ingest_thread.itemDone.connect(self.assetIngested)
         self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.loading_movie = QMovie(':resources/general/load_wheel_24.webp')
+        self.loading_movie = QMovie(':app/load_wheel_24.webp')
         self.loading_movie.setCacheMode(QMovie.CacheAll)
         self.loading_movie.start()
         self.loadingLabel.setMovie(self.loading_movie)
@@ -149,15 +149,16 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.ingestTabWidget.setCurrentIndex(0)
 
     @Slot()
-    def removeIngestFiles(self, index):
+    def removeIngestFiles(self, index, full=True):
         temp_path, temp_asset = self.getCollectedPath(index)
         preview_flavors = [
             temp_path.suffixed('_icon', ext='.jpg'),
             temp_path.suffixed('_proxy', ext='.jpg'),
             temp_path.suffixed('_icon', ext='.mp4'),
             temp_path.suffixed('_proxy', ext='.mp4'),
-            temp_path.suffixed(''),
         ]
+        if full:
+            preview_flavors.append(temp_path.suffixed(''))
         for preview_file in preview_flavors:
             if preview_file.exists():
                 os.remove(str(preview_file))
@@ -594,7 +595,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             self.completedLabel.show()
         index = self.collect_item_model.index(asset.id, 0)
         self.collect_item_model.dataChanged.emit(index, index, [Qt.UserRole])
-        self.collectedListView.update()
+        self.collectedListView.update(index)
 
     def getCollectedPath(self, index):
         temp_asset = index.data(polymorphicItem.Object)
@@ -670,7 +671,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         # Pack the data by path key.
         assets_by_file = {k:v for k, v in map(self.getCollectedPath, indices)}
         # remove the temp previews 
-        [self.removeIngestFiles(x) for x in indices]
+        [self.removeIngestFiles(x, full=False) for x in indices]
         # Hide the extra bracketed exposure assets.
         [self.collectedListView.setRowHidden(x.row(), True) for x in indices[1:]]
         self.updateLabelCounts(None)

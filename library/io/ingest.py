@@ -227,7 +227,7 @@ def processTOOL(in_path, out_path, flag):
         preview_img = thumbnailFromExe(in_path, out_path)
         in_path = out_path
     else:
-        preview_img = QImage(':resources/icons/noicon.jpg')
+        preview_img = QImage(':app/noicon.jpg')
     icon = QPixmap.fromImage(preview_img)
     icon.save(str(out_path.suffixed('_icon', ext='.jpg')))
 

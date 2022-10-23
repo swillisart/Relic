@@ -83,104 +83,20 @@
           </spacer>
          </item>
          <item>
-          <widget class="QFrame" name="searchFrame">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+          <layout class="QHBoxLayout" name="filter_layout">
+           <property name="leftMargin">
+            <number>3</number>
            </property>
-           <property name="styleSheet">
-            <string notr="true">QFrame {
-    border: 2px solid rgb(43, 43, 43);
-    background-color: rgb(43, 43, 43);
-    border-radius: 3px;
-}
-QFrame:hover {
-    border: 2px solid rgb(150, 146, 137);
-}</string>
+           <property name="topMargin">
+            <number>3</number>
            </property>
-           <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
+           <property name="rightMargin">
+            <number>3</number>
            </property>
-           <property name="frameShadow">
-            <enum>QFrame::Plain</enum>
+           <property name="bottomMargin">
+            <number>3</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QPushButton" name="searchButton">
-              <property name="styleSheet">
-               <string notr="true">QPushButton {
-    background-color: rgb(43, 43, 43);
-    padding: 2px;
-	border: none;
-}</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="icon">
-               <iconset resource="../../resources.qrc">
-                <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="flat">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="searchBox">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>256</width>
-                <height>26</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="frame">
-               <bool>false</bool>
-              </property>
-              <property name="placeholderText">
-               <string>Filter...</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
+          </layout>
          </item>
          <item>
           <spacer name="horizontalSpacer_2">

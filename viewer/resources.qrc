@@ -1,6 +1,7 @@
 <RCC>
   <qresource>
     <file>style.qss</file>
+    <file>config.ocio</file>
     <file>resources/downarrowsmall.png</file>
     <file>resources/shape_tool.svg</file>
     <file>resources/text_tool.svg</file>

@@ -14,8 +14,8 @@
    <string>Description </string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resources.qrc">
-    <normaloff>:/resources/general/markdown.png</normaloff>:/resources/general/markdown.png</iconset>
+   <iconset>
+    <normaloff>:/resources/style/markdown.png</normaloff>:/resources/style/markdown.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="topMargin">
@@ -83,133 +83,27 @@
        </spacer>
       </item>
       <item>
-       <widget class="QFrame" name="filterFrame_2">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
+       <layout class="QHBoxLayout" name="filter_layout">
+        <property name="leftMargin">
+         <number>3</number>
         </property>
-        <property name="styleSheet">
-         <string notr="true">QFrame#filterFrame_2 {
-	margin: 2px;
-    border: 1px solid rgb(43, 43, 43);
-    background-color: rgb(43, 43, 43);
-    border-radius: 3px;
-}
-QFrame#filterFrame_2:hover {
-    border: 1px solid rgb(150, 146, 137);
-}</string>
+        <property name="topMargin">
+         <number>3</number>
         </property>
-        <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+        <property name="rightMargin">
+         <number>3</number>
         </property>
-        <property name="frameShadow">
-         <enum>QFrame::Plain</enum>
+        <property name="bottomMargin">
+         <number>3</number>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_11">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="leftMargin">
-          <number>1</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="filterButton_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-    background-color: rgb(57, 57, 57);
-    padding: 0px;
-	border: none;
-}
-QPushButton:hover {
-    background-color: rgb(108, 108, 108);
-}
-QPushButton:checked {
-    background-color: rgb(43, 43, 43);
-}</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="../../resources.qrc">
-             <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>18</width>
-             <height>18</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <property name="flat">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="filter_box">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>128</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="frame">
-            <bool>false</bool>
-           </property>
-           <property name="placeholderText">
-            <string>Find...</string>
-           </property>
-           <property name="clearButtonEnabled">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="found_results_label">
-        <property name="styleSheet">
-         <string notr="true">background-color: transparent;</string>
-        </property>
-        <property name="text">
-         <string>1 / 2</string>
-        </property>
-       </widget>
+        <item>
+         <widget class="QLabel" name="found_results_label">
+          <property name="text">
+           <string>1 / 2</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <spacer name="horizontalSpacer_6">

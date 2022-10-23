@@ -1,10 +1,10 @@
 from extra_types.enums import DataAutoEnum, AutoEnum
 from enum import IntEnum
 
-#import resources
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+from relic.qt.widgets import FilterBox
 
 from library.config import RELIC_PREFS
 from library.widgets.fields import (
@@ -63,7 +63,7 @@ class UserPrefs(object):
             value = user_settings.value(key)
             if isinstance(value, str) and value.isnumeric():
                 value = int(value)
-            setattr(self, key, getPref(key, value))
+            setattr(self, key, self.getPref(key, value))
 
         site_settings = RELIC_PREFS.getSiteSettings()
         site_keys = site_settings.childKeys()
@@ -72,7 +72,7 @@ class UserPrefs(object):
             value = site_settings.value(key)
             if isinstance(value, str) and value.isnumeric():
                 value = int(value)
-            setattr(self, key, getPref(key, value))
+            setattr(self, key, self.getPref(key, value))
 
     def getPref(self, key, value):
         try:
@@ -165,6 +165,8 @@ class PreferencesDialog(Ui_PreferenceForm, QWidget):
         self.setupUi(self)
         self.preference_view = PreferencesView()
         self.content_frame.layout().addWidget(self.preference_view)
+        self.filter_box = FilterBox(self)
+        self.filter_layout.addWidget(self.filter_box)
 
     def close(self):
         self.parent().close()

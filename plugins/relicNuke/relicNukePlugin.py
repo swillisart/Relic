@@ -441,27 +441,16 @@ def applyRepath(node, asset_path):
             except: pass
 
 def captureViewport(save_path):
-    from OpenGL.GL import (GL_FRONT, GL_PACK_ALIGNMENT, GL_UNSIGNED_BYTE,
-                        glPixelStorei, glReadBuffer, glReadPixels,
-                        GL_RGB, GL_RGBA)
     mainWindow, panel = getMainWindows()
-
     try:
         glwidget = panel.children()[1]
     except:
         print('Cannot find nuke glwidget')
         return
-    w = glwidget.width()
-    h = glwidget.height()
-    glPixelStorei(GL_PACK_ALIGNMENT, 1)
-    glReadBuffer(GL_FRONT)
-    pixel_data = glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE)
-
+    src_img = glwidget.grabFrameBuffer()
     try:
         out_img = QImage(288, 192, QImage.Format_RGBA8888)
         out_img.fill(QColor(65, 65, 65, 255))
-
-        src_img = QImage(pixel_data, w, h, QImage.Format_RGBA8888).mirrored(vertical=1)
         alpha_img = src_img.scaled(288, 192, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
 
         painter = QPainter(out_img)

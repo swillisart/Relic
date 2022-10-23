@@ -11,9 +11,9 @@ from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser, QTextEdit, QApplic
 from library.config import peakLoad, RELIC_PREFS
 from library.io.util import readMovieFrames
 from sequence_path.main import SequencePath as Path
+from relic.qt.widgets import FilterBox
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
-
 
 style_file = QFile(':/resources/style/markdown_style.css')
 style_file.open(QFile.ReadOnly | QFile.Text)
@@ -207,8 +207,10 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.setupUi(self)
 
         self.text_browser.matchCountChanged.connect(self.found_results_label.setText)
-        self.filter_box.textChanged.connect(self.text_browser.searchPage)
-        self.filter_box.returnPressed.connect(self.text_browser.findNextInPage)
+        self.filter_box = FilterBox(self)
+        self.filter_box.editor.textChanged.connect(self.text_browser.searchPage)
+        self.filter_box.editor.returnPressed.connect(self.text_browser.findNextInPage)
+        self.filter_layout.insertWidget(0, self.filter_box)
         self.button_box.clicked.connect(self.onDescriptionButtonClicked)
         self.text_edit.textChanged.connect(self.text_browser.onPlainTextEditChanged)
 

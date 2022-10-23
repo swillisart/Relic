@@ -413,7 +413,7 @@ QFrame#collected_frame {background-color: rgb(72, 72, 72);}</string>
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap resource="../../resources.qrc">:/resources/general/load_wheel_24.webp</pixmap>
+                   <pixmap resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">:/app/load_wheel_24.webp</pixmap>
                   </property>
                  </widget>
                 </item>
@@ -423,7 +423,7 @@ QFrame#collected_frame {background-color: rgb(72, 72, 72);}</string>
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap resource="../../resources.qrc">:/resources/general/check_green.png</pixmap>
+                   <pixmap resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">:/app/check_green.png</pixmap>
                   </property>
                  </widget>
                 </item>
@@ -640,7 +640,7 @@ QFrame#processed_frame {background-color: rgb(72, 72, 72);}
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap resource="../../resources.qrc">:/resources/general/load_wheel_24.webp</pixmap>
+                   <pixmap resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">:/app/load_wheel_24.webp</pixmap>
                   </property>
                  </widget>
                 </item>
@@ -650,7 +650,7 @@ QFrame#processed_frame {background-color: rgb(72, 72, 72);}
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap resource="../../resources.qrc">:/resources/general/check_green.png</pixmap>
+                   <pixmap resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">:/app/check_green.png</pixmap>
                   </property>
                  </widget>
                 </item>
@@ -824,7 +824,7 @@ border: none;
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../resources.qrc"/>
+  <include location="../../plugins/LibShared/relic/qt/resources/resources.qrc"/>
  </resources>
  <connections>
   <connection>

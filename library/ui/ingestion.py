@@ -243,13 +243,13 @@ class Ui_IngestForm(object):
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.loadingLabel = QLabel(self.collected_subframe)
         self.loadingLabel.setObjectName(u"loadingLabel")
-        self.loadingLabel.setPixmap(QPixmap(u":/resources/general/load_wheel_24.webp"))
+        self.loadingLabel.setPixmap(QPixmap(u":/app/load_wheel_24.webp"))
 
         self.horizontalLayout_7.addWidget(self.loadingLabel)
 
         self.completedLabel = QLabel(self.collected_subframe)
         self.completedLabel.setObjectName(u"completedLabel")
-        self.completedLabel.setPixmap(QPixmap(u":/resources/general/check_green.png"))
+        self.completedLabel.setPixmap(QPixmap(u":/app/check_green.png"))
 
         self.horizontalLayout_7.addWidget(self.completedLabel)
 
@@ -375,13 +375,13 @@ class Ui_IngestForm(object):
         self.horizontalLayout_8.setContentsMargins(0, 0, 0, 0)
         self.processLoadingLabel = QLabel(self.processed_subframe)
         self.processLoadingLabel.setObjectName(u"processLoadingLabel")
-        self.processLoadingLabel.setPixmap(QPixmap(u":/resources/general/load_wheel_24.webp"))
+        self.processLoadingLabel.setPixmap(QPixmap(u":/app/load_wheel_24.webp"))
 
         self.horizontalLayout_8.addWidget(self.processLoadingLabel)
 
         self.processCompleteLabel = QLabel(self.processed_subframe)
         self.processCompleteLabel.setObjectName(u"processCompleteLabel")
-        self.processCompleteLabel.setPixmap(QPixmap(u":/resources/general/check_green.png"))
+        self.processCompleteLabel.setPixmap(QPixmap(u":/app/check_green.png"))
 
         self.horizontalLayout_8.addWidget(self.processCompleteLabel)
 

@@ -81,10 +81,10 @@ QMenu::icon {
     background-color: rgb(57, 57, 57);
 }
 QMenu::indicator:non-exclusive:checked {
-    image: url(:/resources/style/checkbox_checked.svg);
+    image: url(:/style/checkbox_checked.svg);
 }
 QMenu::indicator:non-exclusive:unchecked {
-    image: url(:/resources/style/checkbox.svg);
+    image: url(:/style/checkbox.svg);
 }
 
 QLineEdit,
@@ -170,7 +170,7 @@ QScrollBar::add-line:horizontal:hover,
 QScrollBar::add-line:horizontal:on,
 QScrollBar::add-line:horizontal {
     margin: 0px 3px 0px 0px;
-    border-image: url(:/resources/style/stylesheet-branch-closed.png);
+    border-image: url(:/style/stylesheet-branch-closed.png);
     height: 10px;
     width: 6px;
     subcontrol-position: right;
@@ -180,7 +180,7 @@ QScrollBar::sub-line:horizontal:hover,
 QScrollBar::sub-line:horizontal:on,
 QScrollBar::sub-line:horizontal {
     margin: 0px 0px 0px 3px;
-    border-image: url(:/resources/style/stylesheet-branch-closedleft.png);
+    border-image: url(:/style/stylesheet-branch-closedleft.png);
     height: 10px;
     width: 6px;
     subcontrol-position: left;
@@ -201,7 +201,7 @@ QScrollBar::handle:vertical {
 }
 QScrollBar::sub-line:vertical {
     margin: 3px 0px 0px 0px;
-    border-image: url(:/resources/style/stylesheet-branch-openup.png);
+    border-image: url(:/style/stylesheet-branch-openup.png);
     height: 6px;
     width: 10px;
     subcontrol-position: top;
@@ -209,7 +209,7 @@ QScrollBar::sub-line:vertical {
 }
 QScrollBar::add-line:vertical {
     margin: 0px 0px 3px 0px;
-    border-image: url(:/resources/style/stylesheet-branch-open.png);
+    border-image: url(:/style/stylesheet-branch-open.png);
     height: 6px;
     width: 10px;
     subcontrol-position: bottom;
@@ -279,7 +279,7 @@ QComboBox::down-arrow,
 QComboBox::down-arrow:on,
 QComboBox::down-arrow:hover,
 QComboBox::down-arrow:focus {
-    image: url(:/resources/style/stylesheet-branch-open.png);
+    image: url(:/style/stylesheet-branch-open.png);
 }
 </string>
   </property>
@@ -352,8 +352,8 @@ QFrame:hover {
          <string/>
         </property>
         <property name="icon">
-         <iconset resource="../../resources.qrc">
-          <normaloff>:/resources/general/searchLight.svg</normaloff>:/resources/general/searchLight.svg</iconset>
+         <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
+          <normaloff>:/app/searchLight.svg</normaloff>:/app/searchLight.svg</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -373,6 +373,7 @@ QFrame:hover {
  </widget>
  <resources>
   <include location="../../resources.qrc"/>
+  <include location="../../plugins/LibShared/relic/qt/resources/resources.qrc"/>
  </resources>
  <connections/>
 </ui>

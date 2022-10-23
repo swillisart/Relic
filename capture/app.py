@@ -19,7 +19,7 @@ from relic.qt.expandable_group import ExpandableGroup
 from intercom import Client, Server
 from sequence_path.main import SequencePath as Path
 
-from d3dshot.d3dshot import D3DShot
+from d3dshot.d3dshot import D3DShot, Singleton
 import av
 from av.filter import Graph
 from av import AudioFrame, VideoFrame
@@ -28,9 +28,10 @@ from fractions import Fraction
 
 # -- Module --
 import resources
-from history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, TypesIndicator)
-from ui.dialog import Ui_ScreenCapture
-from cursor import get_cursor_arrays, build_cursor_data
+import capture.resources
+from capture.history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, TypesIndicator)
+from capture.ui.dialog import Ui_ScreenCapture
+from capture.cursor import get_cursor_arrays, build_cursor_data
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
@@ -115,7 +116,7 @@ class Recorder(QObject):
         for screen in reversed(QGuiApplication.screens()):
             scale = screen.devicePixelRatio()
             cursor_size = int(32 * scale)
-            cursor_cache[screen] = build_cursor_data(cursor_size)
+            cursor_cache[screen.name()] = build_cursor_data(cursor_size)
         self.cursor_cache = cursor_cache
 
     def createContainer(self, out_path):
@@ -214,7 +215,7 @@ class Recorder(QObject):
         image = np.reshape(img_data, (height, width, 4))
 
         # get the proper cursor and copy / paint into image.
-        cursor, cursor_data = get_cursor_arrays(self.cursor_cache[screen])
+        cursor, cursor_data = get_cursor_arrays(self.cursor_cache[screen.name()])
         try:
             if cursor_data is not None:
                 color, mask = cursor_data
@@ -752,6 +753,11 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.show()
         self.screen = screen
         self.rect = rect
+        # because D3DShot doesn't allow for restarting the device.
+        Singleton._instances = {}
+        del self.recorder
+        self.recorder = Recorder()
+        self.recorder.moveToThread(self.recording_thread)
 
         # set the direct 3d display from our chosen screen
         for i, screen in enumerate(reversed(self.screens)):

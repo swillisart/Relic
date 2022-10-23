@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
-    QVBoxLayout, QWidget)
+    QPushButton, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 import resources_rc
 import resources_rc
 
@@ -64,60 +64,11 @@ class Ui_PreferenceForm(object):
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
 
-        self.searchFrame = QFrame(self.title_frame)
-        self.searchFrame.setObjectName(u"searchFrame")
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.searchFrame.sizePolicy().hasHeightForWidth())
-        self.searchFrame.setSizePolicy(sizePolicy)
-        self.searchFrame.setStyleSheet(u"QFrame {\n"
-"    border: 2px solid rgb(43, 43, 43);\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QFrame:hover {\n"
-"    border: 2px solid rgb(150, 146, 137);\n"
-"}")
-        self.searchFrame.setFrameShape(QFrame.StyledPanel)
-        self.searchFrame.setFrameShadow(QFrame.Plain)
-        self.horizontalLayout = QHBoxLayout(self.searchFrame)
-        self.horizontalLayout.setSpacing(0)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.searchButton = QPushButton(self.searchFrame)
-        self.searchButton.setObjectName(u"searchButton")
-        self.searchButton.setStyleSheet(u"QPushButton {\n"
-"    background-color: rgb(43, 43, 43);\n"
-"    padding: 2px;\n"
-"	border: none;\n"
-"}")
-        icon = QIcon()
-        icon.addFile(u":/resources/general/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.searchButton.setIcon(icon)
-        self.searchButton.setIconSize(QSize(20, 20))
-        self.searchButton.setFlat(False)
+        self.filter_layout = QHBoxLayout()
+        self.filter_layout.setObjectName(u"filter_layout")
+        self.filter_layout.setContentsMargins(3, 3, 3, 3)
 
-        self.horizontalLayout.addWidget(self.searchButton)
-
-        self.searchBox = QLineEdit(self.searchFrame)
-        self.searchBox.setObjectName(u"searchBox")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.searchBox.sizePolicy().hasHeightForWidth())
-        self.searchBox.setSizePolicy(sizePolicy1)
-        self.searchBox.setMinimumSize(QSize(256, 26))
-        font1 = QFont()
-        font1.setBold(True)
-        self.searchBox.setFont(font1)
-        self.searchBox.setFrame(False)
-        self.searchBox.setClearButtonEnabled(True)
-
-        self.horizontalLayout.addWidget(self.searchBox)
-
-
-        self.horizontalLayout_3.addWidget(self.searchFrame)
+        self.horizontalLayout_3.addLayout(self.filter_layout)
 
         self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
@@ -180,8 +131,6 @@ class Ui_PreferenceForm(object):
     def retranslateUi(self, PreferenceForm):
         PreferenceForm.setWindowTitle(QCoreApplication.translate("PreferenceForm", u"Preferences", None))
         self.titleLabel.setText(QCoreApplication.translate("PreferenceForm", u"Preferences", None))
-        self.searchButton.setText("")
-        self.searchBox.setPlaceholderText(QCoreApplication.translate("PreferenceForm", u"Filter...", None))
         self.cancelButton.setText(QCoreApplication.translate("PreferenceForm", u"Close", None))
     # retranslateUi
 

@@ -20,7 +20,7 @@ from PySide6.QtCore import (Property, QDir, QDirIterator, QMutex, QMutexLocker,
                             QObject, QRunnable, Qt, QThread, QWaitCondition,
                             Signal, Slot)
 from PySide6.QtGui import QColor, QImage, QPainter, QPixmap, Qt, QImageWriter, QImageReader
-from relic.local import (INGEST_PATH, Extension, TempAsset,
+from relic.local import (INGEST_PATH, Extension, TempAsset, Category,
                         FileType, getAssetSourceLocation)
 from relic.scheme import Class, AssetType
 from sequence_path.main import SequencePath as Path
@@ -167,7 +167,7 @@ def tempAssetFromImage(in_path, out_path, src_img):
     temp_asset = TempAsset(
         name=in_path.stem,
         category=0,
-        type=0,
+        type=AssetType.COMPONENT.index,
         duration=0,
         resolution=str(dimensions),
         path=in_path,
@@ -216,6 +216,18 @@ def writeImagePreviews(proxy_img, icon_img, out_path):
     proxy_img.save(str(out_path.suffixed('_proxy', ext='.jpg')))
     icon_img.save(str(out_path.suffixed('_icon', ext='.jpg')))
 
+class DefaultIcons(object):
+
+    @cached_property
+    def raw(self):
+        return QPixmap.fromImage(makeImagePreview(QImage(':app/RedLogo.png')))
+
+    @cached_property
+    def document(self):
+        return QPixmap.fromImage(makeImagePreview(QImage(':resources/app/markdown_logo.png')))
+
+DEFAULT_ICONS = DefaultIcons()
+
 # ----- Ingest Processors -----
 
 def processTOOL(in_path, out_path, flag):
@@ -233,12 +245,13 @@ def processTOOL(in_path, out_path, flag):
 
     asset = TempAsset(
         name=in_path.stem,
-        category=0,
-        type=0,
+        category=Category.SOFTWARE.index,
+        type=AssetType.COMPONENT.index,
         duration=0,
         path=in_path,
         icon=icon,
     )
+    asset.classification = flag.value
     return asset
 
 
@@ -269,14 +282,14 @@ def processMOV(in_path, out_path, flag):
     asset = TempAsset(
         name=in_path.stem,
         category=0,
-        type=0,
+        type=AssetType.COMPONENT.index,
         duration=int(duration),
         framerate=int(framerate),
         resolution=f'{input_stream.width}x{input_stream.height}x3',
         path=in_path,
         icon=QPixmap.fromImage(icon_img),
     )
-    setattr(asset, 'class', flag.value)
+    asset.classification = flag.value
     return asset
 
 def processSEQ(in_path, out_path, flag):
@@ -330,14 +343,14 @@ def processSEQ(in_path, out_path, flag):
     asset = TempAsset(
         name=in_path.stem,
         category=0,
-        type=0,
+        type=AssetType.COMPONENT.index,
         duration=int(frame_count/24),
         framerate=24,
         resolution=f'{w}x{h}x{c}',
         path=in_path,
         icon=QPixmap.fromImage(icon_img),
     )
-    setattr(asset, 'class', flag.value)
+    asset.classification = flag.value
     return asset
 
 def processRAW(in_path, out_path, flag):
@@ -347,7 +360,7 @@ def processRAW(in_path, out_path, flag):
     src_img = QImage()
     src_img.loadFromData(img_bytes)
     asset = tempAssetFromImage(in_path, out_path, src_img)
-    setattr(asset, 'class', flag.value)
+    asset.classification = flag.value
     return asset
 
 def processLDR(in_path, out_path, flag):
@@ -381,7 +394,7 @@ def processHDR(in_path, out_path, flag):
     asset = TempAsset(
         name=in_path.stem,
         category=0,
-        type=0,
+        type=AssetType.COMPONENT.index,
         duration=0,
         resolution=f'{w}x{h}x{c}',
         path=in_path,
@@ -392,23 +405,24 @@ def processHDR(in_path, out_path, flag):
 def processFILM(in_path, out_path, flag):
     asset = TempAsset(
         name=in_path.stem,
-        category=0,
-        type=0,
+        category=Category.ELEMENTS.index,
+        type=AssetType.COMPONENT.index,
         duration=0,
         path=in_path,
     )
-    setattr(asset, 'class', Class.IMAGE)
+    asset.classification = Class.IMAGE.value
     return asset
 
 def processDOC(in_path, out_path, flag):
     asset = TempAsset(
         name=in_path.stem,
-        category=0,
-        type=AssetType.REFERENCE,
+        category=Category.REFERENCES.index,
+        type=AssetType.REFERENCE.index,
         duration=0,
         path=in_path,
     )
-    setattr(asset, 'class', flag.value)
+    asset.classification = Class.DOCUMENT.flag
+    asset.icon = DEFAULT_ICONS.document
     return asset
 
 def processIMAGE(in_path, out_path, flag):
@@ -418,18 +432,18 @@ def processIMAGE(in_path, out_path, flag):
     elif flag & (FileType.HDR | FileType.EXR):
         # Linear image will get a nice tonemapping applied to the previews.
         asset = processHDR(in_path, out_path, flag)
-    setattr(asset, 'class', flag.value)
+    asset.classification = flag.value
     return asset
 
 def processLIGHT(in_path, out_path, flag):
     asset = TempAsset(
         name=in_path.stem,
-        category=0,
-        type=AssetType.COMPONENT,
+        category=Category.LIGHTING.index,
+        type=AssetType.COMPONENT.index,
         duration=0,
         path=in_path,
     )
-    setattr(asset, 'class', Class.IES)
+    asset.classification = Class.IES.flag
     return asset
 
 
@@ -573,7 +587,7 @@ def applyImageModifications(img_path, temp_asset):
     writeImagePreviews(src_img, icon_img, temp_asset.path)
     dimensions = ImageDimensions.fromQImage(src_img)
     
-    setattr(temp_asset, 'class', FileType.EXR.value)
+    temp_asset.classification = FileType.EXR.value
     temp_asset.resolution = str(dimensions)
     temp_asset.icon = QPixmap.fromImage(icon_img)
     if is_raw: # Clean up
@@ -593,17 +607,6 @@ def blendRawExposures(assets_by_file):
     [os.remove(str(x)) for x in assets_by_file.keys()]
     return primary_asset
 
-class DefaultIcons(object):
-
-    @cached_property
-    def raw(self):
-        return QPixmap.fromImage(makeImagePreview(QImage(':app/RedLogo.png')))
-
-    @cached_property
-    def document(self):
-        return QPixmap.fromImage(makeImagePreview(QImage(':resources/app/markdown_logo.png')))
-
-DEFAULT_ICONS = DefaultIcons()
 
 class TaskRunnerSignals(QObject):
     completed = Signal(object)

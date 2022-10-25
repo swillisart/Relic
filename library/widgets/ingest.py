@@ -112,23 +112,19 @@ class IngestForm(Ui_IngestForm, QDialog):
                 category_expander.show()
             return
 
-        classification = 0
+        classification = 0#selection.pop(0).data(Qt.UserRole).classification
         category_filter = set()
         for index in selection:
             asset = index.data(Qt.UserRole)
-            classifier = Class(getattr(asset, 'class'))
-            classification |= classifier
+            classification |= asset.classification
             # If the category is provided use that as a secondary filter
             if asset.category is not None:
                 category_filter.add(Category(int(asset.category)))
-        
-        # Consider all categories if none are provided by the selection
-        if not category_filter:
-            [category_filter.add(x) for x in Category]
+
         # Filter by categories and classification
         for x in Category:
             category_expander = category_widgets[int(x)]
-            if x.data.classifier & classification and x in category_filter:
+            if x.data.classifier & classification or x in category_filter:
                 category_expander.show()
                 category_expander.expandState()
             else:
@@ -437,7 +433,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         if not asset:
             return
         asset.id = self.collect_item_model.rowCount() + 1
-        asset.type = int(AssetType.ASSET)
         asset.status = int(Statuses.Local)
         item = polymorphicItem(fields=asset)
         self.collect_item_model.appendRow(item)
@@ -504,7 +499,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             _flag = ClassGroup.SOFTWARE
             ingest_map.update(add_filter(ingest.processTOOL, _flag, flags))
         if self.lightsCheckBox.checkState():
-            _flag = ClassGroup.EMISSIVE
+            _flag = Class.IES
             ingest_map.update(add_filter(ingest.processLIGHT, _flag, flags))
         if self.documentsCheckBox.checkState():
             _flag = Class.DOCUMENT

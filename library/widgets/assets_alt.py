@@ -236,7 +236,7 @@ class AssetListView(BaseView):
             dependencies=count,
             path='{}/{}'.format(subcategory.name, collection_name),
             links=(subcategory.relationMap, subcategory.id),
-            type=3, # collection
+            type=int(Type.COLLECTION),
         )
         link_mapping = []
         for item in selection:

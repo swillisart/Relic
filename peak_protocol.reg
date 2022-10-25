@@ -9,4 +9,4 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\peak\shell\open]
 
 [HKEY_CLASSES_ROOT\peak\shell\open\command]
-@="P:\\Code\\Relic\\Scripts\\Pythonw.exe P:\\Code\\Relic\\Peak.py --path %1"
+@="P:\\Code\\Relic\\dist\\Relic\\Peak.exe --path %1"

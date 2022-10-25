@@ -23,7 +23,7 @@ MARKDOWN_STYLE = style_sheet.readAll()
 MARKDOWN = markdown.Markdown(
     extensions = [
         'codehilite', 'tables', 'nl2br', 'toc', 'sane_lists',
-        'admonition', 'fenced_code', 'markdown_checklist.extension'],
+        'admonition', 'fenced_code'],
     output_format="html5"
     )
 

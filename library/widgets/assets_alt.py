@@ -29,9 +29,7 @@ from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie
 from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabel,
                                QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
                                QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
-#unimageable_types = {
-#    '.r3d': QPixmap(':app/RedLogo.png')
-#} 
+
 THREAD_POOL = QThreadPool.globalInstance()
 
 class AssetItemModel(BaseItemModel):

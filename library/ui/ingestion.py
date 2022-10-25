@@ -28,7 +28,7 @@ class Ui_IngestForm(object):
     def setupUi(self, IngestForm):
         if not IngestForm.objectName():
             IngestForm.setObjectName(u"IngestForm")
-        IngestForm.resize(866, 478)
+        IngestForm.resize(866, 558)
         self.verticalLayout_3 = QVBoxLayout(IngestForm)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.frame_2 = QFrame(IngestForm)
@@ -65,86 +65,118 @@ class Ui_IngestForm(object):
         self.horizontalLayout_6.setContentsMargins(-1, 3, -1, 3)
         self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setVerticalSpacing(6)
         self.gridLayout.setContentsMargins(9, 0, 9, 0)
-        self.lightsCheckBox = QCheckBox(self.collectTab)
-        self.lightsCheckBox.setObjectName(u"lightsCheckBox")
+        self.documentsLabel = QLabel(self.collectTab)
+        self.documentsLabel.setObjectName(u"documentsLabel")
+        font = QFont()
+        font.setBold(True)
+        self.documentsLabel.setFont(font)
+        self.documentsLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.gridLayout.addWidget(self.lightsCheckBox, 6, 1, 1, 1)
-
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.gridLayout.addItem(self.verticalSpacer_2, 8, 0, 1, 1)
-
-        self.moviesLabel = QLabel(self.collectTab)
-        self.moviesLabel.setObjectName(u"moviesLabel")
-        self.moviesLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
-
-        self.gridLayout.addWidget(self.moviesLabel, 4, 0, 1, 1)
-
-        self.texturesReferencesLabel = QLabel(self.collectTab)
-        self.texturesReferencesLabel.setObjectName(u"texturesReferencesLabel")
-        self.texturesReferencesLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
-
-        self.gridLayout.addWidget(self.texturesReferencesLabel, 2, 0, 1, 1)
-
-        self.line_8 = QFrame(self.collectTab)
-        self.line_8.setObjectName(u"line_8")
-        self.line_8.setFrameShape(QFrame.HLine)
-        self.line_8.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line_8, 1, 0, 1, 1)
-
-        self.lightsLabel = QLabel(self.collectTab)
-        self.lightsLabel.setObjectName(u"lightsLabel")
-        self.lightsLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
-
-        self.gridLayout.addWidget(self.lightsLabel, 6, 0, 1, 1)
+        self.gridLayout.addWidget(self.documentsLabel, 8, 0, 1, 1)
 
         self.texturesReferencesCheckBox = QCheckBox(self.collectTab)
         self.texturesReferencesCheckBox.setObjectName(u"texturesReferencesCheckBox")
         self.texturesReferencesCheckBox.setChecked(True)
 
-        self.gridLayout.addWidget(self.texturesReferencesCheckBox, 2, 1, 1, 1)
+        self.gridLayout.addWidget(self.texturesReferencesCheckBox, 3, 1, 1, 1)
 
-        self.toolsLabel = QLabel(self.collectTab)
-        self.toolsLabel.setObjectName(u"toolsLabel")
-        self.toolsLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.texturesReferencesLabel = QLabel(self.collectTab)
+        self.texturesReferencesLabel.setObjectName(u"texturesReferencesLabel")
+        self.texturesReferencesLabel.setFont(font)
+        self.texturesReferencesLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.gridLayout.addWidget(self.toolsLabel, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.texturesReferencesLabel, 3, 0, 1, 1)
 
-        self.label_2 = QLabel(self.collectTab)
-        self.label_2.setObjectName(u"label_2")
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        font.setUnderline(False)
-        font.setKerning(True)
-        self.label_2.setFont(font)
+        self.rawLabel = QLabel(self.collectTab)
+        self.rawLabel.setObjectName(u"rawLabel")
+        self.rawLabel.setFont(font)
+        self.rawLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.gridLayout.addWidget(self.label_2, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.rawLabel, 4, 0, 1, 1)
 
-        self.toolsCheckBox = QCheckBox(self.collectTab)
-        self.toolsCheckBox.setObjectName(u"toolsCheckBox")
+        self.lightsLabel = QLabel(self.collectTab)
+        self.lightsLabel.setObjectName(u"lightsLabel")
+        self.lightsLabel.setFont(font)
+        self.lightsLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.gridLayout.addWidget(self.toolsCheckBox, 5, 1, 1, 1)
+        self.gridLayout.addWidget(self.lightsLabel, 7, 0, 1, 1)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer_2, 10, 0, 1, 1)
 
         self.moviesCheckBox = QCheckBox(self.collectTab)
         self.moviesCheckBox.setObjectName(u"moviesCheckBox")
 
-        self.gridLayout.addWidget(self.moviesCheckBox, 4, 1, 1, 1)
+        self.gridLayout.addWidget(self.moviesCheckBox, 5, 1, 1, 1)
 
-        self.rawLabel = QLabel(self.collectTab)
-        self.rawLabel.setObjectName(u"rawLabel")
-        self.rawLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.lightsCheckBox = QCheckBox(self.collectTab)
+        self.lightsCheckBox.setObjectName(u"lightsCheckBox")
 
-        self.gridLayout.addWidget(self.rawLabel, 3, 0, 1, 1)
+        self.gridLayout.addWidget(self.lightsCheckBox, 7, 1, 1, 1)
 
         self.rawCheckBox = QCheckBox(self.collectTab)
         self.rawCheckBox.setObjectName(u"rawCheckBox")
         self.rawCheckBox.setEnabled(True)
         self.rawCheckBox.setChecked(False)
 
-        self.gridLayout.addWidget(self.rawCheckBox, 3, 1, 1, 1)
+        self.gridLayout.addWidget(self.rawCheckBox, 4, 1, 1, 1)
+
+        self.toolsLabel = QLabel(self.collectTab)
+        self.toolsLabel.setObjectName(u"toolsLabel")
+        self.toolsLabel.setFont(font)
+        self.toolsLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+
+        self.gridLayout.addWidget(self.toolsLabel, 6, 0, 1, 1)
+
+        self.title_line = QFrame(self.collectTab)
+        self.title_line.setObjectName(u"title_line")
+        self.title_line.setFrameShape(QFrame.HLine)
+        self.title_line.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout.addWidget(self.title_line, 1, 0, 1, 1)
+
+        self.documentsCheckBox = QCheckBox(self.collectTab)
+        self.documentsCheckBox.setObjectName(u"documentsCheckBox")
+
+        self.gridLayout.addWidget(self.documentsCheckBox, 8, 1, 1, 1)
+
+        self.moviesLabel = QLabel(self.collectTab)
+        self.moviesLabel.setObjectName(u"moviesLabel")
+        self.moviesLabel.setFont(font)
+        self.moviesLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+
+        self.gridLayout.addWidget(self.moviesLabel, 5, 0, 1, 1)
+
+        self.filteringTitleLabel = QLabel(self.collectTab)
+        self.filteringTitleLabel.setObjectName(u"filteringTitleLabel")
+        font1 = QFont()
+        font1.setPointSize(10)
+        font1.setBold(True)
+        font1.setUnderline(False)
+        font1.setKerning(True)
+        self.filteringTitleLabel.setFont(font1)
+
+        self.gridLayout.addWidget(self.filteringTitleLabel, 0, 0, 1, 1)
+
+        self.toolsCheckBox = QCheckBox(self.collectTab)
+        self.toolsCheckBox.setObjectName(u"toolsCheckBox")
+
+        self.gridLayout.addWidget(self.toolsCheckBox, 6, 1, 1, 1)
+
+        self.scenesCheckBox = QCheckBox(self.collectTab)
+        self.scenesCheckBox.setObjectName(u"scenesCheckBox")
+
+        self.gridLayout.addWidget(self.scenesCheckBox, 2, 1, 1, 1)
+
+        self.scenesLabel = QLabel(self.collectTab)
+        self.scenesLabel.setObjectName(u"scenesLabel")
+        self.scenesLabel.setFont(font)
+        self.scenesLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+
+        self.gridLayout.addWidget(self.scenesLabel, 2, 0, 1, 1)
 
 
         self.horizontalLayout_6.addLayout(self.gridLayout)
@@ -161,12 +193,12 @@ class Ui_IngestForm(object):
         self.gridLayout_2.setContentsMargins(9, 0, 9, 0)
         self.label_7 = QLabel(self.collectTab)
         self.label_7.setObjectName(u"label_7")
-        font1 = QFont()
-        font1.setPointSize(9)
-        font1.setBold(True)
-        font1.setUnderline(False)
-        font1.setKerning(True)
-        self.label_7.setFont(font1)
+        font2 = QFont()
+        font2.setPointSize(9)
+        font2.setBold(True)
+        font2.setUnderline(False)
+        font2.setKerning(True)
+        self.label_7.setFont(font2)
 
         self.gridLayout_2.addWidget(self.label_7, 0, 0, 1, 1)
 
@@ -218,10 +250,10 @@ class Ui_IngestForm(object):
         self.categorizeTab = QWidget()
         self.categorizeTab.setObjectName(u"categorizeTab")
         self.categorizeTab.setEnabled(False)
-        font2 = QFont()
-        font2.setUnderline(False)
-        font2.setKerning(True)
-        self.categorizeTab.setFont(font2)
+        font3 = QFont()
+        font3.setUnderline(False)
+        font3.setKerning(True)
+        self.categorizeTab.setFont(font3)
         self.horizontalLayout = QHBoxLayout(self.categorizeTab)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(6, -1, 6, 6)
@@ -255,12 +287,12 @@ class Ui_IngestForm(object):
 
         self.collectedLabel = QLabel(self.collected_subframe)
         self.collectedLabel.setObjectName(u"collectedLabel")
-        font3 = QFont()
-        font3.setPointSize(12)
-        font3.setBold(False)
-        font3.setUnderline(False)
-        font3.setKerning(True)
-        self.collectedLabel.setFont(font3)
+        font4 = QFont()
+        font4.setPointSize(12)
+        font4.setBold(False)
+        font4.setUnderline(False)
+        font4.setKerning(True)
+        self.collectedLabel.setFont(font4)
 
         self.horizontalLayout_7.addWidget(self.collectedLabel)
 
@@ -304,7 +336,7 @@ class Ui_IngestForm(object):
 
         self.categorizeFrame = QFrame(self.categorizeTab)
         self.categorizeFrame.setObjectName(u"categorizeFrame")
-        self.categorizeFrame.setFont(font2)
+        self.categorizeFrame.setFont(font3)
         self.categorizeFrame.setStyleSheet(u"QFrame#categorizeFrame {background-color: rgb(72, 72, 72);}\n"
 "")
         self.categorizeFrame.setFrameShape(QFrame.StyledPanel)
@@ -319,7 +351,7 @@ class Ui_IngestForm(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
         self.label_4.setSizePolicy(sizePolicy)
-        self.label_4.setFont(font3)
+        self.label_4.setFont(font4)
 
         self.verticalLayout_5.addWidget(self.label_4)
 
@@ -332,17 +364,17 @@ class Ui_IngestForm(object):
 
         self.label_5 = QLabel(self.categorizeFrame)
         self.label_5.setObjectName(u"label_5")
-        font4 = QFont()
-        font4.setPointSize(8)
-        font4.setUnderline(False)
-        font4.setKerning(True)
-        self.label_5.setFont(font4)
+        font5 = QFont()
+        font5.setPointSize(8)
+        font5.setUnderline(False)
+        font5.setKerning(True)
+        self.label_5.setFont(font5)
 
         self.verticalLayout_5.addWidget(self.label_5)
 
         self.existingNamesList = AssetNameListView(self.categorizeFrame)
         self.existingNamesList.setObjectName(u"existingNamesList")
-        self.existingNamesList.setFont(font2)
+        self.existingNamesList.setFont(font3)
 
         self.verticalLayout_5.addWidget(self.existingNamesList)
 
@@ -387,7 +419,7 @@ class Ui_IngestForm(object):
 
         self.newAssetsLabel = QLabel(self.processed_subframe)
         self.newAssetsLabel.setObjectName(u"newAssetsLabel")
-        self.newAssetsLabel.setFont(font3)
+        self.newAssetsLabel.setFont(font4)
 
         self.horizontalLayout_8.addWidget(self.newAssetsLabel)
 
@@ -482,17 +514,21 @@ class Ui_IngestForm(object):
     def retranslateUi(self, IngestForm):
         IngestForm.setWindowTitle(QCoreApplication.translate("IngestForm", u"Form", None))
         self.collectPathTextEdit.setPlaceholderText(QCoreApplication.translate("IngestForm", u"Insert paths or urls here...", None))
-        self.lightsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .ies ]", None))
-        self.moviesLabel.setText(QCoreApplication.translate("IngestForm", u"Movies :", None))
-        self.texturesReferencesLabel.setText(QCoreApplication.translate("IngestForm", u"Reference Images:", None))
-        self.lightsLabel.setText(QCoreApplication.translate("IngestForm", u"Lights :", None))
+        self.documentsLabel.setText(QCoreApplication.translate("IngestForm", u"Documents :", None))
         self.texturesReferencesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .tif, .jpg, .png ]", None))
-        self.toolsLabel.setText(QCoreApplication.translate("IngestForm", u"Tools :", None))
-        self.label_2.setText(QCoreApplication.translate("IngestForm", u"File Types Filtering", None))
-        self.toolsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .py, .exe, .nk ]", None))
-        self.moviesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .mov, .mp4, .mxf ]", None))
+        self.texturesReferencesLabel.setText(QCoreApplication.translate("IngestForm", u"Reference Images :", None))
         self.rawLabel.setText(QCoreApplication.translate("IngestForm", u"Camera Raw :", None))
+        self.lightsLabel.setText(QCoreApplication.translate("IngestForm", u"Lights :", None))
+        self.moviesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .mov, .mp4, .mxf ]", None))
+        self.lightsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .ies ]", None))
         self.rawCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .cr2, .dng, .r3d ]", None))
+        self.toolsLabel.setText(QCoreApplication.translate("IngestForm", u"Tools :", None))
+        self.documentsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .md ]", None))
+        self.moviesLabel.setText(QCoreApplication.translate("IngestForm", u"Movies :", None))
+        self.filteringTitleLabel.setText(QCoreApplication.translate("IngestForm", u"File Types Filtering", None))
+        self.toolsCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .py, .exe, .nk ]", None))
+        self.scenesCheckBox.setText(QCoreApplication.translate("IngestForm", u" [ .ma, .usd, .gltf ]", None))
+        self.scenesLabel.setText(QCoreApplication.translate("IngestForm", u"Scenes :", None))
         self.label_7.setText(QCoreApplication.translate("IngestForm", u"Advanced", None))
         self.copyCheckBox.setText("")
         self.copyLabel.setText(QCoreApplication.translate("IngestForm", u"Copy Assets", None))

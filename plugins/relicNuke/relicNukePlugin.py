@@ -20,7 +20,7 @@ from intercom import Client
 # -- Module --
 from relic_base import (asset_classes, asset_views)
 from relic.local import (Nuketools, Category, FileType, TempAsset, INGEST_PATH, getAssetSourceLocation)
-from relic.scheme import (AssetType, TagType, UserType)
+from relic.scheme import (Asset, AssetType, TagType, UserType)
 
 # -- Globals --
 RELIC_CLIENT = Client('relic')
@@ -50,9 +50,10 @@ class RelicPanel(asset_views.RelicSceneForm):
         stripped = payload.replace('\\', '').replace('relic://', '')
         for key, values in json.loads(stripped).items():
             constructor = asset_classes.getCategoryConstructor(str(key.decode()))
-
-            sorted_values_by_type = sorted(values, key=lambda x: x.get('13'), reverse=True)
-            for fields in sorted_values_by_type:
+            # json paylods are strings so sort by type from string key.
+            sort_key = str(Asset.TYPE.index) # 13
+            sorted_values = sorted(values, key=lambda x: x.get(sort_key), reverse=True)
+            for fields in sorted_values:
                 asset = constructor(**fields)
                 added = self.group_widget.addAsset(asset)
                 app_drop = partial(assetDropAction, asset)
@@ -61,10 +62,8 @@ class RelicPanel(asset_views.RelicSceneForm):
                     callbacks = [icon_update, app_drop]
                     asset.setDownloadCompletionCallbacks(callbacks)
                     asset.download()
-                else:
-                    msg = 'Asset {} already exists. Do you want to add it again?'.format(asset.name)
-                    if nuke.ask(msg):
-                        self.drop_callback = QTimer.singleShot(10, app_drop)
+                else: # Asset already exists! Add it again..
+                    QTimer.singleShot(10, app_drop)
         self.group_widget.updateGroups()
         self.update()
         return True
@@ -116,63 +115,85 @@ def addRelicAttributes(nodes, asset):
     for node in nodes:
         if not node.knob('Relic'):
             tab = nuke.Tab_Knob('Relic')
-            node.addKnob(tab)
-            catknob = nuke.String_Knob('RELIC_category')
-            catknob.setValue(str(asset.category))
-            node.addKnob(catknob)
-            strknob = nuke.String_Knob('RELIC_hash')
-            strknob.setValue(str(asset.filehash))
-            node.addKnob(strknob)
-            idknob = nuke.Int_Knob('RELIC_id')
-            idknob.setValue(int(asset.id))
-            node.addKnob(idknob)
+            cat_knob = nuke.String_Knob('RELIC_category')
+            cat_knob.setValue(str(asset.category))
+            hash_knob = nuke.String_Knob('RELIC_hash')
+            hash_knob.setValue(str(asset.filehash))
+            id_knob = nuke.Int_Knob('RELIC_id')
+            id_knob.setValue(int(asset.id))
+            status_knob = nuke.Int_Knob('RELIC_status')
+            #status_knob.setValue(int(asset.status))
+            map(node.addKnob, (tab, cat_knob, hash_knob, id_knob, status_knob))
     return nodes
+
+def replaceNodeContents(a, b):
+    nukescripts.clear_selection_recursive()
+    temp_path = os.getenv('userprofile') + '/temp.nk'
+    a.begin()
+    for subnode in a.nodes():
+        subnode.setSelected(True)
+    nuke.nodeCopy(temp_path)
+    a.end()
+
+    b.begin()
+    for subnode in b.nodes():
+        nuke.delete(subnode)
+    nuke.scriptSource(temp_path)
+    b.end()
+    nuke.delete(a)
+
+def getKnob(knob_name, node):
+    attr = node.knob(knob_name)
+    if attr:
+        return attr.getValue()
 
 def processUnresolvedAssets(asset):
     nukescripts.clear_selection_recursive()
-    for node in nuke.allNodes(recurseGroups=True):
+    # pre-filter all nodes by matching hash.
+    ahash = str(asset.filehash)
+    get_knob = partial(getKnob, 'RELIC_hash')
+    criteria = lambda x : ahash == get_knob(x)
+    filtered = filter(criteria, nuke.allNodes(recurseGroups=True))
+    already_exists = False
+    for existing_node in filtered:
+        # Set paths upstream files.
+        if existing_node.Class() != 'Group' and existing_node.knob('file'):
+            node['file'].setValue(str(asset.local_path))
+            continue
+        status = existing_node.knob('RELIC_status')
         try:
-            hash_knob = node.knob('RELIC_hash')
+            if status.getValue() != 0:
+                continue
         except:
-            hash_knob = False
-
-        if hash_knob:
-            if hash_knob.getValue() != asset.filehash:
-                continue
-
-            if node.Class() != 'Group' and node.knob('file'):
-                node['file'].setValue(str(asset.local_path))
-                continue
-
-            nuke.scriptSource(str(asset.local_path))
-            a = nuke.selectedNode()
-            b = node
-            nukescripts.clear_selection_recursive()
-            temp_path = os.getenv('userprofile') + '/temp.nk'
-            a.begin()
-            for subnode in a.nodes():
-                subnode.setSelected(True)
-            nuke.nodeCopy(temp_path)
-            a.end()
-
-            b.begin()
-            for subnode in b.nodes():
-                nuke.delete(subnode)
-            nuke.scriptSource(temp_path)
-            b.end()
-            nuke.delete(a)
+            status = nuke.Int_Knob('RELIC_status')
+            existing_node.addKnob(status)
+        # replaces unresolved asset groups.
+        nuke.scriptSource(str(asset.local_path))
+        replaceNodeContents(nuke.selectedNode(), existing_node)
+        status.setValue(2)
+        already_exists = True
+    return already_exists
 
 def processUnresolvedFiles(asset_path):
     for node in nuke.allNodes(recurseGroups=True):
         if node.knob('file'):
             applyRepath(node, asset_path)
 
+def executeScript(asset_path):
+    sys.path.append(str(asset_path.parent))
+    asset_name = asset_path.name
+    __import__(asset_name)
+    toolbar = nuke.toolbar('Nodes')
+    library = toolbar.addMenu('Library')
+    library.addCommand(asset_name, 'import {m};{m}.main()'.format(m=asset_name))
+
 def assetDropAction(asset):
     asset_path = asset.local_path
-    # check for nodes of this type already in the scene.
-
-    processUnresolvedAssets(asset)
-    if asset_path.ext == '.nk':
+    # replace the existing upstream nodes already in the scene.
+    already_exists = processUnresolvedAssets(asset)
+    if already_exists:
+        return
+    elif asset_path.ext == '.nk':
         nuke.nodePaste(str(asset_path))
         selection = nuke.selectedNodes()
         nodes = selection
@@ -182,11 +203,7 @@ def assetDropAction(asset):
     #    #nodes = ?
     #    pass
     elif asset_path.ext == '.py':
-        sys.path.append(str(asset_path.parent))
-        __import__(asset_path.name)
-        toolbar = nuke.toolbar('Nodes')
-        library = toolbar.addMenu('Library')
-        library.addCommand(asset_path.name, 'import {m};{m}.main()'.format(m=asset_path.name))
+        executeScript(asset_path)
         return
     else:
         nodes = makeFileRead(asset_path)

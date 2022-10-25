@@ -2,7 +2,7 @@ import os
 import subprocess
 from fractions import Fraction
 from collections import deque
-from functools import partial
+from functools import partial, cached_property
 import traceback
 
 import numpy as np
@@ -22,7 +22,7 @@ from PySide6.QtCore import (Property, QDir, QDirIterator, QMutex, QMutexLocker,
 from PySide6.QtGui import QColor, QImage, QPainter, QPixmap, Qt, QImageWriter, QImageReader
 from relic.local import (INGEST_PATH, Extension, TempAsset,
                         FileType, getAssetSourceLocation)
-from relic.scheme import Class
+from relic.scheme import Class, AssetType
 from sequence_path.main import SequencePath as Path
 
 QImageReader.setAllocationLimit(0)
@@ -233,7 +233,7 @@ def processTOOL(in_path, out_path, flag):
 
     asset = TempAsset(
         name=in_path.stem,
-        category=5,
+        category=0,
         type=0,
         duration=0,
         path=in_path,
@@ -400,6 +400,17 @@ def processFILM(in_path, out_path, flag):
     setattr(asset, 'class', Class.IMAGE)
     return asset
 
+def processDOC(in_path, out_path, flag):
+    asset = TempAsset(
+        name=in_path.stem,
+        category=0,
+        type=AssetType.REFERENCE,
+        duration=0,
+        path=in_path,
+    )
+    setattr(asset, 'class', flag.value)
+    return asset
+
 def processIMAGE(in_path, out_path, flag):
     if flag & (FileType.JPG | FileType.TIF | FileType.PNG | FileType.JPEG):
         # Assumes gamma correction has already been encoded into the file.
@@ -411,7 +422,15 @@ def processIMAGE(in_path, out_path, flag):
     return asset
 
 def processLIGHT(in_path, out_path, flag):
-    return None
+    asset = TempAsset(
+        name=in_path.stem,
+        category=0,
+        type=AssetType.COMPONENT,
+        duration=0,
+        path=in_path,
+    )
+    setattr(asset, 'class', Class.IES)
+    return asset
 
 
 class ConversionRouter(QObject):
@@ -574,6 +593,17 @@ def blendRawExposures(assets_by_file):
     [os.remove(str(x)) for x in assets_by_file.keys()]
     return primary_asset
 
+class DefaultIcons(object):
+
+    @cached_property
+    def raw(self):
+        return QPixmap.fromImage(makeImagePreview(QImage(':app/RedLogo.png')))
+
+    @cached_property
+    def document(self):
+        return QPixmap.fromImage(makeImagePreview(QImage(':resources/app/markdown_logo.png')))
+
+DEFAULT_ICONS = DefaultIcons()
 
 class TaskRunnerSignals(QObject):
     completed = Signal(object)

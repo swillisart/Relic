@@ -6,7 +6,7 @@ from functools import partial
 from imagine.colorchecker_detection import detectColorChecker
 from library.config import RELIC_PREFS, peakPreview
 from library.io import ingest 
-from library.objectmodels import (Type, alusers, getCategoryConstructor,
+from library.objectmodels import (alusers, getCategoryConstructor,
                                   relationships, session, tags)
 from library.ui.ingestion import Ui_IngestForm
 from library.widgets.assets_alt import AssetItemModel
@@ -24,7 +24,7 @@ from qtshared6.utils import polymorphicItem
 from relic.local import (INGEST_PATH, Category, ClassGroup, Extension,
                          FileType, TempAsset, getAssetSourceLocation)
 from relic.qt.delegates import Statuses
-from relic.scheme import Class
+from relic.scheme import Class, AssetType
 from sequence_path.main import SequencePath as Path
 
 CLOSE_MSG = """
@@ -61,7 +61,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedListView.onDeleted.connect(self.removeIngestFiles)
         self.collectedListView.additional_actions.extend([
             QAction('Detect Color Matrix', self, triggered=self.getColorMatrix),
-            QAction('Align & Blend Exposures', self, triggered=self.alignBlendExposures),
+            QAction('Align And Blend Exposures', self, triggered=self.alignBlendExposures),
             QAction('Process Image', self, triggered=self.reprocessImage),
             ])
 
@@ -200,6 +200,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         item_model = self.collect_item_model
         for fields in assets:
             asset = TempAsset(**fields)
+            asset.type = AssetType(asset.type or 1)
             asset.path = Path(asset.path)
             icon_path = asset.path.suffixed('_icon', ext='.jpg')
             asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
@@ -234,11 +235,10 @@ class IngestForm(Ui_IngestForm, QDialog):
             links=(subcategory.relationMap, subcategory.id)
         )
         if total > 1:
-            asset.type = int(Type.COLLECTION)
+            asset.type = int(AssetType.COLLECTION)
             primary_data = {asset.categoryName: asset.export}
             session.initializeprimaryasset.execute(primary_data)
         else:
-            asset.type = int(Type.ASSET)
             asset_data = {asset.categoryName: [asset.export]}
             session.createassets.execute(asset_data)
 
@@ -299,7 +299,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset = asset_constructor() # 
             asset.links = (subcategory.relationMap, subcategory.id)
             asset.name = f'{primary_asset.name}_{increment}'
-            asset.type = int(Type.VARIANT)
+            asset.type = int(AssetType.VARIANT)
             asset.dependencies = 0
             assets.append(asset.export)
         asset_data = {
@@ -339,8 +339,11 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset.icon = temp_asset.icon
             asset.path = temp_asset.path
             asset.resolution = temp_asset.resolution
+            if not asset.type:
+                asset.type = int(temp_asset.type or 1) 
             asset.category = category_id
             asset.subcategory = subcategory
+            asset.dependencies = 0
             self.linkIngestAssetDependencies(asset, temp_asset)
 
             self.collectedListView.setRowHidden(index.row(), True)
@@ -434,7 +437,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         if not asset:
             return
         asset.id = self.collect_item_model.rowCount() + 1
-        asset.type = int(Type.ASSET)
+        asset.type = int(AssetType.ASSET)
         asset.status = int(Statuses.Local)
         item = polymorphicItem(fields=asset)
         self.collect_item_model.appendRow(item)
@@ -487,27 +490,30 @@ class IngestForm(Ui_IngestForm, QDialog):
         """
         ingest_map = {}
         flags = 0
+        add_filter = self._filterFlag
         if self.moviesCheckBox.checkState():
             _flag = Class.MOVIE
-            ingest_map.update(self._filterFlag(ingest.processMOV, _flag, flags))
+            ingest_map.update(add_filter(ingest.processMOV, _flag, flags))
         if self.texturesReferencesCheckBox.checkState():
             _flag = Class.IMAGE | Class.ELEMENT
-            ingest_map.update(self._filterFlag(ingest.processIMAGE, _flag, flags))
+            ingest_map.update(add_filter(ingest.processIMAGE, _flag, flags))
         if self.rawCheckBox.checkState():
             _flag = Class.PHOTO | Class.PLATE
-            ingest_map.update(self._filterFlag(ingest.processRAW, _flag, flags))
+            ingest_map.update(add_filter(ingest.processRAW, _flag, flags))
         if self.toolsCheckBox.checkState():
             _flag = ClassGroup.SOFTWARE
-            ingest_map.update(self._filterFlag(ingest.processTOOL, _flag, flags))
+            ingest_map.update(add_filter(ingest.processTOOL, _flag, flags))
         if self.lightsCheckBox.checkState():
             _flag = ClassGroup.EMISSIVE
-            ingest_map.update(self._filterFlag(ingest.processLIGHT, _flag, flags))
+            ingest_map.update(add_filter(ingest.processLIGHT, _flag, flags))
+        if self.documentsCheckBox.checkState():
+            _flag = Class.DOCUMENT
+            ingest_map.update(add_filter(ingest.processDOC, _flag, flags))
 
         return ingest_map
         #TODO: add standalone conversions for these:
         #Extension.SHADER = ['.mtlx', '.osl', '.sbsar']
         #Extension.DCC = ['.ma', '.mb', '.max', '.hip']
-        #Extension.TOOLS = ['.nk', '.mel', '.py', 'hda']
 
     def close(self):
         if self.done != self.todo:

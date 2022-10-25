@@ -14,7 +14,7 @@
    <string>Description </string>
   </property>
   <property name="windowIcon">
-   <iconset>
+   <iconset resource="../../resources.qrc">
     <normaloff>:/resources/style/markdown.png</normaloff>:/resources/style/markdown.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">

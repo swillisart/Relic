@@ -9,7 +9,7 @@ from functools import partial
 # -- Third-party --
 from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QThreadPool,
                             QTimer, Slot, QSize)
-from PySide6.QtGui import QIcon, QPixmap, Qt
+from PySide6.QtGui import QIcon, QPixmap, Qt, QImage
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
                                QSystemTrayIcon, QToolButton, QWidget)
 
@@ -38,21 +38,7 @@ from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.relationshipView import LinkViewWidget
 from library.widgets.subcategoriesViews import CategoryManager
 from library.widgets.util import DialogOverlay
-
-
-@Slot(QModelIndex)
-def open_file(index):
-    asset = index.data(Qt.UserRole)
-    if not asset:
-        return
-    filepath = asset.network_path
-    if filepath.ext.lower() == '.exe':
-        # Launch software executable
-        with open(str(filepath), 'r') as fp:
-            subprocess.Popen('"{}"'.format(fp.read()))
-        return
-    else:
-        peakPreview(filepath)
+from library.io.ingest import DEFAULT_ICONS
 
 
 class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
@@ -126,7 +112,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         for view in self.links_view.all_views + [self.assets_view]:
             view.selectionModel().selectionChanged.connect(self.loadAssetData)
             view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
-            view.onExecuted.connect(open_file)
+            view.onExecuted.connect(self.open_file)
 
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
         self.description_window.text_browser.assetClicked.connect(self.browseTo) 
@@ -160,6 +146,21 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self._ingester = None
         self.preferences_dialog = None
         self.block_search = False
+
+    @Slot(QModelIndex)
+    def open_file(self, index):
+        asset = index.data(Qt.UserRole)
+        if not asset:
+            return
+        filepath = asset.network_path
+        if filepath.ext.lower() == '.exe':
+            # Launch software executable
+            with open(str(filepath), 'r') as fp:
+                subprocess.Popen('"{}"'.format(fp.read()))
+        elif filepath.ext.lower() == '.md':
+            self.description_window.showMarkdown(filepath)
+        else:
+            peakPreview(filepath)
 
     def setupDockTitles(self):
         attribute_expand_icon = QIcon()
@@ -611,10 +612,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 subcategory = category_obj.subcategory_by_id.get(subcategory)
                 asset.subcategory = subcategory
 
-            #if icons and asset.path:
-            #    asset.fetchIcon()
             item = polymorphicItem(fields=asset)
-            if load_icons:
+            #    asset.fetchIcon()
+            if load_icons and asset.classification == Classification.DOCUMENT.value:
+                asset.icon = DEFAULT_ICONS.document
+            elif load_icons:
                 on_complete = partial(setattr, asset, 'icon')
                 icon_path = asset.network_path.suffixed('_icon', '.jpg')
                 worker = LocalThumbnail(icon_path, on_complete, item)

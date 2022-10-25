@@ -76,5 +76,7 @@ blockquote {
 	margin: 0 3px 0 3px;
 	padding: 0 3px 0 3px;
 }
-
+ul.checklist {
+	list-style-type: square;
+}
 </style>

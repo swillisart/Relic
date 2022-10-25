@@ -21,7 +21,9 @@ style_sheet = QTextStream(style_file)
 MARKDOWN_STYLE = style_sheet.readAll()
 
 MARKDOWN = markdown.Markdown(
-    extensions = ['codehilite', 'tables', 'nl2br', 'toc', 'sane_lists', 'admonition', 'fenced_code'],
+    extensions = [
+        'codehilite', 'tables', 'nl2br', 'toc', 'sane_lists',
+        'admonition', 'fenced_code', 'markdown_checklist.extension'],
     output_format="html5"
     )
 

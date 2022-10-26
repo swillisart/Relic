@@ -15,10 +15,15 @@ from relic.qt.widgets import FilterBox
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
 
-style_file = QFile(':/resources/style/markdown_style.css')
-style_file.open(QFile.ReadOnly | QFile.Text)
-style_sheet = QTextStream(style_file)
-MARKDOWN_STYLE = style_sheet.readAll()
+def readTextFromResource(path):
+    this_file = QFile(path)
+    if not this_file.exists():
+        return ''
+    this_file.open(QFile.ReadOnly | QFile.Text)
+    result = QTextStream(this_file).readAll()
+    return result
+
+MARKDOWN_STYLE = readTextFromResource(':/resources/style/markdown_style.css')
 
 MARKDOWN = markdown.Markdown(
     extensions = [
@@ -230,16 +235,20 @@ class Window(Ui_DescriptionDialog, QDialog):
 
     @Slot(Path)
     def showMarkdown(self, path):
-        if not path.exists():
-            return
-        self.editor_frame.setVisible(int(RELIC_PREFS.edit_mode))
-        
-        with open(str(path), 'r') as fp:
-            markdown_text = fp.read()
-            
-        self.text_browser.markdown_path = path
+
+        if isinstance(path, Path):
+            self.editor_frame.setVisible(int(RELIC_PREFS.edit_mode))
+            with open(str(path), 'r') as fp:
+                markdown_text = fp.read()
+            self.text_browser.markdown_path = path
+            self.text_edit.markdown_path = path
+        else:
+            self.editor_frame.setVisible(False)
+            markdown_text = readTextFromResource(path)
+            self.text_browser.markdown_path = Path('')
+            self.text_edit.markdown_path = Path('')
+
         self.text_browser.setMarkdown(markdown_text)
-        self.text_edit.markdown_path = path
         self.text_edit.setPlainText(markdown_text)
 
         self.show()

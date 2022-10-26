@@ -1,5 +1,6 @@
 <RCC>
   <qresource>
+    <file>README.md</file>
     <file>resources/app/relic.svg</file>
     <file>resources/app/markdown_logo.png</file>
     <file>resources/app/searchLight.svg</file>

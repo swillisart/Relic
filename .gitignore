@@ -11,10 +11,9 @@ dist
 *.spec
 *.exe
 *.lnk
-python-3.9.2-embed-amd64
-Include
-Lib
-Scripts
+/Include
+/Lib
+/Scripts
 resources.py
 resources_rc.py
 tests/data

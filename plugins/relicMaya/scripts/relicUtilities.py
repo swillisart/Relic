@@ -143,3 +143,13 @@ def generateThumbnails(selection, file_path):
     # Cleanup
     cmds.displayPref(wsa="full")
     cmds.delete('orbitCam')
+
+def texturedLight(light, attr, path):
+    texture = cmds.shadingNode('file', asTexture=1)
+    cmds.setAttr(texture + '.fileTextureName', str(path), type='string')
+    cmds.connectAttr(
+        texture + '.outColor',
+        light + attr,
+        force=1
+    )
+    cmds.select(light, r=1)

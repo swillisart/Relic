@@ -17,7 +17,7 @@ Relic defines categorization interactively with classification of items and thei
 2. [Relic Application](h) - The interface for users to interact with the catalog; checking out items into local copies to utilize.
 3. [Relic Plugins](h) - The extension of third-party host applications to author and operate on assets following the specification.
 
-## What Relic is **NOT**
+## **Scope**: What Relic is not
 ---
 While Relic can be used for these purposes it is not built for them and will not be extended to solve their specific problems:
 

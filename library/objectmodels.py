@@ -1,17 +1,14 @@
-import sys
 from collections import Sequence, UserString
 from enum import IntEnum
 
 from extra_types.enums import AutoEnum
 from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtGui import QColor, QPixmap, QIcon, QStandardItem
 from relic.qt.delegates import (Indication, ColorIndicator, IconIndicator, Statuses,
                                  TextIndicator)
-from qtshared6.utils import polymorphicItem
 from relic.base import Fields
-from relic.local import (Alusers, Category, Elements, Lighting, Mayatools,
-                         Modeling, Nuketools, References, Relationships,
-                         Shading, Software, Subcategory, Tags, TempAsset)
+from relic.local import (Alusers, Category, buildObjectMixinMap, Relationships,
+                        Subcategory, Tags, TempAsset)
 from relic.scheme import Table, AssetType
 from sequence_path.main import SequencePath as Path
 
@@ -24,16 +21,15 @@ LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
 NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
 
 colors = {x.name: QColor(*x.data.color) for x in Category}
-types = {x.name: f':AssetType/{x.name}' for x in AssetType}
-
+res_uri = ':{}/{}'
+types = {x.name: QIcon(res_uri.format(AssetType.__name__, x.name)) for x in AssetType}
 CategoryColor = ColorIndicator('CategoryColor', colors)
-Type = IconIndicator('Type', types)
 
 class FieldMixin(object):
     __slots__ = ()
 
     INDICATIONS = [
-        Indication('type', Type, QRect(12, -22, 16, 16)),
+        Indication('type', IconIndicator('Type', types), QRect(12, -22, 16, 16)),
         Indication('category', CategoryColor, QRect(6, -6, 3, -48)),
         Indication('status', Statuses, QRect(30, -22, 16, 16)),
         Indication('resolution', TextIndicator, QRect(50, -22, 0, 16))
@@ -133,6 +129,12 @@ class FieldMixin(object):
                 attr = int(attr)
             elif isinstance(attr, tuple): # Sequence
                 pass #attr = tuple(attr)
+            elif isinstance(attr, QStandardItem):
+                relation = attr.data(Qt.UserRole)
+                if relation:
+                    attr = relation.export
+                else:
+                    continue
             else:
                 continue
 
@@ -152,9 +154,10 @@ class FieldMixin(object):
     def recurseDependencies(asset):
         """Recursively accesses an assets upstream dependencies.
         """
+        variant = AssetType.VARIANT
         if isinstance(asset.upstream, list):
             for upstream in asset.upstream:
-                if upstream.type != Type.VARIANT:
+                if upstream.type != variant:
                     yield from FieldMixin.recurseDependencies(upstream)
         yield asset
 
@@ -292,54 +295,15 @@ class relationships(Relationships, FieldMixin):
         relation = [self.category_map, self.category_id, self.links]
         session.createrelationships.execute([relation])
 
-
-class references(References, FieldMixin):
-    pass
-
-class modeling(Modeling, FieldMixin):
-    pass
-
-class elements(Elements, FieldMixin):
-    pass
-
-class software(Software, FieldMixin):
-    pass
-
-class lighting(Lighting, FieldMixin):
-    pass
-
-class shading(Shading, FieldMixin):
-    pass
-
-class nuketools(Nuketools, FieldMixin):
-    pass
-
-class mayatools(Mayatools, FieldMixin):
-    pass
-
-
-OBJECT_MAP = {
-    0: references,
-    1: modeling,
-    2: elements,
-    3: lighting,
-    4: shading,
-    5: software,
-    6: mayatools,
-    7: nuketools,
-    'references': references,
-    'modeling': modeling,
-    'elements': elements,
-    'lighting': lighting,
-    'shading': shading,
-    'software': software,
-    'mayatools': mayatools,
-    'nuketools': nuketools,
+relational_map = {
     'relationships': relationships,
     'alusers': alusers,
     'tags': tags,
     'subcategory': subcategory,
 }
+
+OBJECT_MAP = buildObjectMixinMap(FieldMixin)
+OBJECT_MAP.update(relational_map)
 
 def getCategoryConstructor(category):
     constructor = OBJECT_MAP.get(category, TempAsset)
@@ -360,7 +324,7 @@ def attachSubcategory(asset, category_obj):
             asset.subcategory = _subcategory
 
 def attachLinkToAsset(asset, link_item):
-    link_item_asset = link_item.data(polymorphicItem.Object)
+    link_item_asset = link_item.data(Qt.UserRole)
     category_name = link_item_asset.categoryName
     if isinstance(link_item_asset, subcategory):
         asset.subcategory = link_item

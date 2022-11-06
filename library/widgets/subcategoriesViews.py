@@ -8,7 +8,7 @@ from library.config import RELIC_PREFS
 from library.objectmodels import relationships, subcategory, CategoryColor
 from library.widgets.util import ListViewFocus
 from relic.qt.expandable_group import ExpandableGroup
-from qtshared6.utils import polymorphicItem
+from relic.qt.util import polymorphicItem
 # -- Third-party --
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             QPoint, QRegularExpression, QSize,
@@ -675,7 +675,7 @@ class CategoryManager(QObject):
                 category.count = count
                 tab = ExpandableTab(category)
                 tab.collapseExpand.connect(self.updateCollapsedItems)
-                tab.frame.layout().insertWidget(1, tree)
+                tab.addContentWidget(tree)
                 category.tab = tab
                 category.tree = tree
                 self.all_categories.append(category)

@@ -15,17 +15,17 @@ from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,
                             QRect, QRegularExpression, QSize,
                             QSortFilterProxyModel, Qt, QTextStream, QThread,
-                            QThreadPool, Signal, Slot, QModelIndex)
+                            QThreadPool, Signal, Slot, QModelIndex, QTimer)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
                            QIcon, QImage, QMovie, QPainter, QPixmap,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
-from qtshared6.utils import polymorphicItem
 from relic.local import (INGEST_PATH, Category, ClassGroup, Extension,
                          FileType, TempAsset, getAssetSourceLocation)
 from relic.qt.delegates import Statuses
+from relic.qt.util import polymorphicItem
 from relic.scheme import Class, AssetType
-from sequence_path.main import SequencePath as Path
+from sequence_path import Path
 
 CLOSE_MSG = """
 You have not completed categorizing the collected files.
@@ -100,6 +100,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedListView.doubleClicked.connect(self.previewLocal)
         self.working = False
         self.current_category_id = None
+        self.fetching_names = False
 
     @Slot()
     def filterCategories(self, index):
@@ -196,7 +197,6 @@ class IngestForm(Ui_IngestForm, QDialog):
         item_model = self.collect_item_model
         for fields in assets:
             asset = TempAsset(**fields)
-            asset.type = AssetType(asset.type or 1)
             asset.path = Path(asset.path)
             icon_path = asset.path.suffixed('_icon', ext='.jpg')
             asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
@@ -310,7 +310,7 @@ class IngestForm(Ui_IngestForm, QDialog):
 
         selection = self.collectedListView.selectedIndexes()
         category_id = self.current_category_id
-        subcategory = self.selectedSubcategory.data(polymorphicItem.Object)
+        subcategory = self.selectedSubcategory.data(Qt.UserRole)
         asset_constructor = getCategoryConstructor(category_id)
         ingester = self.ingest_thread
         if self.copyCheckBox.checkState():
@@ -320,27 +320,40 @@ class IngestForm(Ui_IngestForm, QDialog):
 
         item_model = self.new_asset_item_model
         for num, index in enumerate(selection):
-            temp_asset = index.data(polymorphicItem.Object)
+            temp_asset = index.data(Qt.UserRole)
 
             # temp on-disk local asset location for copying to the network.
             if self.kept_original_name:
                 temp_filename = temp_asset.name
             else:
                 temp_filename = 'unsorted' + str(temp_asset.id)
-
+            new_tags = temp_asset.tags
+            new_links = temp_asset.links
             # Construct asset from database-created fields
             asset = asset_constructor(**new_asset_fields[num])
 
-            # Re-apply the GUI attributes for our item's QPainter. 
-            asset.icon = temp_asset.icon
-            asset.path = temp_asset.path
-            asset.resolution = temp_asset.resolution
+            # populate the type if its not been defined.
             if not asset.type:
                 asset.type = int(temp_asset.type or 1) 
+            # IMPORTANT clear unwanted temp values before transferring attributes
+            temp_asset.id = None
+            temp_asset.name = None
+            temp_asset.type = None
+            temp_asset.tags = None
+            temp_asset.links = None
+
+            asset << temp_asset # transfer attributes
+
+            # convert the flag into the first occurance of classification
+            flag = temp_asset.classification
+            asset.classification = next((i.index for i in Class if flag & i), 0)
+
+            # assign new structure fields.
             asset.category = category_id
             asset.subcategory = subcategory
             asset.dependencies = 0
-            self.linkIngestAssetDependencies(asset, temp_asset)
+            
+            self.linkIngestAssetDependencies(asset, new_tags, new_links)
 
             self.collectedListView.setRowHidden(index.row(), True)
             item = polymorphicItem(fields=asset)
@@ -349,6 +362,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             extra_files = temp_asset.dependencies
 
             ingester.load([temp_filename, asset, extra_files])
+
             # add any new (unique) asset to the existing assets list view
             if '_' not in asset.name:
                 self.existingNamesList.addItem(asset.name, asset.id)
@@ -358,23 +372,24 @@ class IngestForm(Ui_IngestForm, QDialog):
         session.updatesubcategorycounts.execute(count_data)
         self.collectedListView.clearSelection()
 
-    def linkIngestAssetDependencies(self, asset, temp_asset):
+    def linkIngestAssetDependencies(self, asset, new_tags, new_links):
         # Create asset relationships.
         relations = []
-        if temp_asset.links:
-            asset.dependencies += len(temp_asset.links)
-            for link in temp_asset.links:
-                link_constructor = getCategoryConstructor(link['category'])
-                polymorphic = link_constructor()
+        if new_links:
+            asset.dependencies += len(new_links)
+            for link_data in new_links:
+                link_constructor = getCategoryConstructor(link_data['category'])
+                link = link_constructor()
                 relations.append([
-                    polymorphic.relationMap,
-                    int(link['id']),
+                    link.relationMap,
+                    int(link_data['id']),
                     asset.links,
                 ])
-        if temp_asset.tags:
-            for tag_data in temp_asset.tags:
+        if new_tags:
+            for tag_data in new_tags:
                 tag = tags(**tag_data)
-                tag.createNew( [[tag.relationMap, asset.links]])
+                tag.createNew([[tag.relationMap, asset.links]])
+
         user = alusers(name=os.getenv('username'), id=int(RELIC_PREFS.user_id))
         user.createNew([[user.relationMap, asset.links]])
         session.createrelationships.execute(relations)
@@ -519,8 +534,11 @@ class IngestForm(Ui_IngestForm, QDialog):
             if message.exec_() == QMessageBox.RejectRole:
                 return
 
-        # make all category widgets visible again
-        [category.show() for category in self.category_widgets]
+        # make all category widgets visible again and disconnect events
+        for category in self.category_widgets:
+            category.collapseExpand.disconnect(self.onCategoryChanged)
+            category.show()
+
         self.beforeClose.emit(self.category_dock)
 
         # remove any leftover / abandoned temp ingest files 
@@ -550,13 +568,19 @@ class IngestForm(Ui_IngestForm, QDialog):
             return
         for i, expander_widget in enumerate(self.category_widgets):
             if expander_widget is sender:
-                session.retrieveassetnames.execute(i)
-                self.current_category_id = i
+                active_index = i
             else:
                 expander_widget.collapseState()
 
+        self.current_category_id = active_index
+        if not self.fetching_names:
+            get_names = partial(session.retrieveassetnames.execute, active_index)
+            self.delay_call = QTimer.singleShot(0.1*1000, get_names)
+            self.fetching_names = True
+
     @Slot(list)
     def onAssetNameRetrieval(self, asset_data):
+        self.fetching_names = False
         item_model = self.existingNamesList.itemModel
         item_model.clear()
         adder = self.existingNamesList.addItem

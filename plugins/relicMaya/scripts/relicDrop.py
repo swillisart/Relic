@@ -1,15 +1,15 @@
-import sys
 import json
-import re
-from functools import partial
 
 import maya.OpenMayaUI as omui
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
 import shiboken2
 
-from relic_base import asset_classes, asset_views
-from relic_base import config
+from relic.qt.delegates import Statuses
+from relic.plugin.views import updateIcon
+from relic.plugin.classes import getCategoryConstructor
+from relic.scheme import Class
+from relic.local import Category, ClassGroup
 
 from sequence_path.main import SequencePath as Path
 
@@ -43,36 +43,48 @@ class RelicDropCallback(omui.MExternalDropCallback):
         self.relicPanel = relicMixinWindow
 
     def externalDropCallback(self, doDrop, controlName, data):
-        retstring = "External Drop:  doDrop = {},  controlName = {}".format(
-            doDrop,
-            controlName,
-        )
+        retstring = "External Drop: doDrop = {}, controlName = {}".format(
+            doDrop, controlName)
+
+        m_drop = omui.MExternalDropData
+        mouse_button = data.mouseButtons()
+        key_mod = data.keyboardModifiers()
         """
-        data.mouseButtons() & omui.MExternalDropData.kLeftButton
-        data.mouseButtons() & omui.MExternalDropData.kMidButton
-        data.mouseButtons() & omui.MExternalDropData.kRightButton
-        data.keyboardModifiers() & omui.MExternalDropData.kShiftModifier
-        data.keyboardModifiers() & omui.MExternalDropData.kControlModifier
-        data.keyboardModifiers() & omui.MExternalDropData.kAltModifier
+        mouse_button & m_drop.kLeftButton
+        mouse_button & m_drop.kMidButton
+        mouse_button & m_drop.kRightButton
+        key_mod & m_drop.kShiftModifier
+        key_mod & m_drop.kControlModifier
+        key_mod & m_drop.kAltModifier
         """
-        drop_script = data.urls()[0]    
+        drop_script = data.urls()[0]
         assets = data.text()
-        if data.hasFormat(b'application/x-relic') and data.hasUrls() and not doDrop:# and data.hasUrls():
+        
+        is_from_relic = data.hasFormat(b'application/x-relic') and data.hasUrls()
+        scene_content = self.relicPanel.content
+        if is_from_relic and not doDrop:
             for key, values in json.loads(assets).items():
-                constructor = asset_classes.getCategoryConstructor(key)
+                constructor = getCategoryConstructor(key)
                 for fields in values:
                     asset = constructor(**fields)
-                    added = self.relicPanel.group_widget.addAsset(asset)
-                    if added:
-                        maya_drop = partial(self.assetDropAction, asset)
-                        icon_update = partial(asset_views.updateIcon, asset)
-                        callbacks = [icon_update, maya_drop, applyLinkedEdits]
-                        asset.setDownloadCompletionCallbacks(callbacks)
+                    added = scene_content.addAsset(asset)
+                    if not added:
+                        continue
+                    if asset.local_path.parent.exists():
+                        # asset exists; update progress and callback
+                        asset.progress = 288
+                        asset.status = Statuses.Local
+                        self.assetDropAction(asset)
+                        updateIcon(asset)
+                        scene_content.updateProgress(asset)
+                    else:
+                        asset.status = Statuses.Syncing
+                        asset.callbacks = [updateIcon, self.assetDropAction, applyLinkedEdits]
                         asset.download()
-            self.relicPanel.group_widget.updateGroups()
+            scene_content.updateGroups()
             return True
 
-        elif data.hasFormat(b'application/x-relic') and data.hasUrls() and doDrop:
+        elif is_from_relic and doDrop:
         #    for key, values in json.loads(assets).items():
         #        constructor = getattr(asset_classes, str(key))
         #        for fields in values:
@@ -84,45 +96,50 @@ class RelicDropCallback(omui.MExternalDropCallback):
         if data.hasColor()
             color = data.color()
             color = (%d, %d, %d, %d)" % (color.r, color.g, color.b, color.a)
-        if data.hasImage():
-            str += (", image = true")
         """
         return omui.MExternalDropCallback.kMayaDefault
 
     @staticmethod
     def assetDropAction(asset):
-        class_index = getattr(asset, 'class')
-        asset_path = asset.local_path
-        active_renderer = cmds.getAttr('defaultRenderGlobals.currentRenderer')
+        category = asset.category
 
-        if class_index == config.AREA_LIGHT:
-            if active_renderer == 'vray':
-                vrayRectLight(asset_path)
-        elif class_index == config.IES:
-            if active_renderer == 'vray':
-                vrayIESLight(asset_path)
-        elif class_index == config.IBL:
-            if active_renderer == 'vray':
-                vrayDomeLight(asset_path)
-    
-        if class_index == config.MODEL:
-            createMayaReference(asset, asset_path)
-
-        elif class_index == config.TEXTURE or asset_path.ext in config.TEXTURE_EXT:
+        if category == Category.LIGHTING.index:
+            createLighting(asset)
+        elif asset.classification & ClassGroup.SOFTWARE:
+            if asset.path.endswith('.py'):
+                import maya.app.general.executeDroppedPythonFile as TempEDPF
+                TempEDPF.executeDroppedPythonFile(asset.local_path, "")
+                del TempEDPF
+            #if asset.path.endswith('.mel'):
+            #    mel.eval('source "{}";'.format(filepath))
+        elif asset.local_path.ext in ['.mb', '.ma']: # gracefully handle unclassified scenes.
+            createMayaReference(asset, asset.local_path)
+        """
+        if class_index == Class.MODEL:
+            createMayaReference(asset, asset.local_path)
+        elif class_index == config.TEXTURE or asset.local_path.ext in config.TEXTURE_EXT:
             texture = cmds.shadingNode('file', asTexture=1)
-            cmds.setAttr(texture + '.fileTextureName', str(asset_path), type='string')
+            cmds.setAttr(texture + '.fileTextureName', str(asset.local_path), type='string')
+        """
+        asset.status = Statuses.Local
+        asset.progress = 0
 
-        elif asset_path.ext == '.mel':
-            mel.eval('source "{}";'.format(filepath))
+def createLighting(asset):
+    class_index = asset.classification
+    active_renderer = cmds.getAttr('defaultRenderGlobals.currentRenderer')
+    if active_renderer == 'arnold':
+        import relicArnold as renderer
+    elif active_renderer == 'vray':
+        import relicVray as renderer
+    else:
+        return
 
-        elif asset_path.ext == '.py':
-            import maya.app.general.executeDroppedPythonFile as TempEDPF
-            TempEDPF.executeDroppedPythonFile(asset_path, "")
-            del TempEDPF
-
-        elif asset_path.ext == '.ma' or asset_path.ext == '.mb':
-            createMayaReference(asset, asset_path)
-
+    if class_index == Class.IBL.index:
+        renderer.domeLight(asset.local_path)
+    elif class_index == Class.IES.index:
+        renderer.iesLight(asset.local_path)
+    elif class_index == Class.IMAGE.index:
+        renderer.areaLight(asset.local_path)
 
 
 def createMayaReference(asset, asset_path):
@@ -146,7 +163,6 @@ def createMayaReference(asset, asset_path):
         #namespace='{}'.format(asset_path.name+'_mtlx'),
     )
 
-
 def iterateReferencePaths(all_references):
     for ref_node in all_references:
         ref_path = cmds.referenceQuery(ref_node, filename=1)
@@ -154,7 +170,7 @@ def iterateReferencePaths(all_references):
         if not ref_path.endswith('.mtlx') and not ref_path.endswith('.editMB'):
             yield ref_node, Path(ref_path)
 
-def applyLinkedEdits():
+def applyLinkedEdits(asset):
     all_references = cmds.ls(exactType='reference')
     edited_attr = 'RELIC_edited'
 
@@ -192,28 +208,3 @@ def applyLinkedEdits():
                     mapPlaceHolderNamespace=['<root>', destination_ref]
                 )
             #file -r -type "editMA" -mapPlaceHolderNamespace "<root>" "PoleLanternBasicRN" -applyTo "LanternBasicRN" "C:/Users/Resartist/.relic/ingest/LanternBasic.editMA";
-
-def vrayTexturedLight(light, attr, path):
-    texture = cmds.shadingNode('file', asTexture=1)
-    cmds.setAttr(texture + '.fileTextureName', str(path), type='string')
-    cmds.connectAttr(
-        texture + '.outColor',
-        light + attr,
-        force=1
-    )
-    cmds.select(light, r=1)
-
-def vrayDomeLight(path):
-    light = cmds.shadingNode('VRayLightDomeShape', asLight=1)
-    cmds.setAttr(light + '.useDomeTex', 1)
-    vrayTexturedLight(light, '.domeTex', path)
-
-def vrayRectLight(path):
-    light = cmds.shadingNode(light_type, asLight=1)
-    cmds.setAttr(light + '.useRectTex', 1)
-    vrayTexturedLight(light, '.rectTex', path)
-
-def vrayIESLight(path):
-    light = cmds.shadingNode('VRayLightIESShape', asLight=1)
-    cmds.setAttr(light + '.iesFile', str(path).replace('/', '\\'))
-    cmds.select(light, r=1)

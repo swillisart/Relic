@@ -19,10 +19,9 @@ URL_REGEX = re.compile(r'(\w+):\/\/(\w+):(\d{4})')
 class RelicCommand(QObject):
 
     callback = Signal(dict)
-
-    def __init__(self, socket):
+    socket = None
+    def __init__(self):
         super(RelicCommand, self).__init__()
-        self.socket = socket
 
     def execute(self, data):
         self.socket.sendTextMessage(json.dumps({self.__class__.__name__: data}))
@@ -130,31 +129,31 @@ class RelicClientSession(QObject):
         self.socket.binaryMessageReceived.connect(self.receiveBinary)
         if url:
             self.bindTo(url)
-
-        self.searchkeywords = SearchKeywords(self.socket)
-        self.searchcategories = SearchCategories(self.socket)
-        self.searchcategory = SearchCategory(self.socket)
-        self.retrieveassets = RetrieveAssets(self.socket)
-        self.getcategories = GetCategories(self.socket)
-        self.retrievedependencies = RetrieveDependencies(self.socket)
-        self.updatesubcategorycounts = UpdateSubcategoryCounts(self.socket)
-        self.updateassets = UpdateAssets(self.socket)
-        self.retrievelinks = RetrieveLinks(self.socket)
-        self.createcollection = CreateCollection(self.socket)
-        self.removerelationships = RemoveRelationships(self.socket)
-        self.createrelationships = CreateRelationships(self.socket)
-        self.linksubcategories = LinkSubcategories(self.socket)
-        self.createsubcategory = CreateSubcategory(self.socket)
-        self.createtag = CreateTag(self.socket)
-        self.createuser = CreateUser(self.socket)
-        self.createassets = CreateAssets(self.socket)
-        self.fetchassets = FetchAssets(self.socket)
-        self.moveassets = MoveAssets(self.socket)
-        self.removeassets = RemoveAssets(self.socket)
-        self.deleteassets = DeleteAssets(self.socket)
-        self.retrieveassetnames = RetrieveAssetNames(self.socket)
-        self.initializeprimaryasset = InitializePrimaryAsset(self.socket)
-        self.videostream = VideoStream(self.socket)
+        RelicCommand.socket = self.socket
+        self.searchkeywords = SearchKeywords()
+        self.searchcategories = SearchCategories()
+        self.searchcategory = SearchCategory()
+        self.retrieveassets = RetrieveAssets()
+        self.getcategories = GetCategories()
+        self.retrievedependencies = RetrieveDependencies()
+        self.updatesubcategorycounts = UpdateSubcategoryCounts()
+        self.updateassets = UpdateAssets()
+        self.retrievelinks = RetrieveLinks()
+        self.createcollection = CreateCollection()
+        self.removerelationships = RemoveRelationships()
+        self.createrelationships = CreateRelationships()
+        self.linksubcategories = LinkSubcategories()
+        self.createsubcategory = CreateSubcategory()
+        self.createtag = CreateTag()
+        self.createuser = CreateUser()
+        self.createassets = CreateAssets()
+        self.fetchassets = FetchAssets()
+        self.moveassets = MoveAssets()
+        self.removeassets = RemoveAssets()
+        self.deleteassets = DeleteAssets()
+        self.retrieveassetnames = RetrieveAssetNames()
+        self.initializeprimaryasset = InitializePrimaryAsset()
+        self.videostream = VideoStream()
         self.videostream.callback.connect(self.setupVideo)
         #self.imagestream.callback.connect(image_callback)
 

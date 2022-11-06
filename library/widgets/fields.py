@@ -10,11 +10,11 @@ from PySide6.QtWidgets import *
 
 from relic.scheme import Classification, AssetType, UserType, TagType
 from relic.local import Category, Relational, TempAsset
+from relic.qt.util import polymorphicItem
 
-from library.objectmodels import alusers, tags, getCategoryConstructor, Type
+from library.objectmodels import alusers, tags, getCategoryConstructor
 from library.widgets.rating import Rating
 from library.widgets.simple_asset_view import SimpleAssetView
-from qtshared6.utils import polymorphicItem
 from sequence_path.main import FileSize
 
 class SpinBox(QSpinBox):
@@ -172,13 +172,6 @@ class VerticalTreeModel(QStandardItemModel):
 
 
 class FieldDelegate(QStyledItemDelegate):
-
-    def __init__(self, parent=None):
-        super(FieldDelegate, self).__init__(parent)
-
-        for x in Type:
-            if x.value:
-                x.data = QIcon(x.data)
 
     def createEditor(self, parent, option, index):
         if index.column() != 1:
@@ -379,7 +372,7 @@ class ObjectField(UserList):
             if y_offset_count == 3:
                 draw_expander = True
                 break
-            painter.drawPixmap(QRect(0, 0, 16, 16), icon)
+            icon.paint(painter, QRect(0, 0, 16, 16))
             painter.translate(16, 0)
             x_pos += 16
             painter.drawText(QRect(margin - 2, 0, x_offset - 2, 16), item.name)
@@ -491,7 +484,7 @@ def setup_enum_ui(combo_enum):
     for x in combo_enum:
         x.draw = ComboField.draw
         x.widget = widget_create
-        x.icon = QPixmap(f':{prefix}/{x.name}')
+        x.icon = QIcon(f':{prefix}/{x.name}')
     combo_enum.widget = widget_create
     combo_enum.default = 0
 
@@ -511,7 +504,7 @@ def icon_from_item(item):
         else:
             icon = TagType(asset.type).icon
     else:
-        icon = QPixmap()
+        icon = QIcon()
     return icon
 
 # Setup asset type UI

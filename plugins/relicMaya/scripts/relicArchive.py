@@ -1,12 +1,14 @@
 import json
 import re
+import os
 
 # -- App --
 import maya.cmds as cmds
 # -- First-party --
 from relic.local import (INGEST_PATH, Category, FileType, Nuketools, TempAsset,
                          getAssetSourceLocation)
-from relic.scheme import AssetType, TagType, UserType
+from relic.scheme import AssetType, TagType, UserType, Class
+from relic.plugin import project_variable
 from sequence_path import Path
 
 # -- Module --
@@ -35,10 +37,11 @@ def archiveScene(path=None):
     asset.path = INGEST_PATH / asset.name / (asset.name + '.ma')
     asset.path.createParentFolders()
     asset.category = Category.MODELING.index
-    asset.type = 1
+    asset.classification = Class.MODEL.flag
+    asset.type = AssetType.ASSET.index
     asset.duration = 0
     asset.resolution = ''
-    asset.tags = []
+    asset.tags = [{'name': 'archive', 'type': 0}, {'name': os.getenv(project_variable, 'noshow'), 'type': 0}]
     generateThumbnails(selection, asset.path)
 
     file_info = {}
@@ -69,6 +72,6 @@ def archiveScene(path=None):
         asset.dependencies = list(all_files)
         cmds.select(selection, r=True)
         asset.path = str(asset.path)
-        cmds.file(asset.path, force=1, options="v=0;", type="mayaAscii", exportSelected=1)
+        cmds.file(asset.path, force=1, shader=True, options="v=0;", type="mayaAscii", exportSelected=1)
 
     return json.dumps([asset.asDict()])

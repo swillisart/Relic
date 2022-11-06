@@ -449,7 +449,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             tree.resizeColumnToContents(0)
             tree.sortByColumn(1, Qt.AscendingOrder)
 
-            group = ExpandableGroup(tree, self.historyGroupBox)
+            group = ExpandableGroup(tree, parent=self.historyGroupBox)
             group.collapseExpand.connect(self.onGroupCollapse)
             group.iconButton.setIconSize(QSize(18,18))
             ExpandableGroup.BAR_HEIGHT -= 1

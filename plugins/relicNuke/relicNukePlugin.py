@@ -7,26 +7,24 @@ from functools import partial
 # -- App --
 import nuke
 import nukescripts
-
 # -- Third-party --
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
-
+from relic.local import (INGEST_PATH, Category, FileType, Nuketools,
+                         Subcategory, TempAsset, getAssetSourceLocation)
+from relic.plugin import networking, views
+from relic.plugin.classes import getCategoryConstructor
+# -- Module --
+from relic.qt.delegates import Statuses
+from relic.qt.util import loadStylesheet
+from relic.scheme import Asset, AssetType, TagType, UserType
 # -- First-party --
 from sequence_path import Path
-from intercom import Client
-
-# -- Module --
-from relic_base import (asset_classes, asset_views)
-from relic.local import (Nuketools, Category, FileType, TempAsset, INGEST_PATH, getAssetSourceLocation)
-from relic.scheme import (Asset, AssetType, TagType, UserType)
 
 # -- Globals --
-RELIC_CLIENT = Client('relic')
-SOFTWARE_REGEX = re.compile(r"[^A-Za-z0-9\n\.]")
-IGNORE_NODES = ['Write', 'DeepWrite', 'WriteGeo', 'LiveInput']
 MENU_NAME = 'Relic'
+IGNORE_NODES = ['Write', 'DeepWrite', 'WriteGeo', 'LiveInput']
 FORMAT_NAME = 'root(asset)'
 
 FRAME_EXPR = 'root.proxy ? frame-({start}-1) : frame'
@@ -34,13 +32,14 @@ FIRST_EXPR = 'root.proxy ? 1 : {start}'
 LAST_EXPR = 'root.proxy ? {proxy_last} : {seq_last}'
 
 
-class RelicPanel(asset_views.RelicSceneForm):
+class RelicPanel(views.RelicSceneForm):
     TITLE = 'Relic Scene Assets'
     ID = 'resarts.relic_assets'
 
     def __init__(self, *args, **kwargs):
         super(RelicPanel, self).__init__(*args, **kwargs)
         nukescripts.addDropDataCallback(self.assetDropCallback)
+        loadStylesheet(self, path=':app_style.qss')
 
     def assetDropCallback(self, mime_type, payload):
         if not payload.startswith('relic://'):
@@ -48,23 +47,26 @@ class RelicPanel(asset_views.RelicSceneForm):
 
         self.update()
         stripped = payload.replace('\\', '').replace('relic://', '')
+        scene_content = self.content
         for key, values in json.loads(stripped).items():
-            constructor = asset_classes.getCategoryConstructor(str(key.decode()))
+            constructor = getCategoryConstructor(str(key.decode()))
             # json paylods are strings so sort by type from string key.
             sort_key = str(Asset.TYPE.index) # 13
             sorted_values = sorted(values, key=lambda x: x.get(sort_key), reverse=True)
             for fields in sorted_values:
                 asset = constructor(**fields)
-                added = self.group_widget.addAsset(asset)
-                app_drop = partial(assetDropAction, asset)
-                if added:
-                    icon_update = partial(asset_views.updateIcon, asset)
-                    callbacks = [icon_update, app_drop]
-                    asset.setDownloadCompletionCallbacks(callbacks)
-                    asset.download()
-                else: # Asset already exists! Add it again..
+                added = scene_content.addAsset(asset)
+                if asset.local_path.parent.exists():
+                    # Asset already exists! Add it again..
+                    if added:
+                        views.updateIcon(asset)
+                    app_drop = partial(assetDropAction, asset)
                     QTimer.singleShot(10, app_drop)
-        self.group_widget.updateGroups()
+                else:
+                    asset.status = Statuses.Syncing
+                    asset.callbacks = [views.updateIcon, assetDropAction]
+                    asset.download()
+        scene_content.updateGroups()
         self.update()
         return True
 
@@ -73,14 +75,16 @@ class RelicPanel(asset_views.RelicSceneForm):
             if not node.knob('RELIC_id'):
                 continue
             cat_id = int(node['RELIC_category'].value())
-            constructor = asset_classes.getCategoryConstructor(cat_id)
+            constructor = getCategoryConstructor(cat_id)
             asset = constructor(category=cat_id)
             asset.name = str(node['name'].value())
             asset.id = int(node['RELIC_id'].value())
             asset.filehash = str(node['RELIC_hash'].value())
-            asset.progress = [1,1]
-            if not self.group_widget.assetInModel(asset):
-                asset.fetch(on_complete=partial(self.group_widget.addAsset, asset))
+            asset.progress = 288
+            asset.status = Statuses.Local
+            if not self.content.assetInModel(asset):
+                asset.callbacks = [self.content.addAsset, views.updateIcon]
+                asset.fetch()
 
     def showEvent(self, event):
         setNukeZeroMarginsWidget(self)
@@ -122,7 +126,7 @@ def addRelicAttributes(nodes, asset):
             id_knob = nuke.Int_Knob('RELIC_id')
             id_knob.setValue(int(asset.id))
             status_knob = nuke.Int_Knob('RELIC_status')
-            #status_knob.setValue(int(asset.status))
+            status_knob.setValue(int(asset.status))
             map(node.addKnob, (tab, cat_knob, hash_knob, id_knob, status_knob))
     return nodes
 
@@ -158,7 +162,7 @@ def processUnresolvedAssets(asset):
     for existing_node in filtered:
         # Set paths upstream files.
         if existing_node.Class() != 'Group' and existing_node.knob('file'):
-            node['file'].setValue(str(asset.local_path))
+            existing_node['file'].setValue(str(asset.local_path))
             continue
         status = existing_node.knob('RELIC_status')
         try:
@@ -179,18 +183,22 @@ def processUnresolvedFiles(asset_path):
         if node.knob('file'):
             applyRepath(node, asset_path)
 
-def executeScript(asset_path):
+def executeScript(asset):
+    asset_path = asset.local_path
     sys.path.append(str(asset_path.parent))
+    subcategory = Subcategory(**asset.subcategory)
     asset_name = asset_path.name
     __import__(asset_name)
     toolbar = nuke.toolbar('Nodes')
-    library = toolbar.addMenu('Library')
-    library.addCommand(asset_name, 'import {m};{m}.main()'.format(m=asset_name))
+    relic_tolbar = toolbar.addMenu('Relic/{}'.format(subcategory.name))
+    relic_tolbar.addCommand(asset_name, 'import {m};{m}.main()'.format(m=asset_name))
 
 def assetDropAction(asset):
     asset_path = asset.local_path
     # replace the existing upstream nodes already in the scene.
     already_exists = processUnresolvedAssets(asset)
+    asset.status = Statuses.Local
+    asset.progress = 0
     if already_exists:
         return
     elif asset_path.ext == '.nk':
@@ -203,11 +211,11 @@ def assetDropAction(asset):
     #    #nodes = ?
     #    pass
     elif asset_path.ext == '.py':
-        executeScript(asset_path)
+        executeScript(asset)
         return
     else:
         nodes = makeFileRead(asset_path)
-
+    
     addRelicAttributes(nodes, asset)
 
 def makeFileRead(asset_path):
@@ -360,6 +368,7 @@ def exportSelection(asset_type=None):
     if asset_type: # Overrride the type
         asset.type = asset_type
 
+    SOFTWARE_REGEX = re.compile(r"[^A-Za-z0-9\n\.]")
     software_tag_name = 'nuke' + re.sub(SOFTWARE_REGEX, '', nuke.NUKE_VERSION_STRING)
     asset.tags = [{'name': software_tag_name, 'type': 1}]
 
@@ -377,7 +386,7 @@ def exportSelection(asset_type=None):
     results = [{attr: val for i, attr, val in asset}]
     try:
         r = json.dumps(results)
-        RELIC_CLIENT.sendPayload(r)
+        networking.tryLaunch(r)
     except Exception as exerr:
         nuke.message('Invalid data for export! caused this error: \n%s' % exerr)
     finally:
@@ -488,7 +497,7 @@ def setNukeZeroMarginsWidget(widget_object):
             a = parent.parentWidget()
             b = a.parentWidget()
             c = b.parentWidget()
-            for sub in [a, b, c]:
+            for sub in (a, b, c):
                 for tinychild in sub.children():
                     if not isinstance(tinychild, QLayout):
                         continue

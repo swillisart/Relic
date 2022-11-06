@@ -57,6 +57,7 @@ class TypesIndicator(IconIndicator):
     Video = ':type/video.png'
     Animated = ':type/gif.png'
 
+
 class HistoryTreeFilter(QSortFilterProxyModel):
     def __init__(self, filter_id):
         super(HistoryTreeFilter, self).__init__()

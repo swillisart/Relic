@@ -5,19 +5,19 @@ import time
 import json
 import subprocess
 from functools import partial
-from sequence_path.main import SequencePath as Path
+from sequence_path import Path
 from collections import defaultdict
-from qtshared6.utils import polymorphicItem
+from relic.qt.util import polymorphicItem
 from relic.qt.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseItemModel, ItemDispalyModes
 
 # -- Module --
 import library.config as config
-from relic.local import Category, TempAsset, FileType
+from relic.local import Category, TempAsset, FileType, AssetType
 from relic.scheme import Classification
 from library.io import ingest
 from library.io.util import LocalThumbnail
 
-from library.objectmodels import subcategory, getCategoryConstructor, Library, Type
+from library.objectmodels import subcategory, getCategoryConstructor, Library
 
 # -- Third-party --
 from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPool,
@@ -25,61 +25,46 @@ from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPo
                             QPropertyAnimation, QRect, QSize, Signal, Slot, QEvent, QTimer, QUrl)
 from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie, QPainter,
                            QPainterPath, QPen, QPixmap, QRegion,
-                           QStandardItemModel, Qt, QImage, QMouseEvent)
+                           QStandardItemModel, Qt, QImage, QMouseEvent, QStandardItem)
 from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabel,
                                QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
                                QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
 
 THREAD_POOL = QThreadPool.globalInstance()
 
-class AssetItemModel(BaseItemModel):
 
+class AssetItemModel(BaseItemModel):
+    
     def mimeData(self, indices):
         # Removes unserializable data
         paths = []
-        unhashable = defaultdict(list)
-        objs = []
+        assets = {}
 
         by_category = defaultdict(list)
-        unique_ids = []
-
+        item_getter = self.itemFromIndex
         for index in indices:
-            obj = index.data(polymorphicItem.Object)
-            if obj:
-                if isinstance(obj, TempAsset):
-                    by_category['uncategorized'].append(obj.export)
+            asset = index.data(Qt.UserRole)
+            if asset:
+                assets[index] = asset
+                export_data = asset.export
+                if isinstance(asset, TempAsset):
+                    by_category['uncategorized'].append(export_data)
                 else:
-                    for asset in obj.recurseDependencies(obj):
-                        # Insert asset into the payload
-                        if isinstance(asset, polymorphicItem):
-                            asset = asset.data(polymorphicItem.Object)
-                        key = Category(asset.category).name.lower()
-                        by_category[key].append(asset.export)
+                    for upstream in asset.recurseDependencies(asset):
+                        if isinstance(upstream, QStandardItem):
+                            upstream = upstream.data(Qt.UserRole)
+                        # Insert upstream assets into the payload
+                        key = Category(upstream.category).name.lower()
+                        by_category[key].append(upstream.export)
 
-                paths.append(QUrl.fromLocalFile(str(obj.path)))
-                unhashable['icon'].append(obj.icon)
-                unhashable['category'].append(obj.category)
-                unhashable['subcategory'].append(obj.subcategory)
-                unhashable['tags'].append(obj.tags)
-                unhashable['alusers'].append(obj.alusers)
-                unhashable['upstream'].append(obj.upstream)
-                unhashable['downstream'].append(obj.downstream)
-                unhashable['video'].append(obj.video)
-                objs.append(obj)
-                obj.icon = None
-                obj.category = None
-                obj.subcategory = None
-                obj.tags = None
-                obj.alusers = None
-                obj.upstream = None
-                obj.downstream = None
-                obj.video = None
-                
-
+                item = item_getter(index)
+                export_data['count'] = asset.count
+                item.setData(export_data, role=Qt.UserRole)
+                paths.append(QUrl.fromLocalFile(str(asset.path)))
+        self.endResetModel()
         mime_data = super(BaseItemModel, self).mimeData(indices)
 
         payload = json.dumps(by_category)
-
         protocol = 'relic://'
         mime_data.setText(payload)
 
@@ -87,16 +72,11 @@ class AssetItemModel(BaseItemModel):
         mime_data.setData('application/x-relic', itemData)
         url = QUrl.fromLocalFile(protocol + str(payload))
         mime_data.setUrls([url])
-        # Tacks back in serializable data
-        for i, obj in enumerate(objs):
-            obj.icon = unhashable['icon'][i]
-            obj.category = unhashable['category'][i]
-            obj.subcategory = unhashable['subcategory'][i]
-            obj.tags = unhashable['tags'][i]
-            obj.alusers = unhashable['alusers'][i]
-            obj.upstream = unhashable['upstream'][i]
-            obj.downstream = unhashable['downstream'][i]
-            obj.video = unhashable['video'][i]
+
+        # Tacks back in un-serializable data.
+        for index, asset in assets.items():
+            item = item_getter(index)
+            item.setData(asset, role=Qt.UserRole)
 
         return mime_data
 
@@ -227,20 +207,20 @@ class AssetListView(BaseView):
         if not ok:
             return
     
-        primary = selection[-1].data(polymorphicItem.Object)
+        primary = selection[-1].data(Qt.UserRole)
         constructor = getCategoryConstructor(primary.category)
-        subcategory = primary.subcategory.data(polymorphicItem.Object)
+        subcategory = primary.subcategory.data(Qt.UserRole)
 
         collection = constructor(
             name=collection_name,
             dependencies=count,
             path='{}/{}'.format(subcategory.name, collection_name),
             links=(subcategory.relationMap, subcategory.id),
-            type=int(Type.COLLECTION),
+            type=int(AssetType.COLLECTION),
         )
         link_mapping = []
         for item in selection:
-            asset = item.data(polymorphicItem.Object)
+            asset = item.data(Qt.UserRole)
             link_mapping.append([asset.relationMap, asset.id])
 
         collection.createCollection(link_mapping)
@@ -249,7 +229,7 @@ class AssetListView(BaseView):
         selection = self.selectionModel().selectedIndexes()
         if not selection:
             return None
-        return selection[-1].data(polymorphicItem.Object)
+        return selection[-1].data(Qt.UserRole)
 
     def indexToItem(self, index):
         proxy_model = index.model()
@@ -264,7 +244,7 @@ class AssetListView(BaseView):
         index = self.indexAt(mouse_pos)
         if not index.isValid():
             return
-        asset = index.data(polymorphicItem.Object)
+        asset = index.data(Qt.UserRole)
 
         if index != self.lastIndex:
             self.lastIndex = index
@@ -272,14 +252,13 @@ class AssetListView(BaseView):
                 has_movie = hasattr(asset, 'duration') and asset.duration
                 if has_movie or getattr(asset, 'class') == Classification.MODEL:
                     asset.stream_video_to()
-                elif asset.type == int(Type.COLLECTION):
+                elif asset.type == int(AssetType.COLLECTION):
                     asset.video = []
                     if isinstance(asset.upstream, list):
                         for num, x in enumerate(asset.upstream):
                             if num > 15:
                                 break
-                            linked_asset = x.data(polymorphicItem.Object)
-                            #linked_asset.fetchIcon()
+                            linked_asset = x.data(Qt.UserRole)
                             ico = linked_asset.network_path.suffixed('_icon', '.jpg')
                             worker = LocalThumbnail(ico, asset.video.append)
                             THREAD_POOL.start(worker)
@@ -303,7 +282,7 @@ class AssetListView(BaseView):
         index = self.indexAt(event.pos())
         if not index.isValid():
             return
-        primary_asset = index.data(polymorphicItem.Object)
+        primary_asset = index.data(Qt.UserRole)
         
         dst_name = primary_asset.name
         msg = f'Link selected assets to <b>{dst_name}</b>?\n'
@@ -370,12 +349,12 @@ class AssetListView(BaseView):
         count_data = defaultdict(int)
 
         for index in self.selectedIndexes():
-            asset = index.data(polymorphicItem.Object)
+            asset = index.data(Qt.UserRole)
             subcategory = asset.subcategory
             if isinstance(subcategory, list):
                 subcategory = subcategory[0]
 
-            if subcategory and asset.type != Type.COLLECTION:
+            if subcategory and asset.type != AssetType.COLLECTION:
                 count_data[subcategory.id] -= 1
 
             if not isinstance(asset, TempAsset):
@@ -395,7 +374,7 @@ class AssetListView(BaseView):
             return
 
         for index in self.selectedIndexes():
-            asset = index.data(polymorphicItem.Object)
+            asset = index.data(Qt.UserRole)
             path = asset.network_path
             if asset.path == '' or not path.parent.exists():
                 continue
@@ -416,7 +395,7 @@ class AssetListView(BaseView):
 
     def browseLocalAsset(self):
         for index in self.selectedIndexes():
-            asset = index.data(polymorphicItem.Object)
+            asset = index.data(Qt.UserRole)
             if isinstance(asset, TempAsset):
                 winpath = str(asset.path).replace('/', '\\')
             else:
@@ -426,5 +405,5 @@ class AssetListView(BaseView):
     
     def assetPreview(self):
         index = self.selectedIndexes()[-1]
-        asset = index.data(polymorphicItem.Object)
+        asset = index.data(Qt.UserRole)
         config.peakPreview(asset.network_path)

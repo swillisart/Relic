@@ -4,42 +4,44 @@ cmds.loadPlugin('relicMayaPlugin')
 cmds.loadPlugin('P:/Code/Relic/plugins/relicMaya/relicMayaPlugin.py')
 """
 
-import sys
-import re
 import json
 import os
+import re
+import sys
 from functools import partial
+
+# -- App --
+import maya.api.OpenMaya as om
+import maya.cmds as cmds
+import maya.OpenMayaUI as omui
+import shiboken2
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # -- Third-party --
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
-# -- App --
-import shiboken2
-import maya.OpenMayaUI as omui
-import maya.api.OpenMaya as om
-import maya.cmds as cmds
-from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
-
 # -- First-party --
-from relic_base import (asset_classes, asset_views)
-from relic.local import (Nuketools, Category, FileType, TempAsset, INGEST_PATH, getAssetSourceLocation)
-from relic.scheme import (AssetType, TagType, UserType)
 from sequence_path import Path
-from intercom import Client
+from relic.local import (INGEST_PATH, Category, FileType, Nuketools, TempAsset,
+                         getAssetSourceLocation)
+from relic.scheme import AssetType, TagType, UserType
+from relic.plugin import views, networking
+from relic.qt.util import loadStylesheet
 
 # -- Module --
 from relicDrop import RelicDropCallback
-from relicTranslator import getSelectionDependencies
 from relicArchive import archiveScene
-from relicUtilities import setMeshMetadata, generateThumbnails, UndoThis, clearAllShading
+from relicTranslator import getSelectionDependencies
+from relicUtilities import (UndoThis, clearAllShading, generateThumbnails,
+                            setMeshMetadata)
 
 # -- Globals --
 MENU_NAME = 'Relic'
 ANUM_REGEX = re.compile(r"[^A-Za-z0-9]")
 IGNORE_PLUGINS = ['stereoCamera']
-RELIC_CLIENT = Client('relic')
+
 if not 'relicMixinWindow' in globals():
     relicMixinWindow = None
 
@@ -129,10 +131,11 @@ def captureViewport(save=False):
     #    icon_img = file_io.makeIconQt(data, w, h)
     #    icon_img.save(save)
 
-class RelicPanel(MayaQWidgetDockableMixin, asset_views.RelicSceneForm):
+class RelicPanel(MayaQWidgetDockableMixin, views.RelicSceneForm):
     def __init__(self, parent=None):
         super(RelicPanel, self).__init__(parent=parent)
         self.setWindowTitle('Relic Assets')
+        loadStylesheet(self, path=':app_style.qss')
 
     def refreshSceneAssets(self):
         all_nodes_iter = om.MItDependencyNodes()
@@ -142,20 +145,18 @@ class RelicPanel(MayaQWidgetDockableMixin, asset_views.RelicSceneForm):
             if dep_node.hasAttribute('RELIC_id'):
                 nodename = dep_node.name()
                 cat_id = cmds.getAttr(nodename + '.RELIC_category')
-                constructor = asset_classes.getCategoryConstructor(cat_id)
+                constructor = classes.getCategoryConstructor(cat_id)
                 asset = constructor(category=cat_id)
                 asset.name = str(nodename.split('RN')[0])
                 asset.id = cmds.getAttr(nodename + '.RELIC_id')
                 asset.filehash = cmds.getAttr(nodename + '.RELIC_hash')
-                asset.progress = [1,1]
-                if not self.group_widget.assetInModel(asset):
-                    asset.fetch(on_complete=partial(self.group_widget.addAsset, asset))
+                if not self.content.assetInModel(asset):
+                    asset.fetch(on_complete=partial(self.content.addAsset, asset))
 
             all_nodes_iter.next()
 
-    def show(self, *args, **kwargs):
-        self.refreshSceneAssets()
-        super(RelicPanel, self).show(*args, **kwargs)
+    def deleteAsset(self, asset):
+        pass
 
 
 def DockableWidgetUIScript(restore=False):
@@ -170,7 +171,7 @@ def DockableWidgetUIScript(restore=False):
 
     if relicMixinWindow is None:
         # Create a relic mixin widget for the first time
-        relicMixinWindow = RelicPanel()     
+        relicMixinWindow = RelicPanel()
         relicMixinWindow.setObjectName('relicMayaMixinWindow')
         
     if restore == True:
@@ -192,11 +193,13 @@ def removeRelicMenus():
     if cmds.workspaceControl(control, q=True, exists=True):
         cmds.deleteUI(control, control=True)
 
+
 def createRelicMenus():
     removeRelicMenus()
-    payback = RELIC_CLIENT.sendPayload
+    payback = networking.tryLaunch
     relicMenu = cmds.menu(MENU_NAME, parent='MayaWindow', tearOff=True, label=MENU_NAME)
     cmds.menuItem(parent=relicMenu, label='Scene Assets Panel', command=DockableWidgetUIScript)
+    cmds.menuItem(divider=True, dividerLabel='Export')
     export_cmd = lambda x : payback(exportSelection(AssetType.ASSET))
     cmds.menuItem(parent=relicMenu, label='Export Asset', command=export_cmd)
     variation_cmd = lambda x : payback(exportSelection(AssetType.VARIANT))

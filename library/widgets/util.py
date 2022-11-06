@@ -1,7 +1,7 @@
 from functools import partial
 
 from library.ui.list_view_filtered import Ui_ListViewFiltered
-from qtshared6.utils import polymorphicItem
+from relic.qt.util import polymorphicItem
 
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
                             QObject, QPoint, QRect, QRegularExpression, QSize,
@@ -179,7 +179,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
     def onSelection(self, selection):
         indices = selection.indexes()
         if indices:
-            asset = indices[0].data(polymorphicItem.Object)
+            asset = indices[0].data(Qt.UserRole)
             #print(asset)
             
             #self.searchBox.setText(asset.name)
@@ -226,7 +226,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         except Exception:
             index = self.proxyModel.index(0, 0)
         if index.data():
-            asset = index.data(polymorphicItem.Object)
+            asset = index.data(Qt.UserRole)
             if not asset.id:
                 print('HEY HEY HAY REMOVE ME!!!!!')
                 asset = asset.name
@@ -277,7 +277,7 @@ class AssetNameListView(ListViewFocus):
             index = self.proxyModel.index(0, 0)
 
         if index.data():
-            asset = index.data(polymorphicItem.Object)
+            asset = index.data(Qt.UserRole)
             self.linkItem.emit(asset)
         else:
             self.newItem.emit(str(self.searchBox.text()))

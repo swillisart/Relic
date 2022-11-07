@@ -58,7 +58,7 @@ class TextEdit(QTextEdit):
                         "Name:", QLineEdit.Normal)
                 if not ok:
                     return
-                out_file = destination_folder / f'{name}.jpg'
+                out_file = destination_folder / f'{name}.png'
                 out_file.createParentFolders()
                 clip_img.save(str(out_file))
                 self.insertImage(out_file.stem)

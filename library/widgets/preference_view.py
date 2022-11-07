@@ -166,6 +166,7 @@ class PreferencesDialog(Ui_PreferenceForm, QWidget):
         self.preference_view = PreferencesView()
         self.content_frame.layout().addWidget(self.preference_view)
         self.filter_box = FilterBox(self)
+        self.filter_box.button.setChecked(True)
         self.filter_layout.addWidget(self.filter_box)
 
     def close(self):

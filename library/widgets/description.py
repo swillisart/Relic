@@ -1,17 +1,20 @@
-import re
-import os
 import operator
+import os
+import re
 from functools import partial
+
 import markdown
-
-from PySide6.QtCore import Slot, QUrl, Signal, QFile, QTextStream, QEvent, QObject, QTimer
-from PySide6.QtGui import QImage, Qt, QTextDocument, QTextCursor, QMovie, QColor, QFontMetrics
-from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser, QTextEdit, QApplication, QInputDialog, QLineEdit, QWidget, QAbstractButton, QDialog
-
-from library.config import peakLoad, RELIC_PREFS
+from library.config import RELIC_PREFS, peakLoad
 from library.io.util import readMovieFrames
-from sequence_path.main import SequencePath as Path
+from PySide6.QtCore import (QEvent, QFile, QObject, QTextStream, QTimer, QUrl,
+                            Signal, Slot)
+from PySide6.QtGui import (QColor, QFontMetrics, QImage, QKeySequence, QMovie,
+                           QShortcut, Qt, QTextCursor, QTextDocument)
+from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog,
+                               QDialogButtonBox, QInputDialog, QLineEdit,
+                               QTextBrowser, QTextEdit, QWidget)
 from relic.qt.widgets import FilterBox
+from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
 
@@ -208,6 +211,7 @@ class TextBrowser(QTextBrowser):
 
 from library.ui.description import Ui_DescriptionDialog
 
+
 class Window(Ui_DescriptionDialog, QDialog):
     def __init__(self, *args, **kwargs):
         super(Window, self).__init__(*args, **kwargs)
@@ -220,6 +224,7 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.filter_layout.insertWidget(0, self.filter_box)
         self.button_box.clicked.connect(self.onDescriptionButtonClicked)
         self.text_edit.textChanged.connect(self.text_browser.onPlainTextEditChanged)
+        QShortcut(QKeySequence('ctrl+f'), self, self.filter_box.editor.setFocus)
 
     @Slot(Path)
     def keyPressEvent(self, event):

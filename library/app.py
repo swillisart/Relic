@@ -8,8 +8,8 @@ from functools import partial
 
 # -- Third-party --
 from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QThreadPool,
-                            QTimer, Slot, QSize)
-from PySide6.QtGui import QIcon, QPixmap, Qt, QImage
+                            QTimer, Slot, QSize, QPoint)
+from PySide6.QtGui import QIcon, QPixmap, Qt, QImage, QShortcut, QKeySequence, QCursor
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
                                QSystemTrayIcon, QToolButton, QWidget, QLabel)
 
@@ -144,6 +144,27 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self._ingester = None
         self.preferences_dialog = None
         self.block_search = False
+        QShortcut(QKeySequence('ctrl+f'), self, self.toFilterBox)
+
+    @Slot()
+    def toFilterBox(self):
+        position = self.mapFromGlobal(QCursor.pos())
+        mapping = {
+            self.categoryDock: self.categoryDock.titleBarWidget().filter_line,
+            self.attributeDock: self.attributeDock.titleBarWidget().filter_line,
+            self.linksDock: self.linksDock.titleBarWidget().filter_line,
+        }
+        for widget, search in mapping.items():
+            if not widget.isVisible():
+                continue
+            rect = widget.rect()
+            g = widget.mapTo(self, rect.topLeft())
+            rect = rect.translated(g)
+            if rect.contains(position):
+                search.setFocus()
+                return
+
+        self.searchBox.setFocus()
 
     @Slot(list)
     def installLinkViewSlots(self, views):

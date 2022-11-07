@@ -585,10 +585,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     def change_count(self, operation, item_type, number):
         group = item_type.group
-        count = group.countSpinBox.value()
-
-        total = operation(count, number)
-        group.countSpinBox.setValue(total)
+        total = operation(group.count, number)
+        group.setCount(total)
 
     def closeEvent(self, event):
         self.hide()
@@ -601,8 +599,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def searchChanged(self, text):
         regex = QRegularExpression(text, QRegularExpression.CaseInsensitiveOption)
         for item_type in Types:
-            view_proxy_model = item_type.group.content.model()
-            view_proxy_model.setFilterRegularExpression(regex)
+            group = item_type.group
+            proxy_model = group.content.model()
+            proxy_model.setFilterRegularExpression(regex)
+            proxy_model.endResetModel()
+            rows = proxy_model.rowCount()
+            group.setCount(total=group.count, filtered=rows)
 
     @Slot()
     def openInViewer(self, index):

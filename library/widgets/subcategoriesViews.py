@@ -23,38 +23,15 @@ from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
 class recursiveTreeFilter(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super(recursiveTreeFilter, self).__init__(parent)
-        self.text = ""
-
-    def _accept_index(self, idx):
-        if idx.isValid():
-            text = idx.data(role=Qt.DisplayRole)
-
-            if text:
-                condition = text.lower().find(self.text.lower()) >= 0
-            else:
-                return False
-            if condition:
-                return True
-            for childnum in range(idx.model().rowCount(parent=idx)):
-                if self._accept_index(idx.model().index(childnum, 0, parent=idx)):
-                    return True
-        return False
+        self.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.setRecursiveFilteringEnabled(True)
+        self.setAutoAcceptChildRows(True)
 
     def lessThan(self, left, right):
         leftData = self.sourceModel().data(left)
         rightData = self.sourceModel().data(right)
         return leftData > rightData
-
-    def filterAcceptsRow(self, sourceRow, sourceParent):
-        """Only first column in model for search
-
-        Args:
-            sourceRow ([type]): [description]
-            sourceParent ([type]): [description]
-        """
-
-        idx = self.sourceModel().index(sourceRow, 0, sourceParent)
-        return self._accept_index(idx)
 
 
 class subcategoryDelegate(QStyledItemDelegate):
@@ -109,8 +86,6 @@ class subcategoryTreeView(QTreeView):
         proto_item = polymorphicItem(fields=subcategory(name='', count=0))
         self.model.setItemPrototype(proto_item)
         self.proxyModel = recursiveTreeFilter()
-        self.proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
-        self.proxyModel.setSortRole(Qt.DisplayRole)
         self.proxyModel.setSourceModel(self.model)
         self.setModel(self.proxyModel)
         self.subcategoryListView = ListViewFocus(self)
@@ -649,7 +624,7 @@ class CategoryManager(QObject):
                     set_counter(tree_item, tree_view, count_data)
                 item_model.dataChanged.emit(index, index, [Qt.UserRole])
                 full_count += root_item.count
-            cat.tab.countSpinBox.setValue(full_count)
+            cat.tab.setCount(full_count)
 
     @staticmethod
     def setCountData(tree_item, tree_view, count_data):
@@ -715,15 +690,18 @@ class CategoryManager(QObject):
             category.tree.clear() 
 
     def filterAll(self, text):
+        role = Qt.UserRole
         for category in self.all_categories:
-            self._filterTree(category.tree, text)
+            tree = category.tree
+            proxy = tree.proxyModel
+            proxy.setFilterFixedString(text)
+            tree.expandAll()
+            rows = range(proxy.rowCount())
+            filtered = sum([proxy.index(i, 0).data(role).count for i in rows])
+            category.tab.setCount(category.count, filtered)
 
-    @staticmethod
-    def _filterTree(tree, text):
-        tree.proxyModel.text = text
-        regex = QRegularExpression(text, QRegularExpression.CaseInsensitiveOption)
-        tree.proxyModel.setFilterRegularExpression(regex)
-        tree.expandAll()
+        if text == '':
+            [x.tab.show() for x in self.all_categories]
 
 
 class ExpandableTab(ExpandableGroup):
@@ -737,8 +715,7 @@ class ExpandableTab(ExpandableGroup):
         icon = QIcon(category.icon)
         self.iconButton.setIcon(icon)
         self.nameLabel.setText(category.name)
-        self.countSpinBox.setValue(category.count)
-        
+        self.setCount(category.count)
         for widget in (self.styledLine, self.styledLine_1):
             color = CategoryColor(category.id).data
             widget.setStyleSheet(

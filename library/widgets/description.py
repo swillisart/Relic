@@ -219,13 +219,15 @@ class Window(Ui_DescriptionDialog, QDialog):
 
         self.text_browser.matchCountChanged.connect(self.found_results_label.setText)
         self.filter_box = FilterBox(self)
+        self.filter_box.button.setChecked(True)
         self.filter_box.editor.textChanged.connect(self.text_browser.searchPage)
         self.filter_box.editor.returnPressed.connect(self.text_browser.findNextInPage)
         self.filter_layout.insertWidget(0, self.filter_box)
         self.button_box.clicked.connect(self.onDescriptionButtonClicked)
         self.text_edit.textChanged.connect(self.text_browser.onPlainTextEditChanged)
         QShortcut(QKeySequence('ctrl+f'), self, self.filter_box.editor.setFocus)
-
+        self.base_width = self.width()
+    
     @Slot(Path)
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -240,9 +242,9 @@ class Window(Ui_DescriptionDialog, QDialog):
 
     @Slot(Path)
     def showMarkdown(self, path):
-
+        edit_mode = int(RELIC_PREFS.edit_mode)
         if isinstance(path, Path):
-            self.editor_frame.setVisible(int(RELIC_PREFS.edit_mode))
+            self.editor_frame.setVisible(edit_mode)
             with open(str(path), 'r') as fp:
                 markdown_text = fp.read()
             self.text_browser.markdown_path = path
@@ -255,7 +257,8 @@ class Window(Ui_DescriptionDialog, QDialog):
 
         self.text_browser.setMarkdown(markdown_text)
         self.text_edit.setPlainText(markdown_text)
-
+        width = self.base_width * (edit_mode + 1) # double width in edit mode
+        self.resize(width, self.height())
         self.show()
         self.activateWindow()
 

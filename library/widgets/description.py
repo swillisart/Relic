@@ -9,7 +9,7 @@ from library.io.util import readMovieFrames
 from PySide6.QtCore import (QEvent, QFile, QObject, QTextStream, QTimer, QUrl,
                             Signal, Slot)
 from PySide6.QtGui import (QColor, QFontMetrics, QImage, QKeySequence, QMovie,
-                           QShortcut, Qt, QTextCursor, QTextDocument)
+                           QShortcut, Qt, QTextCursor, QTextDocument, QTextOption)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog,
                                QDialogButtonBox, QInputDialog, QLineEdit,
                                QTextBrowser, QTextEdit, QWidget)
@@ -43,6 +43,7 @@ class TextEdit(QTextEdit):
         super(TextEdit, self).__init__(*args, **kwargs)
         font_width = QFontMetrics(self.currentCharFormat().font()).averageCharWidth()
         self.setTabStopDistance(4 * font_width)
+        self.setWordWrapMode(QTextOption.WordWrap)
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -103,6 +104,7 @@ class TextBrowser(QTextBrowser):
         super(TextBrowser, self).__init__(*args, **kwargs)
         font_width = QFontMetrics(self.currentCharFormat().font()).averageCharWidth()
         self.setTabStopDistance(2 * font_width)
+        self.setWordWrapMode(QTextOption.WordWrap)
 
         self.movies = {}
         self.anchorClicked.connect(self.handleLink)
@@ -245,7 +247,7 @@ class Window(Ui_DescriptionDialog, QDialog):
         edit_mode = int(RELIC_PREFS.edit_mode)
         if isinstance(path, Path):
             self.editor_frame.setVisible(edit_mode)
-            with open(str(path), 'r') as fp:
+            with open(str(path), 'r', encoding='utf-8') as fp:
                 markdown_text = fp.read()
             self.text_browser.markdown_path = path
             self.text_edit.markdown_path = path
@@ -269,7 +271,7 @@ class Window(Ui_DescriptionDialog, QDialog):
             self.showMarkdown(self.text_browser.markdown_path)
         elif role == QDialogButtonBox.AcceptRole:
             text = self.text_edit.toPlainText()
-            with open(str(self.text_browser.markdown_path), 'w') as fp:
+            with open(str(self.text_browser.markdown_path), 'w', encoding='utf-8') as fp:
                 fp.write(text)
             self.close()
         elif role == QDialogButtonBox.HelpRole:

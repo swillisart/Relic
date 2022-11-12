@@ -140,6 +140,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.selected_assets_by_link = {} # Used for dependency linking
         self.selected_assets = [] # Used for dependency linking
         self.startup_callbacks = {} # upon completion of connection and subcategories.
+        self.result_callbacks = []
         self.asset_startup_path = None
         self._ingester = None
         self.preferences_dialog = None
@@ -150,9 +151,9 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def toFilterBox(self):
         position = self.mapFromGlobal(QCursor.pos())
         mapping = {
-            self.categoryDock: self.categoryDock.titleBarWidget().filter_line,
-            self.attributeDock: self.attributeDock.titleBarWidget().filter_line,
-            self.linksDock: self.linksDock.titleBarWidget().filter_line,
+            self.categoryDock: self.categoryDock.titleBarWidget().filter_box,
+            self.attributeDock: self.attributeDock.titleBarWidget().filter_box,
+            self.linksDock: self.linksDock.titleBarWidget().filter_box,
         }
         for widget, search in mapping.items():
             if not widget.isVisible():
@@ -161,7 +162,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             g = widget.mapTo(self, rect.topLeft())
             rect = rect.translated(g)
             if rect.contains(position):
-                search.setFocus()
+                search.button.setChecked(True)
+                search.editor.setFocus()
                 return
 
         self.searchBox.setFocus()
@@ -324,7 +326,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 # Don't link subcategories to themselves or cross categorize.
                 continue
             subcategory_relation = relationships(
-                link=asset.links,
+                links=asset.links,
                 category_map=Table.subcategory.index
             )
             data[asset.categoryName].append(asset.export)
@@ -524,20 +526,21 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             self.searchBox.setText(name.split('.')[0])
         except:
             pass
-        self.searchLibrary()
         # Inject specific asset into the search filter adding to the main view. 
         #filtered = [[category_id, asset_id, [], _subcategory]]
         #self.onFilterResults(filtered)
         if '#' in name:
-            name, description = name.split('#')
-            self.loadCurrentAssetsDescription(asset)
+            self.result_callbacks.append(self.loadCurrentAssetsDescription)
+        self.searchLibrary()
+
 
     @Slot()
-    def loadCurrentAssetsDescription(self, asset=None):
-        if not asset:
-            if not self.selected_assets:
-                return
+    def loadCurrentAssetsDescription(self):
+        if self.selected_assets:
             asset = self.selected_assets[-1]
+        else:
+            index = self.assets_view.model.index(0, 0, QModelIndex())
+            asset = index.data(Qt.UserRole)
         description_path = asset.network_path.suffixed('_description', '.md')
         if not description_path.exists():
             description_path.touch()
@@ -682,6 +685,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         session.retrievelinks.execute(link_ids)
         self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
         self.block_search = False
+        [call() for call in self.result_callbacks]
+        self.result_callbacks = []
 
     def filterAssets(self):
         categories = self.category_manager.selected_subcategories.copy()

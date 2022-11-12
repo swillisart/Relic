@@ -750,9 +750,10 @@ class IngestionThread(QThread):
 
                     files_map[in_icon] = out_path.suffixed('_icon', ext='.jpg')
                     files_map[in_proxy] = out_path.suffixed('_proxy', ext='.jpg')
-
-                migrate_files(files_map)
-
+                try:
+                    migrate_files(files_map)
+                except:
+                    print('failed to migrate files from mapping', files_map)
                 # Calculate the final hash and size of the asset on network storage.
                 item.filehash = out_path.parent.hash
                 item.filesize = out_path.parent.size.kilobytes

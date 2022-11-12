@@ -58,6 +58,14 @@ class subcategoryDelegate(QStyledItemDelegate):
             "({})".format(data.count),
         )
 
+class SubcategoryModel(QStandardItemModel):
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid():
+            if role == Qt.ToolTipRole:
+                item = self.itemFromIndex(index)
+                value = item.data(role=Qt.UserRole)
+                return str(value)
+        return super(SubcategoryModel, self).data(index, role)
 
 class subcategoryTreeView(QTreeView):
 
@@ -82,7 +90,7 @@ class subcategoryTreeView(QTreeView):
         self.setItemDelegate(subcategoryDelegate())
 
         # Setup model and proxy for sorting
-        self.model = QStandardItemModel(self)
+        self.model = SubcategoryModel(self)
         proto_item = polymorphicItem(fields=subcategory(name='', count=0))
         self.model.setItemPrototype(proto_item)
         self.proxyModel = recursiveTreeFilter()

@@ -61,7 +61,8 @@ class AssetItemModel(BaseItemModel):
                 export_data['count'] = asset.count
                 item.setData(export_data, role=Qt.UserRole)
                 paths.append(QUrl.fromLocalFile(str(asset.path)))
-        self.endResetModel()
+
+        #self.endResetModel() <- Why was this here?
         mime_data = super(BaseItemModel, self).mimeData(indices)
 
         payload = json.dumps(by_category)

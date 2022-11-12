@@ -1,14 +1,10 @@
 import json
-import os
 import re
-import sys
 
 # -- Third-Party --
 from PySide6.QtCore import (QObject, QUrl, Signal, Slot)
 from PySide6.QtWebSockets import QWebSocket
 from PySide6.QtWidgets import QApplication
-
-from sequence_path.main import SequencePath as Path
 
 # -- Module -- 
 from library.config import RELIC_PREFS
@@ -193,6 +189,7 @@ class RelicClientSession(QObject):
 
 
 if __name__ == '__main__':
+    import sys
     #app = QApplication(sys.argv)
     session = RelicClientSession(RelicClientSession.URI)
     sys.exit(qApp.exec())

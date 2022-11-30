@@ -452,18 +452,21 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             group = ExpandableGroup(tree, parent=self.historyGroupBox)
             group.collapseExpand.connect(self.onGroupCollapse)
             group.iconButton.setIconSize(QSize(18,18))
-            ExpandableGroup.BAR_HEIGHT -= 1
             group.styledLine.hide()
             group.styledLine_1.hide()
             item_icon = TypesIndicator(int(item_type))
             group.iconButton.setIcon(item_icon.data)
             group.nameLabel.setText(item_type.name)
+            group.customContextMenu.connect(self.onContextMenu)
 
             history_layout.insertWidget(-2, group)
             header = tree.header()
             header.resizeSection(0, 200)
             header.resizeSection(1, 80)
             item_type.group = group
+    
+        spacer = QSpacerItem(100, 1, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        history_layout.addItem(spacer)
 
         self.captureItemsFromFolder(OUTPUT_PATH)
 
@@ -474,6 +477,30 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.recording_thread = QThread(self)
         self.recorder.moveToThread(self.recording_thread)
         self.recording_thread.start()
+
+        self.actions = [
+            QAction('Expand All Tabs', self, triggered=lambda : self.setTabsState(True)),
+            QAction('Collapse All Tabs', self, triggered=lambda : self.setTabsState(False)), 
+            QAction('Enable Order', self, triggered=lambda : self.setOrderingState(True)), 
+            QAction('Disable Order', self, triggered=lambda : self.setOrderingState(False)), 
+        ]
+
+    @Slot(bool)
+    def setOrderingState(self, state):
+        [x.group.content.setHeaderHidden(not state) for x in Types]
+
+    @Slot(bool)
+    def setTabsState(self, state):
+        if state:
+            [x.group.expandState() for x in Types]
+        else:
+            [x.group.collapseState() for x in Types]
+
+    @Slot()
+    def onContextMenu(self):
+        context_menu = QMenu(self)
+        [context_menu.addAction(action) for action in self.actions]
+        context_menu.exec(QCursor.pos())
 
     @cached_property
     def tree_actions(self):
@@ -587,6 +614,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         group = item_type.group
         total = operation(group.count, number)
         group.setCount(total)
+        group.show()
 
     def closeEvent(self, event):
         self.hide()
@@ -605,6 +633,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             proxy_model.endResetModel()
             rows = proxy_model.rowCount()
             group.setCount(total=group.count, filtered=rows)
+            group.show()
 
     @Slot()
     def openInViewer(self, index):

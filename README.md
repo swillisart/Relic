@@ -11,7 +11,7 @@ Specializing in consolidation of sparse abstract assets into intuitive, discover
 ---
 Relic defines categorization interactively with classification of items and their types consistently. (Ontology Semantics for computer graphics) Presented in a human-readable format for efficient machine and user exchange.
 
-## **Orchestration**: Relic manifests itself in 3 forms
+## **Orchestration**: Manifestation in 3 forms
 ---
 1. [Relic Server](h) - The communication storage hub for Relic, including the asset catalog, specification, application and plugins.
 2. [Relic Application](h) - The interface for users to interact with the catalog; checking out items into local copies to utilize.
@@ -27,4 +27,4 @@ While Relic can be used for these purposes it is not built for them and will not
    - It's recommended to implement a dedicated service like ShotGrid. Relic will never contain features for making iterations, versions, scheduling or task assignments.
 3. A scientific reference.
    - Relic's purpose is to be the best balance between as human-readablility, accuracy, usefulness and truth.
-   - The repositiory will contain uncertified data, assumtions and approximations.
+   - The repositiory will contain uncertified data, assumptions and approximations.

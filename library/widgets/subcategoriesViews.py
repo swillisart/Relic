@@ -14,7 +14,7 @@ from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             QPoint, QRegularExpression, QSize,
                             QSortFilterProxyModel, Signal, Slot)
 from PySide6.QtGui import (QAction, QColor, QCursor, QIcon, QDropEvent, QDrag,
-                           QRegularExpressionValidator, QStandardItemModel, Qt, QPainter, QBrush)
+                           QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
                                QMessageBox, QStyledItemDelegate, QTreeView,
                                QWidget, QInputDialog, QLineEdit, QApplication, QStyle)
@@ -86,7 +86,6 @@ class subcategoryTreeView(QTreeView):
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
-        self.setMouseTracking(False)
         self.setItemDelegate(subcategoryDelegate())
 
         # Setup model and proxy for sorting
@@ -413,10 +412,10 @@ class subcategoryTreeView(QTreeView):
                 ['Move Assets'], True)
             if ok:
                 self.onAssetDrop.emit(destination_item)
+            self.update(destination_item.index())
 
         event.setDropAction(Qt.IgnoreAction)
         event.accept()
-        self.update(destination_item.index())
         return
 
     def dropEvent(self, event):
@@ -605,6 +604,11 @@ class CategoryManager(QObject):
         super(CategoryManager, self).__init__(*args, **kwargs)
         self.selected_subcategories = {}
         self.all_categories = []
+        self.actions = [
+            QAction('Expand All Tabs', self, triggered=lambda : self.setTabsState(True)),
+            QAction('Collapse All Tabs', self, triggered=lambda : self.setTabsState(False)), 
+        ]
+        self.block = False
 
     @staticmethod
     def iterateTreeItems(tree_item):
@@ -658,6 +662,7 @@ class CategoryManager(QObject):
                 category.count = count
                 tab = ExpandableTab(category)
                 tab.collapseExpand.connect(self.updateCollapsedItems)
+                tab.customContextMenu.connect(self.onContextMenu)
                 tab.addContentWidget(tree)
                 category.tab = tab
                 category.tree = tree
@@ -666,11 +671,15 @@ class CategoryManager(QObject):
 
     @Slot()
     def updateCollapsedItems(self, state):
-        sender = self.sender()
+        if self.block:
+            return
         if state:
             self.getAllSelectedItems(None)
         else:
             try:
+                sender = self.sender()
+                if not sender:
+                    return
                 selected = self.selected_subcategories.pop(sender.category.id)
                 self.onSelection.emit(selected)
             except KeyError:
@@ -710,6 +719,22 @@ class CategoryManager(QObject):
 
         if text == '':
             [x.tab.show() for x in self.all_categories]
+
+    @Slot(bool)
+    def setTabsState(self, state):
+        self.block = True
+        if state:
+            [x.tab.expandState() for x in self.all_categories]
+        else:
+            [x.tab.collapseState() for x in self.all_categories]
+        self.block = False
+        self.updateCollapsedItems(state)
+
+    @Slot()
+    def onContextMenu(self):
+        context_menu = QMenu()
+        [context_menu.addAction(action) for action in self.actions]
+        context_menu.exec(QCursor.pos())
 
 
 class ExpandableTab(ExpandableGroup):

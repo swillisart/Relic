@@ -71,7 +71,7 @@ class ObjectMulti(QListView):
         self.setModel(model)
 
     def mouseDoubleClickEvent(self, event):
-        print(event)
+        self.onNewAction()
 
     def _createContextMenus(self, value):
         context_menu = QMenu(self)

@@ -76,7 +76,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         # Creates asset view
         self.assets_view = AssetListView(self)
-        self.asset_item_model = AssetItemModel()
+        self.asset_item_model = AssetItemModel(self.assets_view)
         self.assets_view.setModel(self.asset_item_model)
         self.assets_view.doubleClicked.connect(self.loadLinkData)
         self.assets_view.selectionModel().selectionChanged.connect(self.loadAssetData)
@@ -302,7 +302,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot(int, list)
     def externalSubcategoryDrop(self, category_id: int, paths: list):
         self.beginIngest()
-        self.ingest_form.categoryComboBox.setCurrentIndex(category_id)
         self.ingest_form.collectPathTextEdit.setPlainText('\n'.join(paths))
 
     @Slot(polymorphicItem)

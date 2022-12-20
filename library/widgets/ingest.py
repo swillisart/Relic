@@ -500,25 +500,25 @@ class IngestForm(Ui_IngestForm, QDialog):
         """
         ingest_map = {}
         flags = 0
-        add_filter = self._filterFlag
+        filter_flag = self._filterFlag
         if self.moviesCheckBox.checkState():
             _flag = Class.MOVIE
-            ingest_map.update(add_filter(ingest.processMOV, _flag, flags))
+            ingest_map.update(filter_flag(ingest.processMOV, _flag, flags))
         if self.texturesReferencesCheckBox.checkState():
             _flag = Class.IMAGE | Class.ELEMENT
-            ingest_map.update(add_filter(ingest.processIMAGE, _flag, flags))
+            ingest_map.update(filter_flag(ingest.processIMAGE, _flag, flags))
         if self.rawCheckBox.checkState():
             _flag = Class.PHOTO | Class.PLATE
-            ingest_map.update(add_filter(ingest.processRAW, _flag, flags))
+            ingest_map.update(filter_flag(ingest.processRAW, _flag, flags))
         if self.toolsCheckBox.checkState():
             _flag = ClassGroup.SOFTWARE
-            ingest_map.update(add_filter(ingest.processTOOL, _flag, flags))
+            ingest_map.update(filter_flag(ingest.processTOOL, _flag, flags))
         if self.lightsCheckBox.checkState():
             _flag = Class.IES
-            ingest_map.update(add_filter(ingest.processLIGHT, _flag, flags))
+            ingest_map.update(filter_flag(ingest.processLIGHT, _flag, flags))
         if self.documentsCheckBox.checkState():
             _flag = Class.DOCUMENT
-            ingest_map.update(add_filter(ingest.processDOC, _flag, flags))
+            ingest_map.update(filter_flag(ingest.processDOC, _flag, flags))
 
         return ingest_map
         #TODO: add standalone conversions for these:

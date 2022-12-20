@@ -28,13 +28,15 @@ from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie
                            QStandardItemModel, Qt, QImage, QMouseEvent, QStandardItem)
 from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabel,
                                QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
-                               QStyleOption, QWidget, QApplication, QCheckBox, QMessageBox)
+                               QStyleOption, QStyleOptionViewItem, QWidget, QApplication, QCheckBox, QMessageBox)
 
 THREAD_POOL = QThreadPool.globalInstance()
 
 
+
+
 class AssetItemModel(BaseItemModel):
-    
+
     def mimeData(self, indices):
         # Removes unserializable data
         paths = []
@@ -63,8 +65,7 @@ class AssetItemModel(BaseItemModel):
                 paths.append(QUrl.fromLocalFile(str(asset.path)))
 
         #self.endResetModel() <- Why was this here?
-        mime_data = super(BaseItemModel, self).mimeData(indices)
-
+        mime_data = super(QStandardItemModel, self).mimeData(indices)
         payload = json.dumps(by_category)
         protocol = 'relic://'
         mime_data.setText(payload)
@@ -96,11 +97,6 @@ class AssetListView(BaseView):
         scroller = self.verticalScrollBar()
         scroller.setSingleStep(40)
         self.setResizeMode(QListView.Adjust)
-        self.setViewMode(QListView.IconMode)
-        self.setFlow(QListView.LeftToRight)
-        self.setMouseTracking(True)
-        self.setUniformItemSizes(True)
-        self.setAutoFillBackground(True)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         # Drag & Drop
         self.setAcceptDrops(True)
@@ -113,7 +109,6 @@ class AssetListView(BaseView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenus)
         self.setSpacing(4)
-        self.setItemDelegate(BaseItemDelegate(self))
 
         self.lastIndex = None
         self.drag_select = False
@@ -130,15 +125,27 @@ class AssetListView(BaseView):
         self.advanced_label = QLabel(' Advanced')
         self.advanced_label.setStyleSheet('background-color: rgb(68,68,68); color: rgb(150, 150, 150);')
         self.additional_actions = []
+        self.drop_index = None
 
     def dragMoveEvent(self, event):
         super(AssetListView, self).dragMoveEvent(event)
         index = self.indexAt(event.pos())
         if not index.isValid() or index in self.selectedIndexes():
             event.ignore()
+            self.drop_index = None
         elif event.mimeData().hasUrls():
             self.setFocus()
             event.acceptProposedAction()
+            self.drop_index = index
+
+    def paintEvent(self, event):
+        super(AssetListView, self).paintEvent(event)
+        if self.drop_index:
+            r = self.visualRect(self.drop_index)
+            r = r - QMargins(1,1,1,1)
+            painter = QPainter(self.viewport())
+            painter.drawRect(r)
+            self.update(self.drop_index)
 
     def leaveEvent(self, event):
         super(AssetListView, self).leaveEvent(event)

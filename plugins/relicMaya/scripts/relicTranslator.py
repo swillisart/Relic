@@ -4,30 +4,40 @@ from glob import glob
 
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
-
-from relic.local import Extension, INGEST_PATH, getAssetSourceLocation
+#maya_resources = om.MGlobal.getAbsolutePathToResources() -> <MAYA_RESOURCES>
+# preserve sets om.MGlobal.getAssociatedSets()
+from relic.local import INGEST_PATH, getAssetSourceLocation
+from functools import partial
 
 from sequence_path import SequencePath
 
+REPLACE_TOKEN = partial(re.sub, SequencePath.TOKEN_REGEX)
+
 def getFileAttributePaths(node_name, collection):
     file_attributes = cmds.listAttr(node_name, usedAsFilename=True)
-    if file_attributes:
-        for attribute in file_attributes + ['filePath']:
-            if cmds.attributeQuery(attribute, node=node_name, exists=1):
-                attr = node_name + '.' + attribute
-                path = cmds.getAttr(attr, x=1)
-                if path:
-                    if not os.path.exists(path):
-                        continue
-                    udim_path = re.sub(SequencePath.TOKEN_REGEX, '.1001.', path)
-                    glob_path = re.sub(SequencePath.TOKEN_REGEX, '.*.', path)
-                    for tiles in glob(glob_path):
-                        collection.add(tiles)
-                    filename = os.path.basename(path)
-                    # Set the relative path for the library.
-                    subfolder = getAssetSourceLocation(path)
-                    changed_path = subfolder + '/' + filename
-                    cmds.setAttr(attr, changed_path, type='string')
+    if not file_attributes:
+        return
+    for attribute in file_attributes + ['filePath']:
+        if not cmds.attributeQuery(attribute, node=node_name, exists=1):
+            continue
+        attr = node_name + '.' + attribute
+        path = cmds.getAttr(attr, x=1)
+        if path:
+            #TODO: This is for nonexistent textures and particularly the 
+            # <MAYA_RESOURCES> token in defaultColorMgtGlobals.configFilePath
+            # needs to handle relative paths images/sourceimages within the project too.
+            if not os.path.exists(path):
+                continue
+            udim_path = REPLACE_TOKEN('.1001.', path)
+            glob_path = REPLACE_TOKEN('.*.', path)
+            for tiles in glob(glob_path):
+                collection.add(tiles)
+            filename = path.rsplit('/', 1)[-1]
+            # Set the relative path for the library.
+            subfolder = getAssetSourceLocation(path)
+            changed_path = subfolder + '/' + filename
+            cmds.setAttr(attr, changed_path, type='string')
+
 
 def collectIfRef(dep_node, assets, files=None):
     if dep_node.isFromReferencedFile:
@@ -99,6 +109,7 @@ def recurseUpstreamConnections(dep_node, visited, files, assets):
                 getFileAttributePaths(node_name, files)
                 recurseUpstreamConnections(dep_node, visited, files, assets)
 
+
 def collectMaterialFiles(dep_node, visited_nodes, files, assets):
     """Collects the files of the dependency node's files by
     recursively iterating the node connections (MPlugs)
@@ -127,6 +138,7 @@ def collectMaterialFiles(dep_node, visited_nodes, files, assets):
                     #print('\tplug', plug.name(), plug.source())
                     recurseUpstreamConnections(dep_node, visited_nodes, files, assets)
 
+
 def getSelectionDependencies(selected):
     dependent_files = set()
     dependent_assets = {}
@@ -143,7 +155,6 @@ def getSelectionDependencies(selected):
 
 
     while not iterSel.isDone():
-        material_name = None
         node = iterSel.getDependNode()
         dag = iterSel.getDagPath()
 
@@ -180,5 +191,6 @@ def getSelectionDependencies(selected):
     #print(dependent_assets)
     return dependent_files, dependent_assets
 
+
 if __name__=='__main__':
-    getSelectionDependencies(cmds.ls(sl=True), 'bleh')
+    getSelectionDependencies(cmds.ls(sl=True)[0])

@@ -102,16 +102,22 @@ class RelicDropCallback(omui.MExternalDropCallback):
     @staticmethod
     def assetDropAction(asset):
         category = asset.category
-
+        classify = Class(asset.classification)
         if category == Category.LIGHTING.index:
             createLighting(asset)
-        elif asset.classification & ClassGroup.SOFTWARE:
+        elif classify & ClassGroup.SOFTWARE: # category == Category.MAYATOOLS.index
             if asset.path.endswith('.py'):
                 import maya.app.general.executeDroppedPythonFile as TempEDPF
                 TempEDPF.executeDroppedPythonFile(asset.local_path, "")
                 del TempEDPF
             #if asset.path.endswith('.mel'):
             #    mel.eval('source "{}";'.format(filepath))
+            #cmds.loadModule(scan=True) 
+            else: # zipped plugin with module
+                paths = cmds.loadModule(scan=True)
+                plugins = cmds.loadModule(allModules=True)
+                cmds.loadPlugin(asset.name, quiet=True)
+
         elif asset.local_path.ext in ['.mb', '.ma']: # gracefully handle unclassified scenes.
             createMayaReference(asset, asset.local_path)
         """

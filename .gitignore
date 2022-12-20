@@ -16,8 +16,9 @@ dist
 /Scripts
 resources.py
 resources_rc.py
-tests/data
+tests/.data
 plugins/LibShared
+plugins/relicShotgrid/shotgun_api3
 plugins/Lib39
 plugins/Lib37
 plugins/Lib27

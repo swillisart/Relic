@@ -435,7 +435,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         model_root = self.item_model.invisibleRootItem()
         history_layout = self.historyGroupBox.layout()
-
+        ExpandableGroup.BAR_HEIGHT -= 3
         for item_type in Types:
             tree = HistoryTreeView(self)
             proxy_model = HistoryTreeFilter(item_type)

@@ -11,6 +11,7 @@ h1, h2, h3, h4, h5, h6, p {
 	margin-right: 12px;
 }
 p { 
+	margin-top: 0.75em;
 	margin-bottom: 0.75em;
 }
 ol,
@@ -45,12 +46,12 @@ th {
 }
 /* Indented code */
 code {
-	color: rgb(223, 184, 145);
-    background-color: rgb(48, 48, 48);
+	color: rgb(235, 184, 145);
+    background-color: rgb(43, 43, 43);
 	margin: 8px;
 }
 pre {
-    background-color: rgb(48, 48, 48);
+    background-color: rgb(43, 43, 43);
 	margin-left: 12px;
 	margin-right: 12px;
 }

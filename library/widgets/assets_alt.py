@@ -12,8 +12,8 @@ from relic.qt.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseI
 
 # -- Module --
 import library.config as config
-from relic.local import Category, TempAsset, FileType, AssetType
-from relic.scheme import Classification
+from relic.local import Category, TempAsset, FileType, AssetType, EXTENSION_MAP
+from relic.scheme import Classification as Class
 from library.io import ingest
 from library.io.util import LocalThumbnail
 
@@ -30,9 +30,9 @@ from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabe
                                QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
                                QStyleOption, QStyleOptionViewItem, QWidget, QApplication, QCheckBox, QMessageBox)
 
+# -- Globals --
 THREAD_POOL = QThreadPool.globalInstance()
-
-
+PREVIEWABLE = [Class.MODEL, Class.TOOL, Class.ANIMATION, Class.MOVIE, Class.PLATE]
 
 
 class AssetItemModel(BaseItemModel):
@@ -81,6 +81,7 @@ class AssetItemModel(BaseItemModel):
             item.setData(asset, role=Qt.UserRole)
 
         return mime_data
+
 
 class AssetListView(BaseView):
 
@@ -193,14 +194,27 @@ class AssetListView(BaseView):
     def clipboardPaste(self):
         clipboard = QApplication.clipboard()
         clip_img = clipboard.image()
-        if not int(config.RELIC_PREFS.edit_mode) or not clip_img:
+        if not int(config.RELIC_PREFS.edit_mode):
             return
-        if asset := self.getSelectedAsset():
+        mime_data = clipboard.mimeData()
+        asset = self.getSelectedAsset()
+        if not asset:
+            return
+
+        if mime_data.hasImage():
             out_img = ingest.makeImagePreview(clip_img)
             out_path = asset.network_path.suffixed('_icon', ext='.jpg')
             out_path.path.parent.mkdir(parents=True, exist_ok=True)
             out_img.save(str(out_path))
             asset.icon = QPixmap.fromImage(out_img) # fromImageInPlace
+        elif mime_data.hasUrls():
+            for url in mime_data.urls():
+                if not url.isLocalFile():
+                    continue
+                path = Path(url.toLocalFile())
+                file_type = EXTENSION_MAP[path.ext.lower()] 
+                if path.is_file() and file_type == Class.MOVIE:
+                    ingest.generateProxy(path, asset.network_path)
 
     def groupSelectedItems(self):
         """Creates a new collection asset and links all the selected
@@ -246,19 +260,34 @@ class AssetListView(BaseView):
 
         return item
 
+    def resetLastIndex(self):
+        index = self.lastIndex
+        asset = index.data(Qt.UserRole)
+        asset.progress = 0
+        on_complete = partial(setattr, asset, 'icon')
+        worker = LocalThumbnail(asset.icon_path, on_complete)
+        THREAD_POOL.start(worker)
+        self.model.dataChanged.emit(index, index, [Qt.UserRole])
+        self.lastIndex = None
+
     def mouseMoveEvent(self, event):
         super(AssetListView, self).mouseMoveEvent(event)
         mouse_pos = event.pos()
         index = self.indexAt(mouse_pos)
         if not index.isValid():
+            if self.lastIndex is not None:
+                self.resetLastIndex()
             return
         asset = index.data(Qt.UserRole)
-
         if index != self.lastIndex:
+            if self.lastIndex is not None:
+                self.resetLastIndex()
             self.lastIndex = index
+            THREAD_POOL.clear()
+            THREAD_POOL.waitForDone()
             if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
-                has_movie = hasattr(asset, 'duration') and asset.duration
-                if has_movie or getattr(asset, 'class') == Classification.MODEL:
+                has_duration = hasattr(asset, 'duration') and asset.duration
+                if has_duration or getattr(asset, 'class') in PREVIEWABLE:
                     asset.stream_video_to()
                 elif asset.type == int(AssetType.COLLECTION):
                     asset.video = []
@@ -267,9 +296,10 @@ class AssetListView(BaseView):
                             if num > 15:
                                 break
                             linked_asset = x.data(Qt.UserRole)
-                            ico = linked_asset.network_path.suffixed('_icon', '.jpg')
-                            worker = LocalThumbnail(ico, asset.video.append)
+                            # TODO: this is a temporary local implementation.
+                            worker = LocalThumbnail(linked_asset.icon_path, asset.video.append)
                             THREAD_POOL.start(worker)
+
         if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
             rect = self.visualRect(index)
             a = rect.bottomLeft()
@@ -281,7 +311,7 @@ class AssetListView(BaseView):
                     asset.icon = asset.video[pos_idx]
                     asset.progress = relative_pos
 
-                self.dataChanged(index, index)
+                self.model.dataChanged.emit(index, index, [Qt.UserRole])
 
     def dropEvent(self, event):
         if not int(config.RELIC_PREFS.edit_mode):
@@ -389,14 +419,14 @@ class AssetListView(BaseView):
             # Reuse the ingest methods to make preview media.
             found_type = FileTypes[asset.path.ext]
             classifiy = found_type.value
-            is_image = classifiy & Classification.IMAGE
+            is_image = classifiy & Class.IMAGE
             if path.isSequence() and is_image:
                 new = ingest.processSEQ(path, path)
             elif found_type & FileTypes.exr:
                 new = ingest.processHDR(path, path)
             elif is_image:
                 new = ingest.processLDR(path, path)
-            elif classifiy in Classification.MOVIE:
+            elif classifiy in Class.MOVIE:
                 new = ingest.processMOV(path, path)
 
             asset.icon = new.icon

@@ -97,14 +97,17 @@ class FieldMixin(object):
         return NETWORK_STORAGE / str(self.relativePath)
 
     @property
+    def icon_path(self):
+        return self.network_path.suffixed('_icon', '.jpg')
+
+    @property
     def relativePath(self):
         stem = str(self.path).rsplit('/', 1)[-1]
         partial_path = Path(self.categoryName) / str(self.path)
         return partial_path.parents(0) / partial_path.name / stem
 
     def fetchIcon(self):
-        icon_path = self.relativePath.suffixed('_icon', ext='.jpg')
-        rc = 'retrieveIcon/{}'.format(icon_path)
+        rc = 'retrieveIcon/{}'.format(self.icon_path)
         db.accessor.doStream(rc, self.id)
 
     def stream_video_to(self, slot=None):

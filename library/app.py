@@ -286,6 +286,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 continue
             asset = view.lastIndex.data(Qt.UserRole)
             if asset:
+                # TODO: this is a temporary local implementation.
                 on_complete = partial(setattr, asset, 'video')
                 worker = LocalThumbnail(data, on_complete)
                 self.pool.start(worker)

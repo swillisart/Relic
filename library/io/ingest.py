@@ -254,29 +254,36 @@ def processTOOL(in_path, out_path, flag):
     asset.classification = flag.value
     return asset
 
+def getDurationFramerate(stream):
+    framerate = float(stream.rate)
+    duration = stream.duration * float(stream.time_base)
+    return duration, framerate
 
-def processMOV(in_path, out_path, flag):
+def generateProxy(in_path, out_path, modulus=10):
     input_container = av.open(str(in_path))
     input_stream = input_container.streams.video[0]
     input_stream.thread_type = "AUTO"
 
-    framerate = float(input_stream.rate)
-    duration = input_stream.duration * float(input_stream.time_base)
-    middle_frame = int((duration * framerate) / 2 )
+    duration, framerate = getDurationFramerate(input_stream)
+    middle_frame = int((duration * framerate) / 2)
 
     # decode and encode streams
     with VidOut(out_path, input_stream) as vidout:
         for frame_number, frame in enumerate(input_container.decode(video=0)):
             # Only encode the preview every 10th frame to speed it up.
-            if frame_number % 10 == 0:
+            if frame_number % modulus == 0:
                 icon_frame = vidout.encodePreview(frame_number, frame)
             if frame_number == middle_frame:
-                array = icon_frame.to_rgb().to_ndarray()
+                middle_pixels = icon_frame.to_rgb().to_ndarray()
             vidout.encodeProxy(frame)
-
     input_container.close()
-    ih, iw, _ = array.shape
-    src_img = QImage(array, iw, ih, QImage.Format_RGB888)
+    return duration, framerate, middle_pixels, input_stream
+
+
+def processMOV(in_path, out_path, flag):
+    duration, framerate, middle_pixels, stream = generateProxy(in_path, out_path)
+    ih, iw, _ = middle_pixels.shape
+    src_img = QImage(middle_pixels, iw, ih, QImage.Format_RGB888)
     icon_img = makeImagePreview(src_img)
     icon_img.save(str(out_path.suffixed('_icon', ext='.jpg')))
     asset = TempAsset(
@@ -285,7 +292,7 @@ def processMOV(in_path, out_path, flag):
         type=AssetType.COMPONENT.index,
         duration=int(duration),
         framerate=int(framerate),
-        resolution=f'{input_stream.width}x{input_stream.height}x3',
+        resolution=f'{stream.width}x{stream.height}x3',
         path=in_path,
         icon=QPixmap.fromImage(icon_img),
     )

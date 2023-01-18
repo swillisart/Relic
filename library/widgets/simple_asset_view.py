@@ -20,11 +20,13 @@ class SimpleAssetView(ListViewFocus):
     def onFilterResults(self, results):
         if not self.constructor:
             return
+        constructor = self.constructor
+        item_model = self.itemModel
         for x in results:
-            relate = self.constructor(*x)
+            relate = constructor(*x)
             item = QStandardItem(relate.name)
             item.setData(relate, role=Qt.UserRole)
-            self.itemModel.appendRow(item)
+            item_model.appendRow(item)
 
     def filterRegExpChanged(self):
         text = self.searchBox.text()

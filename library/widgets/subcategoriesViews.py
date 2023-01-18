@@ -8,14 +8,14 @@ from library.config import RELIC_PREFS
 from library.objectmodels import relationships, subcategory, CategoryColor
 from library.widgets.util import ListViewFocus
 from relic.qt.expandable_group import ExpandableGroup
-from relic.qt.util import polymorphicItem
+from relic.qt.util import polymorphicItem, indexToItem
 # -- Third-party --
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QObject,
                             QPoint, QRegularExpression, QSize,
                             QSortFilterProxyModel, Signal, Slot)
 from PySide6.QtGui import (QAction, QColor, QCursor, QIcon, QDropEvent, QDrag,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
-from PySide6.QtWidgets import (QAbstractItemView, QListView, QMenu,
+from PySide6.QtWidgets import (QAbstractItemView, QMenu,
                                QMessageBox, QStyledItemDelegate, QTreeView,
                                QWidget, QInputDialog, QLineEdit, QApplication, QStyle)
 
@@ -95,7 +95,7 @@ class subcategoryTreeView(QTreeView):
         self.proxyModel = recursiveTreeFilter()
         self.proxyModel.setSourceModel(self.model)
         self.setModel(self.proxyModel)
-        self.subcategoryListView = ListViewFocus(self)
+        self.subcategoryListView = ListViewFocus()
         self.subcategoryListView.setWindowFlags(Qt.Popup | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.subcategoryListView.newItem.connect(self.newSubcategory)
         self.subcategoryListView.renameItem.connect(self.renameSubcategory)
@@ -145,9 +145,8 @@ class subcategoryTreeView(QTreeView):
         self._showSubcategoryLister()
 
     def _showSubcategoryLister(self):
-        self.subcategoryListView.addItems(self.model, replace=True)
-        self.subcategoryListView.proxyModel.endResetModel()
         self.subcategoryListView.show()
+        self.subcategoryListView.addItems(self.model, replace=True)
 
     def loadTreeFromData(self, data):
         """Loads the tree from data.
@@ -164,13 +163,14 @@ class subcategoryTreeView(QTreeView):
 
             # If the subcategory does not have a link-to-parent relationship
             # consider it a root subcategory at the top of the tree.
-            if not tree_item.upstream or tree_item.upstream <= 0:
+            tree_upstream = tree_item.upstream 
+            if not tree_upstream or tree_upstream <= 0:
                 model_root_item.appendRow(tree_item)
             else:
-                parent = data.get(tree_item.upstream)
+                parent = data.get(tree_upstream)
                 parent.appendRow(tree_item)
             
-            if not tree_item.upstream:
+            if not tree_upstream:
                 count += tree_item.count if tree_item.count else 0
         self.proxyModel.sort(0, Qt.DescendingOrder)
         return count
@@ -239,11 +239,6 @@ class subcategoryTreeView(QTreeView):
 
         context_menu.exec(QCursor.pos())
 
-    def indexToItem(self, index):
-        remapped_index = self.proxyModel.mapToSource(index)
-        item = self.model.itemFromIndex(remapped_index)
-        return item
-
     @Slot()
     def newSubcategory(self, name):
         """Inserts a named subcategory into the category tree.
@@ -255,7 +250,7 @@ class subcategoryTreeView(QTreeView):
             count=0,
         )
         if selection:
-            item = self.indexToItem(selection[-1])
+            item = indexToItem(self.model, selection[-1])
             new_item.links = (self.category.id, item.id)
             self.new_item_parent = item
         new_item.createNew()
@@ -276,7 +271,7 @@ class subcategoryTreeView(QTreeView):
         selection = self.selectedIndexes()
         if not selection: return
 
-        item = self.indexToItem(selection[0])
+        item = indexToItem(self.model, selection[0])
         item.setData(name, Qt.DisplayRole)
         item.name = name
         subcategory(id=item.id,name=item.name).update(fields=['name'])
@@ -293,7 +288,7 @@ class subcategoryTreeView(QTreeView):
             return
 
         for index in selection:
-            item = self.indexToItem(index)
+            item = indexToItem(self.model, index)
             difference = new_count - item.count
             self.category.count += difference
             asset = index.data(Qt.UserRole)
@@ -319,7 +314,7 @@ class subcategoryTreeView(QTreeView):
 
         ids = []
         for i, item in enumerate(selection):
-            item = self.indexToItem(item)
+            item = indexToItem(self.model, item)
             # Use the recursive nature of getCounts to fetch tree descendent ids.
             for tree_item in CategoryManager.iterateTreeItems(item):
                 if tree_item.count > 0:
@@ -337,7 +332,7 @@ class subcategoryTreeView(QTreeView):
         indexes = self.selectedIndexes()
         ids = []
         for i in indexes:
-            item = self.indexToItem(i)
+            item = indexToItem(self.model, i)
             do_recurse = int(RELIC_PREFS.recurse_subcategories)
             if do_recurse:
                 # get all descendant subcategory ids
@@ -370,7 +365,7 @@ class subcategoryTreeView(QTreeView):
             if len(selection) != 1:
                 return
 
-            item = self.indexToItem(selection[0])
+            item = indexToItem(self.model, selection[0])
             if not item:
                 return
             self.drag_item = item
@@ -389,7 +384,7 @@ class subcategoryTreeView(QTreeView):
         index = self.indexAt(drop_position)
 
         if index.isValid():
-            destination = self.indexToItem(index)
+            destination = indexToItem(self.model, index)
         else:
             destination = None
 
@@ -488,7 +483,7 @@ class subcategoryTreeView(QTreeView):
         # Reparents an item moving to root.
         root = self.model.invisibleRootItem()
         for index in self.selectedIndexes():
-            subcategory_item = self.indexToItem(index)
+            subcategory_item = indexToItem(self.model, index)
             selected_parent = subcategory_item.parent()
             if not selected_parent:
                 continue

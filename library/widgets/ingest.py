@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 from relic.local import (INGEST_PATH, Category, ClassGroup, Extension,
                          FileType, TempAsset, getAssetSourceLocation)
 from relic.qt.delegates import Statuses
-from relic.qt.util import polymorphicItem
+from relic.qt.util import polymorphicItem, indexToItem
 from relic.scheme import Class, AssetType
 from sequence_path import Path
 
@@ -262,8 +262,8 @@ class IngestForm(Ui_IngestForm, QDialog):
 
         # upate the group item with new count.
         total = self.increment + len(selection)
-        index = self.existingNamesList.listView.selectedIndexes()[0]
-        qitem = self.existingNamesList.indexToItem(index)
+        index = self.existingNamesList.list_view.selectedIndexes()[0]
+        qitem = indexToItem(self.existingNamesList.itemModel, index)
         simple_asset.name = f'{base} {total}'
         qitem.setData(simple_asset.name, Qt.DisplayRole)
 
@@ -402,7 +402,7 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     def updateSubcategoryCounts(self, index):
         tab = self.category_widgets[self.current_category_id]
-        item = tab.category.tree.indexToItem(index)
+        item = indexToItem(tab.category.tree.model, index)
         tab.category.tree.updateSubcategoryCounts(item)
 
     @Slot()

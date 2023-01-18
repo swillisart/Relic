@@ -27,7 +27,7 @@ from sequence_path import Path
 from relic.local import (INGEST_PATH, Category, FileType, Nuketools, TempAsset,
                          getAssetSourceLocation)
 from relic.scheme import AssetType, TagType, UserType
-from relic.plugin import views, networking
+from relic.plugin import views, networking, classes
 from relic.qt.util import loadStylesheet
 
 # -- Module --

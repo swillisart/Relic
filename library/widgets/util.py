@@ -1,6 +1,6 @@
 from functools import partial
 
-from relic.qt.util import polymorphicItem
+from relic.qt.util import polymorphicItem, indexToItem
 from relic.qt.widgets import FilterBox, FilterBoxLine
 
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
@@ -113,30 +113,31 @@ class ListViewFocus(QFrame):
         layout.addWidget(self.list_view)
         self.setLayout(layout)  
 
-    def indexToItem(self, index):
-        remapped_index = self.proxyModel.mapToSource(index)
-        item = self.itemModel.itemFromIndex(remapped_index)
-        return item
-
     def addItems(self, data_model, replace=False):
         if replace:
             self.itemModel.clear()
+        item_model = self.itemModel
+        recurse = self.recursivelyAppendItemToModel
         if isinstance(data_model, QStandardItemModel):
             for i in range(data_model.rowCount()):
                 item = data_model.item(i, 0)
                 if item:
-                    self.recursivelyAppendItemToModel(item)
+                    recurse(item_model, recurse, item)
 
+        print(self.proxyModel.rowCount())
+        print(self.itemModel.rowCount())
 
-    def recursivelyAppendItemToModel(self, item):
+    @staticmethod
+    def recursivelyAppendItemToModel(item_model, recurse, item):
+        obj = item.data(Qt.UserRole)
+        simple = SimpleAsset(obj.name, obj.id)
+        clone = polymorphicItem(fields=simple)
+        item_model.appendRow(clone)
         if item.hasChildren():
-            self.itemModel.appendRow(item.clone())
             for i in range(item.rowCount()):
                 child_index = item.child(i, 0)
                 if child_index:
-                    self.recursivelyAppendItemToModel(child_index)
-        else:
-            self.itemModel.appendRow(item.clone())
+                    recurse(item_model, recurse, child_index)
 
     @Slot()
     def onSelection(self, selection):

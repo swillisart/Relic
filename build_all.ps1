@@ -1,4 +1,5 @@
-﻿$dst = './dist/Relic'
+﻿killapp exiftool
+$dst = './dist/Relic'
 if (Test-Path -path $dst ){
     remove-item $dst -r -Force -Confirm:$False
 }

@@ -159,6 +159,7 @@ def processUnresolvedAssets(asset):
     criteria = lambda x : ahash == get_knob(x)
     filtered = filter(criteria, nuke.allNodes(recurseGroups=True))
     already_exists = False
+    local = Statuses.Local.value
     for existing_node in filtered:
         # Set paths upstream files.
         if existing_node.Class() != 'Group' and existing_node.knob('file'):
@@ -166,7 +167,7 @@ def processUnresolvedAssets(asset):
             continue
         status = existing_node.knob('RELIC_status')
         try:
-            if status.getValue() != 0:
+            if status.getValue() == local:
                 continue
         except:
             status = nuke.Int_Knob('RELIC_status')
@@ -174,7 +175,7 @@ def processUnresolvedAssets(asset):
         # replaces unresolved asset groups.
         nuke.scriptSource(str(asset.local_path))
         replaceNodeContents(nuke.selectedNode(), existing_node)
-        status.setValue(2)
+        status.setValue(local)
         already_exists = True
     return already_exists
 
@@ -288,6 +289,8 @@ def collectRelicAsset(node, files, assets, is_group):
     else:
         collectFilePath(node, files)
     key = node.knob('RELIC_hash').value()
+    # Reset the local status.
+    node.knob('RELIC_status').setValue(Statuses.Cloud.value)
     assets[key] = {
         'category': int(node.knob('RELIC_category').value()),
         'id': int(node.knob('RELIC_id').value())

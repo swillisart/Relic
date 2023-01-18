@@ -17,6 +17,7 @@ from relic.qt.widgets import FilterBox
 from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
+HEADER_REGEX = re.compile(r'(#{1,2}.+\n)')
 
 def readTextFromResource(path):
     this_file = QFile(path)
@@ -127,10 +128,10 @@ class TextBrowser(QTextBrowser):
     def setMarkdown(self, text):
         # Find all relative paths.
         matcher = re.findall(URL_REGEX, text)
-
         # Update the markdown document source paths.
         image_root = str(self.markdown_path.parent / 'source_images')
         updated_paths = text.replace('(./', f'({image_root}/')
+        updated_paths = re.sub(HEADER_REGEX, '\\1---\n', updated_paths)
         gen_html = MARKDOWN.convert(updated_paths)
 
         # Set Description Media

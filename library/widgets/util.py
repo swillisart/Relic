@@ -1,7 +1,7 @@
 from functools import partial
 
-from library.ui.list_view_filtered import Ui_ListViewFiltered
 from relic.qt.util import polymorphicItem
+from relic.qt.widgets import FilterBox, FilterBoxLine
 
 from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
                             QObject, QPoint, QRect, QRegularExpression, QSize,
@@ -23,7 +23,7 @@ class SimpleAsset(object):
         self.name = name
         self.id = id
 
-class FocusedSearchBox(QLineEdit):
+class FocusedSearchBox(FilterBoxLine):
 
     focusOut = Signal(bool)
     onReturn = Signal(bool)
@@ -31,11 +31,6 @@ class FocusedSearchBox(QLineEdit):
     def __init__(self, *args, **kwargs):
         super(FocusedSearchBox, self).__init__(*args, **kwargs)
         self.setFocusPolicy(Qt.StrongFocus)
-        self.setPlaceholderText('Filter...')
-        stylefont = QFont("Segoi UI", 9)
-        stylefont.setStyleHint(QFont.TypeWriter)
-        self.setFont(stylefont)
-        self.setFrame(False)
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -46,40 +41,6 @@ class FocusedSearchBox(QLineEdit):
         else:
             super(FocusedSearchBox, self).keyPressEvent(event)
 
-    def paintEvent(self, event):
-        super(FocusedSearchBox, self).paintEvent(event)
-
-        if self.hasFocus() and self.text() and not self.selectedText():
-            painter = QPainter(self)
-            cursor_rect = self.cursorRect()
-            sub_rect = cursor_rect - QMargins(6, 0, 4, 0)
-            painter.fillRect(sub_rect, QColor(31, 28, 27))
-            painter.setPen(QColor(205, 205, 205))
-
-            currentPos = int(self.cursorPosition())
-            currentText = self.text()
-            if not currentPos < len(currentText):
-                return
-            elif currentPos + 1 < len(currentText):
-                nextChar = currentText[currentPos+1]
-            else:
-                nextChar = ' '
-            currentChar = currentText[currentPos]
-
-            metric = QFontMetrics(self.font())
-            width = metric.horizontalAdvance(currentChar)
-            character_rect = QRect(
-                cursor_rect.x()+5,
-                cursor_rect.y(),
-                width+2,
-                cursor_rect.height()
-            ) 
-            painter.drawText(
-                character_rect,
-                currentChar + nextChar
-            )
-            painter.end()
-
 
 class FocusFilter(QObject):
     onFocusedIn = Signal()
@@ -87,23 +48,18 @@ class FocusFilter(QObject):
     onTabPress = Signal()
 
     def eventFilter(self, widget, event):
-        if event.type() == QEvent.FocusOut:
+        event_type = event.type()
+        if event_type == QEvent.FocusOut:
             self.onFocusedOut.emit()
-            return True
-        if event.type() == QEvent.FocusIn:
+        elif event_type == QEvent.FocusIn:
             self.onFocusedIn.emit()
-            return True
-        if event.type() == QEvent.KeyPress:
+        elif event_type == QEvent.KeyPress:
             if event.key() == Qt.Key_Tab:
                 self.onTabPress.emit()
-                return True
-            else:
-                return False
-        else:
-            return False
+        return super(FocusFilter, self).eventFilter(widget, event)
 
 
-class ListViewFocus(Ui_ListViewFiltered, QWidget):
+class ListViewFocus(QFrame):
 
     newItem = Signal(str)
     renameItem = Signal(str)
@@ -111,7 +67,6 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
 
     def __init__(self, *args, **kwargs):
         super(ListViewFocus, self).__init__(*args, **kwargs)
-        self.setupUi(self)
         self.rename_mode = False
         self.filter_regex = r"[A-Za-z0-9]+"
 
@@ -125,31 +80,38 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         self.itemModel = QStandardItemModel(self)
         self.proxyModel.setSourceModel(self.itemModel)
 
-        self.listView = FocusListView(self)
-        self.listView.setModel(self.proxyModel)
-        self.listView.onReturn.connect(self.onViewReturn)
-        self.listView.fill_line_text.connect(self.onViewFill)
+        self.list_view = FocusListView(self)
+        self.list_view.setModel(self.proxyModel)
+        self.list_view.onReturn.connect(self.onViewReturn)
+        self.list_view.fill_line_text.connect(self.onViewFill)
 
-        selmod = self.listView.selectionModel()
+        selmod = self.list_view.selectionModel()
         selmod.selectionChanged.connect(self.onSelection)
 
         # Widgets
+        self.filter_box = FilterBox(self, editor=False)
         self.searchBox = FocusedSearchBox()
+        self.filter_box.editor = self.searchBox
+        self.filter_box.layout().addWidget(self.searchBox)
         self.searchBox.installEventFilter(self.focus_filter)
         self.searchBox.textChanged.connect(self.filterRegExpChanged)
-        self.searchBox.focusOut.connect(self.listView.setFocus)
-        focus_first = lambda x: self.listView.setCurrentIndex(self.proxyModel.index(0, 0))
+        self.searchBox.focusOut.connect(self.list_view.setFocus)
+        focus_first = lambda x: self.list_view.setCurrentIndex(self.proxyModel.index(0, 0))
         self.searchBox.focusOut.connect(focus_first)
         self.searchBox.onReturn.connect(self.onViewReturn)
-        self.listView.onBackspace.connect(self.searchBox.keyPressEvent)
+        self.list_view.onBackspace.connect(self.searchBox.keyPressEvent)
 
         qregex = QRegularExpression(self.filter_regex)
         validator = QRegularExpressionValidator(qregex)
         self.searchBox.setValidator(validator)
 
-        # Layouts 
-        self.layout().insertWidget(1, self.listView)
-        self.searchFrame.layout().insertWidget(1, self.searchBox)
+        # Layouts
+        layout = QVBoxLayout()
+        layout.setContentsMargins(2,2,2,2)
+        layout.setSpacing(1)
+        layout.addWidget(self.filter_box)
+        layout.addWidget(self.list_view)
+        self.setLayout(layout)  
 
     def indexToItem(self, index):
         remapped_index = self.proxyModel.mapToSource(index)
@@ -164,6 +126,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
                 item = data_model.item(i, 0)
                 if item:
                     self.recursivelyAppendItemToModel(item)
+
 
     def recursivelyAppendItemToModel(self, item):
         if item.hasChildren():
@@ -185,13 +148,13 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
             #self.searchBox.setText(asset.name)
             #self.searchBox.setFocus()
             # model_item_index = [self.itemModel.itemFromIndex(i).data()
-            #  for i in self.listView.selectedIndexes()]
-            # index = self.listView.selectedIndexes()[0]
+            #  for i in self.list_view.selectedIndexes()]
+            # index = self.list_view.selectedIndexes()[0]
 
     @Slot()
     def onViewFill(self):
         try:
-            index = self.listView.selectedIndexes()[0]
+            index = self.list_view.selectedIndexes()[0]
         except Exception:
             index = self.proxyModel.index(0, 0)
 
@@ -202,7 +165,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
     def hide_filter(self):
         if (
             self.searchBox.hasFocus() is False
-            and self.listView.hasFocus() is False
+            and self.list_view.hasFocus() is False
         ):
             self.hide()
 
@@ -222,7 +185,7 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
     @Slot()
     def onViewReturn(self):
         try:
-            index = self.listView.selectedIndexes()[0]
+            index = self.list_view.selectedIndexes()[0]
         except Exception:
             index = self.proxyModel.index(0, 0)
         if index.data():
@@ -251,9 +214,9 @@ class ListViewFocus(Ui_ListViewFiltered, QWidget):
         x = pos.x() - (self.sizeHint().width() / 2)
         y = pos.y()
         self.move(x + 75, y - 5)
-        self.searchBox.setFocus()
         super(ListViewFocus, self).show()
-
+        self.searchBox.setFocus()
+        self.searchBox.setCursorPosition(0)
 
 class AssetNameListView(ListViewFocus):
 
@@ -272,7 +235,7 @@ class AssetNameListView(ListViewFocus):
     @Slot()
     def onViewReturn(self):
         try:
-            index = self.listView.selectedIndexes()[0]
+            index = self.list_view.selectedIndexes()[0]
         except Exception:
             index = self.proxyModel.index(0, 0)
 
@@ -293,7 +256,6 @@ class FocusListView(QListView):
     def __init__(self, *args, **kwargs):
         super(FocusListView, self).__init__(*args, **kwargs)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.setFocusPolicy(Qt.StrongFocus)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:

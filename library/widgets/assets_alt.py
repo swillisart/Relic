@@ -139,6 +139,10 @@ class AssetListView(BaseView):
             event.acceptProposedAction()
             self.drop_index = index
 
+    def dragLeaveEvent(self, event):
+        super(AssetListView, self).dragLeaveEvent(event)
+        self.drop_index = None
+
     def paintEvent(self, event):
         super(AssetListView, self).paintEvent(event)
         if self.drop_index:
@@ -151,10 +155,12 @@ class AssetListView(BaseView):
     def leaveEvent(self, event):
         super(AssetListView, self).leaveEvent(event)
         self.lastIndex = None # Essential! last index will be deleted by Qt
+        self.drop_index = None
 
     def enterEvent(self, event):
         super(AssetListView, self).enterEvent(event)
         self.lastIndex = None # Essential! last index will be deleted by Qt
+        self.drop_index = None
 
     def setModel(self, model):
         super(AssetListView, self).setModel(model)
@@ -261,13 +267,16 @@ class AssetListView(BaseView):
         return item
 
     def resetLastIndex(self):
+        if self.lastIndex is None:
+            return
         index = self.lastIndex
         asset = index.data(Qt.UserRole)
-        asset.progress = 0
-        on_complete = partial(setattr, asset, 'icon')
-        worker = LocalThumbnail(asset.icon_path, on_complete)
-        THREAD_POOL.start(worker)
-        self.model.dataChanged.emit(index, index, [Qt.UserRole])
+        if asset is not None and not isinstance(asset, TempAsset):
+            asset.progress = 0
+            on_complete = partial(setattr, asset, 'icon')
+            worker = LocalThumbnail(asset.icon_path, on_complete)
+            THREAD_POOL.start(worker)
+            self.model.dataChanged.emit(index, index, [Qt.UserRole])
         self.lastIndex = None
 
     def mouseMoveEvent(self, event):
@@ -275,13 +284,11 @@ class AssetListView(BaseView):
         mouse_pos = event.pos()
         index = self.indexAt(mouse_pos)
         if not index.isValid():
-            if self.lastIndex is not None:
-                self.resetLastIndex()
+            self.resetLastIndex()
             return
         asset = index.data(Qt.UserRole)
         if index != self.lastIndex:
-            if self.lastIndex is not None:
-                self.resetLastIndex()
+            self.resetLastIndex()
             self.lastIndex = index
             THREAD_POOL.clear()
             THREAD_POOL.waitForDone()

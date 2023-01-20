@@ -84,7 +84,7 @@ def video_to_gif(path):
         in_container.close()
 
     png_frames = temp_path.replace('.%04d.', '.*.') 
-    cmd = f'gifski -o {out_path} --fps 15 {png_frames}'
+    cmd = f'gifski -o {out_path} -W {w} -H {h} --fps 15 {png_frames}'
     subprocess.call(cmd)
     [os.remove(temp_path % i) for i in range(frame_count)]
 

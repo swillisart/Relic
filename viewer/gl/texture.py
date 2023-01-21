@@ -155,10 +155,10 @@ class BufferedTexture(object):
         height, width, channels = pixels.shape
         if channels == 3:
             pixel_format = RGB_CHANNELS.get(texture_format)
-            self.order = GL_RGB if order == 'rgb' else GL_BGR
+            self.order = GL_RGB if order == 'rgb' else GL_RGB
         elif channels == 4:
             pixel_format = RGBA_CHANNELS.get(texture_format)
-            self.order = GL_RGBA if order == 'rgb' else GL_BGRA
+            self.order = GL_RGBA if order == 'rgb' else GL_RGBA
         elif channels == 1:
             pixel_format = R_CHANNEL.get(texture_format)
             self.order = GL_RED

@@ -3,4 +3,4 @@ from viewer.io import workers
 
 # -- Globals --
 GEOMETRY = ['.abc', '.gltf', '.glb']
-MOVIE = [".mov", ".mp4", ".mxf"]
+MOVIE = ['.mov', '.mp4', '.mxf']

@@ -21,8 +21,9 @@ USERPROFILE = os.getenv('userprofile')
 
 # -- Logging --
 logging.basicConfig(
-    filename=f'{USERPROFILE}/.relic/peak.log',
-    format='%(asctime)-10s %(filename)s: %(funcName)10s %(message)s'
+    #filename='./peak.log',
+    format='%(filename)s, %(funcName)10s, %(message)s (%(asctime)s%(msecs)04d))',
+    datefmt='%H:%M:%S',
 )
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)

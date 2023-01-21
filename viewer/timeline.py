@@ -147,13 +147,6 @@ class BaseClip(object):
         elif BaseClip.mode == FRAMES:
             return duration
 
-    @classmethod
-    def fromData(cls, **kwargs):
-        obj = cls()
-        for k, v in kwargs.items():
-            setattr(obj, k, v)
-        return obj
-
     def clear(self):
         self.label = ''
         self.path = ''
@@ -216,12 +209,11 @@ class MovClip(BaseClip):
         w, h = resolution.split('x')
         width = int(w)
         height = int(h)
-        aspect = 1
         self.first = 1
         self.last = int(round(calc_duration))
         self.framerate = float(framerate)
         pixels = np.zeros(shape=(height, width, 3), dtype=np.uint8)
-        self.geometry = ImagePlane(pixels, aspect=aspect, order='bgr')
+        self.geometry = ImagePlane(pixels, aspect=1.0, order='bgr')
         self.setTimelineOut()
         self.getImageAnnotations()
 
@@ -477,14 +469,16 @@ class timelineGLView(InteractiveGLView):
         self.scrubbing = None
         self.edit_mode = None
 
-    def addFileAsClip(self, path, offset, sequence_index):
+    def insertClip(self, path, add_mode):
         # Validate path
         if isinstance(path, str):
             path = Path(path)
-            path.checkSequence()
-        else:
-            path.checkSequence()
-
+    
+        path.checkSequence()
+        clip_position = self.defineClipPosition(add_mode)
+        offset = int(clip_position.x)
+        sequence_index = int(clip_position.y)
+        
         kwargs = {'file_path': path, 'timeline_in': offset}
 
         if path.ext in io.MOVIE:
@@ -492,8 +486,9 @@ class timelineGLView(InteractiveGLView):
             self.movieAdded.emit(clip)
         else:
             clip = SeqClip(**kwargs) if path.sequence_path else ImageClip(**kwargs)
-            self.graph.appendClip(clip, sequence_index)
-            self.updateNodeGlyphs()
+
+        self.graph.appendClip(clip, sequence_index)
+        self.updateNodeGlyphs()
 
         return clip
 
@@ -560,7 +555,7 @@ class timelineGLView(InteractiveGLView):
     def getClipOnFrame(self, frame):
         for sequence, clip in self.graph.iterateSequences():
             local_frame = clip.mapToLocalFrame(frame)
-            if local_frame:
+            if local_frame is not False:
                 return clip, local_frame
 
         return False, False 
@@ -595,7 +590,7 @@ class timelineGLView(InteractiveGLView):
         self.frame_glyphs.draw(self.MVP)
         self.time_cursor.draw(time_mvp)
         self.update()
-        return self.current_clip, local_frame
+        return self.current_clip, int(local_frame)
 
     def setRegionCacheColor(self):
         try:

@@ -33,12 +33,13 @@ from enum import Enum
 import resources_rc
 import viewer.resources
 from viewer import io
+from viewer.io.workers import DeleteCacheRange
 from viewer.timeline import MovClip, SeqClip, ImageClip, Graph, timelineGLView
 from viewer.ui import playerWidget
 from viewer.ui.widgets import PaintDock, ColorPickerkDock, AnnotationDock
 from viewer.viewport import Viewport
 from viewer import config
-
+from viewer.config import log
 # Interaction modes
 VIEW = 0
 PAINT = 1
@@ -55,10 +56,15 @@ class ExportExtension(Enum):
     mp4 = 1
     piq = 2
 
-class timelineControl(QTimeLine):
+class ImageLayout(Enum):
+    SINGLE = 0
+    STACK = 1
+    SPLIT = 2
+
+class TimelineControl(QTimeLine):
 
     def __init__(self, *args, **kwargs):
-        super(timelineControl, self).__init__(*args, **kwargs)
+        super(TimelineControl, self).__init__(*args, **kwargs)
         self.end = 864000
         self.setFrameRange(1, self.end)
         self.fps = 24
@@ -93,9 +99,11 @@ class timelineControl(QTimeLine):
 
     def play(self):
         state = self.state()
-        if state in [0, 1]:
+        if state in (QTimeLine.State.NotRunning, QTimeLine.State.Paused):
+            log.debug('Playing')
             self.resume()
-        if state == 2:
+        elif state == QTimeLine.State.Running:
+            log.debug('stopping')
             self.stop()
 
     def jumpFirst(self):
@@ -135,19 +143,23 @@ class FrameEngine(QObject):
     def __init__(self, parent, timeline, viewport):
         QObject.__init__(self, parent)
         self.parent = parent
-        self.thread = io.workers.FrameThread(FrameEngine.CACHE, self)
-        self.thread.signals.frame_ready.connect(self.updateCache)
-        self.thread.signals.finished.connect(self.onCacheFinished)
-        self.thread.start(priority=QThread.LowPriority)
-        self.mov_thread = io.workers.QuicktimeThread(FrameEngine.CACHE, self)
+        #self.frame_thread = io.workers.FrameThread(FrameEngine.CACHE, self)
+        #self.frame_thread.signals.frame_ready.connect(self.updateCache)
+        #self.frame_thread.signals.finished.connect(self.onCacheFinished)
+        #self.frame_thread.start(priority=QThread.LowPriority)
+        self.mov_thread = io.workers.FramesThread(FrameEngine.CACHE, self)
         self.mov_thread.signals.frame_ready.connect(self.updateCache)
         self.mov_thread.signals.finished.connect(self.onCacheFinished)
         self.mov_thread.start()
-        self.frame_io_thread = io.workers.FrameCacheIOThread(FrameEngine.CACHE, self)
-        self.frame_io_thread.start(priority=QThread.LowestPriority)
-        self.timeline_control = timelineControl()
-        self._frameChanger = self.singleFrameChange
-        self.timeline_control.frameChanged.connect(self.onFrameChange)
+        self.bg_thread = QThread(self)
+        self.command_queue = io.workers.CommandQueueThread()
+        self.command_queue.moveToThread(self.bg_thread)
+        self.command_queue.onFrameReady.connect(self.updateCache, Qt.DirectConnection)
+        self.cache_clearer = DeleteCacheRange()
+        self.timeline_control = TimelineControl()
+        #self._frameChanger = self.singleFrameChange
+        #self.timeline_control.frameChanged.connect(self.onFrameChange)
+        self.timeline_control.frameChanged.connect(self.realFrameChanged)
         self.timeline = timeline
         self.timeline.frameJump.connect(self.onFrameJump)
         self.viewport = viewport
@@ -164,6 +176,42 @@ class FrameEngine(QObject):
         self.cache_mode = FrameEngine.LOOK_AHEAD
         self.comp_mode = FrameEngine.SINGLE
         self.deferred_frame_load = None
+        self.cache = defaultdict(list)
+        self.bg_thread.started.connect(self.command_queue.run)
+        self.bg_thread.start()
+
+    def cacheClip(self, clip):
+        for i in range(clip.duration):
+            command = (io.workers.ReadImage, (clip, i, self.cache))
+            #worker.result.connect(self.updateCache)
+            self.command_queue.addToQueue(command)
+        print('DONE')
+
+    @Slot(int)
+    def realFrameChanged(self, timeline_frame: int):
+        viewport = self.viewport
+        timeline = self.timeline
+        clip, clip_frame = timeline.updatedFrame(timeline_frame)
+ 
+        if clip:
+            planes = self.cache.get(timeline_frame, [])
+            for pixels in planes:
+                geo = clip.geometry
+                viewport.image_plane = geo
+                geo.texture.push(pixels)
+        #    #self.startCaching(clip, clip_frame, timeline_frame, new_clip=True)
+        #    #self.startCaching(clip, clip_frame, timeline_frame)
+
+            if timeline_frame == clip.timeline_in:
+                if clip.framerate != self.timeline_control.fps:
+                    self.parent.playbackToggle()
+                    self.timeline_control.setFramerate(clip.framerate)
+                    self.timeline_control.setFrame(timeline_frame)
+                    self.parent.playbackToggle()
+
+        viewport.update()
+        timeline.drawViewport()
+
 
     @property
     def cache_mode(self):
@@ -180,23 +228,22 @@ class FrameEngine(QObject):
 
     @Slot(int)
     def onFrameJump(self, frame):
-        cache = FrameEngine.CACHE
-        all_frames = [item for items in [cache[i].keys() for i in cache] for item in items]
+        #cache = self.cache
+        #all_frames = [item for items in [cache[i].keys() for i in cache] for item in items]
 
         #if self.is_caching:
         #    if frame not in all_frames:
         #        return
         #else:
-        if frame not in all_frames and not self.deferred_frame_jump:
-            self.clearFrameCache(frame, update=True)
-            deferred_load = partial(self.onFrameChange, frame)
-            self.deferred_frame_jump = QTimer.singleShot(300, deferred_load)
-
-        if self.cache_mode == FrameEngine.LOOK_AHEAD:
-            clip, clip_frame = self.timeline.getClipOnFrame(frame)
-            self.timeline.current_clip = clip
-            if isinstance(clip, MovClip): 
-                self.mov_thread.setClip(clip, clip_frame, frame)
+        #if frame not in all_frames and not self.deferred_frame_jump:
+        #    self.clearFrameCache(frame, update=True)
+        #    deferred_load = partial(self.onFrameChange, frame)
+        #    self.deferred_frame_jump = QTimer.singleShot(300, deferred_load)
+        #if self.cache_mode == FrameEngine.LOOK_AHEAD:
+        #    clip, clip_frame = self.timeline.getClipOnFrame(frame)
+        #    self.timeline.current_clip = clip
+        #    if isinstance(clip, MovClip): 
+        #        self.mov_thread.setClip(clip, clip_frame, frame)
 
         self.timeline_control.setFrame(frame)
 
@@ -226,23 +273,23 @@ class FrameEngine(QObject):
         if self.cache_finished_callback:
             self.cache_finished_callback()
 
-    @Slot(int)
-    def updateCache(self, frame):
-        sender = self.sender()
+    @Slot(int, object)
+    def updateCache(self, frame, data):
+        #msg = 'slot connected on frame %d in thread %s'
+        #log.debug(msg % (frame, QThread.currentThread().objectName()))
+        self.cache[frame].append(data)
         if frame < self.minc:
             self.minc = frame
         elif frame > self.maxc:
             self.maxc = frame
         self.cache_length += 1
-        self.timeline.updateCacheSize(self.minc, self.maxc)
-
         # clear tail frames past threshold seconds 
-        if isinstance(sender, io.workers.QuicktimeSignals):
-            if self.cache_length > 480:
-                self.removeTailFrames(120)
-        elif isinstance(sender, io.workers.FrameSignals):
-            if self.cache_length > 180:
-                self.removeTailFrames(60)
+        #if isinstance(sender, io.workers.QuicktimeSignals):
+        #    if self.cache_length > 480:
+        #        self.removeTailFrames(120)
+        #elif isinstance(sender, io.workers.FrameSignals):
+        #    if self.cache_length > 192:
+        #        self.removeTailFrames(48)
 
     def multiFrameChange(self, timeline_frame):
         viewport = self.viewport
@@ -264,14 +311,15 @@ class FrameEngine(QObject):
 
         timeline.drawViewport()
 
-    @Slot(int)
-    def onFrameChange(self, frame):
-        self._frameChanger(frame)
+    #@Slot(int)
+    #def onFrameChange(self, frame):
+    #    self._frameChanger(frame)
 
     def singleFrameChange(self, timeline_frame):
         viewport = self.viewport
         timeline = self.timeline
         clip, clip_frame = timeline.updatedFrame(timeline_frame)
+
         if not clip:
             return
         if isinstance(clip, ImageClip):
@@ -327,11 +375,11 @@ class FrameEngine(QObject):
         while _clips := clips:
             clip = _clips.pop(0)
             cache = FrameEngine.CACHE[clip.sequence]
-            [cache.update({x:None}) for x in range(head, tail + 1)]
+            cache.update({{x:None} for x in range(head, tail + 1)})
             if isinstance(clip, MovClip):
-                worker = io.workers.QuicktimeThread
+                worker = io.workers.FramesThread
                 self.mov_thread.setClip(clip, clip.first, clip.timeline_in)
-                worker.iterations = partial(range, clip.duration + 1)
+                #worker.iterations = partial(range, clip.duration + 1)
                 self.cache_finished_callback = partial(self.regionCaching, clips)
                 return
             elif isinstance(clip, ImageClip):
@@ -341,15 +389,19 @@ class FrameEngine(QObject):
                 self.is_caching = False
                 self.updateCache(clip.timeline_out)
             else:
-                worker = io.workers.FrameThread
+                #worker = io.workers.FrameThread
                 # Update the cache methods frame mappings
-                worker.fastRead = partial(worker.fastRead,
-                    sequence=clip.sequence,
-                    frame=clip.timeline_in,
-                    clip_frame=clip.first,
-                    path=clip.path)
-                worker.iterations = partial(range, clip.duration + 1)
-                self.cache_finished_callback = partial(self.regionCaching, clips)
+                #worker.fastRead = partial(worker.fastRead,
+                #    sequence=clip.sequence,
+                #    frame=clip.timeline_in,
+                #    clip_frame=clip.first,
+                #    path=clip.path)
+                #worker.iterations = partial(range, clip.duration + 1)
+                #self.cache_finished_callback = partial(self.regionCaching, clips)
+                command_args = (io.workers.ReadImage, (clip, 1, cache))
+                self.command_queue.addToQueue(command_args)
+                command_args = (io.workers.ReadImage, (clip, 2, cache))
+                self.command_queue.addToQueue(command_args)
                 return
         self.cache_finished_callback = None
 
@@ -406,19 +458,22 @@ class FrameEngine(QObject):
             return
 
         if isinstance(clip, MovClip):
-            worker = io.workers.QuicktimeThread
+            worker = io.workers.FramesThread
             if new_clip:
                 self.mov_thread.setClip(clip, clip_start_frame, cache_end)
             else:
                 self.mov_thread.setFrame(clip_start_frame, cache_end) # Debug impact
         elif isinstance(clip, SeqClip):
-            worker = io.workers.FrameThread
-            # Update the cache methods frame mappings
-            worker.fastRead = partial(worker.fastRead,
-                sequence=clip.sequence,
-                frame=cache_end,
-                clip_frame=clip_start_frame,
-                path=clip.path)
+            cache = FrameEngine.CACHE[clip.sequence]
+            command_args = (io.workers.ReadImage, (clip, FrameEngine.CACHE))
+            new_cache_end = (cache_end + duration)
+            self.cache_end = new_cache_end
+            [cache.update({x:None}) for x in range(cache_end, new_cache_end)]
+            cache = FrameEngine.CACHE
+            for i in range(clip.duration):
+                command_args = (io.workers.ReadImage, (clip, i, cache))
+                self.command_queue.addToQueue(command_args)
+            return
         else:
             img_data = io.image.simpleRead(str(clip.path))
             cache = FrameEngine.CACHE[clip.sequence]
@@ -434,14 +489,15 @@ class FrameEngine(QObject):
         self.cache_end = new_cache_end
         [cache.update({x:None}) for x in range(cache_end, new_cache_end)]
         worker.iterations = partial(range, duration + 1)
+        #worker.iterations = duration + 1
 
     def removeTailFrames(self, amount):
         if self.cache_mode == FrameEngine.REGION:
             return
         self.cache_length = self.cache_length - amount
         new_min = self.minc + amount
-        func = partial(io.workers.FrameCacheIOThread.deleteCacheRange, self.minc, new_min)
-        self.frame_io_thread.addToQueue(func)
+        command_args = (self.cache_clearer, (self.minc, new_min, FrameEngine.CACHE))
+        self.command_queue.addToQueue(command_args)
         self.minc = new_min
 
     def clearFrameCache(self, timeline_frame, update=False):
@@ -589,10 +645,10 @@ class PlayerAppWindow(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         # Layouts
-        self.mov_meta_thread = io.workers.ExifWorker(self)
-        self.mov_meta_thread.metaLoaded.connect(self.movieDataRecieved)
-        self.mov_meta_thread.start()
-        self.timeline.movieAdded.connect(self.mov_meta_thread.addToQueue)
+        #self.mov_meta_thread = io.workers.ExifWorker(self)
+        #self.mov_meta_thread.metaLoaded.connect(self.movieDataRecieved)
+        #self.mov_meta_thread.start()
+        #self.timeline.movieAdded.connect(self.mov_meta_thread.addToQueue)
 
         self.frame_engine = FrameEngine(self, self.timeline, self.viewport)
         self.player = playerWidget(self)
@@ -612,7 +668,7 @@ class PlayerAppWindow(QMainWindow):
         self.viewport.finishAnnotation.connect(self.saveAnnotation)
         self.viewport.zoomChanged.connect(self.setZoomValue)
 
-        self.timeline.frameJump.connect(self.playbackToggle)
+        #self.timeline.frameJump.connect(self.playbackToggle)
         self.timeline.annotatedLoad.connect(self.viewAnnotated)
         self.timeline.mouseInteracted.connect(self.refreshViewport)
         self.timeline.clearCache.connect(self.clearCache)
@@ -645,6 +701,11 @@ class PlayerAppWindow(QMainWindow):
         QShortcut(QKeySequence('`'), self, self.theatreMode)
 
         self.viewport.setColorConfig()
+        self.refresh_call = QTimer.singleShot(1000, self.refreshCache)
+
+    def refreshCache(self):
+        self.timeline.updateCacheSize(self.frame_engine.minc, self.frame_engine.maxc)
+        self.refresh_call = QTimer.singleShot(500, self.refreshCache)
 
     def clearCache(self, frame):
         update = self.frame_engine.cache_mode == FrameEngine.STACK
@@ -942,15 +1003,15 @@ class PlayerAppWindow(QMainWindow):
 
 
     @Slot()
-    def playbackToggle(self, stop=False):
+    def playbackToggle(self):
         timeline_control = self.frame_engine.timeline_control 
-        if stop and timeline_control.state() != 2:
-            return
-        if timeline_control.state() == 2:
+        state = timeline_control.state()
+        if state == QTimeLine.State.Running:
             self.player.play.setChecked(False)
-        else:
+            timeline_control.stop()
+        elif state in (QTimeLine.State.NotRunning, QTimeLine.State.Paused):
             self.player.play.setChecked(True)
-        timeline_control.play()
+            timeline_control.resume()
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls:
@@ -995,19 +1056,18 @@ class PlayerAppWindow(QMainWindow):
         self.activateWindow()
         self.raise_()
         # Define the clip position and add / insert it to the timeline.
-        clip_position = self.timeline.defineClipPosition(add_mode)
-        clip = self.timeline.addFileAsClip(
-            file_path, int(clip_position.x), int(clip_position.y))
+        clip = self.timeline.insertClip(file_path, add_mode)
 
         # Finally update the viewport again
-        self.frame_engine.timeline_control.setFrame(clip.timeline_in)
-        if isinstance(clip, ImageClip):
-            callback = partial(self.frame_engine.onFrameJump, clip.timeline_in + 1)
-        elif isinstance(clip, SeqClip):
-            callback = partial(self.frame_engine.onFrameJump, clip.timeline_in)
-        else:
-            callback = partial(self.frame_engine.onFrameChange, clip.timeline_in)
-        deferred_frame = QTimer.singleShot(900, callback)
+        #self.frame_engine.timeline_control.setFrame(clip.timeline_in)
+        #if isinstance(clip, ImageClip):
+        #    callback = partial(self.frame_engine.onFrameJump, clip.timeline_in + 1)
+        #elif isinstance(clip, SeqClip):
+        #    callback = partial(self.frame_engine.onFrameJump, clip.timeline_in)
+        #else:
+        #    callback = partial(self.frame_engine.onFrameChange, clip.timeline_in)
+        callback = partial(self.frame_engine.cacheClip, clip)
+        deferred_frame = QTimer.singleShot(600, callback)
         self.viewport.frameGeometry()
         self.timeline.frameGeometry()
 
@@ -1025,12 +1085,6 @@ class PlayerAppWindow(QMainWindow):
         super(PlayerAppWindow, self).hide()
 
     def closeEvent(self, event):
-        self.frame_engine.thread.pool.shutdown()
-        self.mov_meta_thread.stop()
-        self.mov_meta_thread.quit()
-        self.frame_engine.thread.quit()
-        self.frame_engine.mov_thread.stop()
-        self.frame_engine.mov_thread.quit()
         super(PlayerAppWindow, self).closeEvent(event)
 
     @Slot()
@@ -1049,10 +1103,11 @@ def main(args):
     QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     # Sets a 4x MSAA surface format to all QGLWidgets creatin in this application
+    QThread.currentThread().setObjectName('<Main Thread>')
 
     # C Python Windowing
     ctypes.windll.kernel32.SetConsoleTitleW('Peak')
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.peak")
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u'resarts.peak')
     app.setEffectEnabled(Qt.UI_AnimateCombo, False)
     window = PlayerAppWindow()
     window.setWindowIcon(QIcon(':resources/icons/peak.svg'))
@@ -1073,5 +1128,6 @@ def main(args):
         if args.annotate:
             window.paint_dock.setFloating(False)
             window.paintContext()
-
-    sys.exit(app.exec_())
+    #print(QOpenGLContext.supportsThreadedOpenGL()) 
+    # > True
+    sys.exit(app.exec())

@@ -8,25 +8,30 @@ import numpy as np
 
 # -- First-Party -- 
 from viewer.gl.shading import BaseProgram
+from viewer.config import log
 
 # -- Globals --
 NP_TEXTURE_FORMAT = {
     'uint8': GL_UNSIGNED_BYTE,
+    #'uint16': GL_UNSIGNED_SHORT,
     'float16': GL_HALF_FLOAT,
     'float32': GL_FLOAT,
 }
 RGB_CHANNELS = {
     GL_UNSIGNED_BYTE: GL_RGB8,
+    #GL_UNSIGNED_SHORT: GL_RGB16,
     GL_HALF_FLOAT: GL_RGB16F,
     GL_FLOAT: GL_RGB32F
 }
 RGBA_CHANNELS = {
     GL_UNSIGNED_BYTE: GL_RGBA8,
+    #GL_UNSIGNED_SHORT: GL_RGBA16,
     GL_HALF_FLOAT: GL_RGBA16F,
     GL_FLOAT: GL_RGBA32F
 }
 R_CHANNEL = {
     GL_UNSIGNED_BYTE: GL_R8,
+    #GL_UNSIGNED_SHORT: GL_R16,
     GL_HALF_FLOAT: GL_R16F,
     GL_FLOAT: GL_R32F
 }

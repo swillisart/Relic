@@ -1,14 +1,17 @@
 import concurrent.futures
 from functools import partial
 from collections import deque, defaultdict
-
+import timeit
+from PySide6.QtGui import QImage, QImageReader
 from PySide6.QtCore import (Signal, Slot, QMutex, QMutexLocker, Qt, QThread,
-    QRunnable, QObject, QThreadPool
+    QRunnable, QObject, QThreadPool, QWaitCondition
 )
+import time
 import av
 import numpy as np
 from .image import simpleRead
 from sequence_path.main import Path
+import cv2
 
 from viewer.config import log
 
@@ -128,88 +131,84 @@ class FrameThread(QThread):
                 self.msleep(1)
             self.msleep(10)
 
-def fastRead(index, cache, sequence, frame, clip_frame, path):
+
+def fastRead(index, sequence, frame, clip_frame, path):
     timeline_frame = frame + index
     fp = path.padSequence(clip_frame + index)
+    start = timeit.default_timer()
+    #data = cv2.imread(str(fp))
     data = simpleRead(str(fp))
-    #if frame in cache[sequence]: # Frame expected by GUI (Not old or obsolete)
-    #    cache[sequence][timeline_frame] = data
     return timeline_frame, data
 
-class ReadImage(QObject):
+class Signals(QObject):
+    finished = Signal(list)
 
-    finished = Signal(int, object)
+class ReadImage(QRunnable):
 
-    def __init__(self, clip, index, cache):
+    def __init__(self, reader, index):
         super(ReadImage, self).__init__()
-        self.clip = clip
-        self.cache = cache
+        self.reader = reader
         self.index = index
+        self.signals = Signals()
+        self.setAutoDelete(False)
 
     def run(self):
-        #msg = '%s in thread %s'
+        #msg = '%s in %s'
         #log.debug(msg % (self.__class__.__name__, str(QThread.currentThread().objectName())))
-        frame, data = fastRead(
-            self.index,
-            self.cache,
-            self.clip.sequence,
-            self.clip.timeline_in,
-            self.clip.first,
-            self.clip.path
-        )
-        self.finished.emit(frame, data)
-        QThread.currentThread().quit()
+        reader = self.reader
+        frame_data = [reader(i) for i in range(self.index-1, self.index+7)]
+        self.signals.finished.emit(frame_data)
 
 class CommandQueueThread(QObject):
 
-    onFrameReady = Signal(int, object)
+    onFrameReady = Signal(list)
 
     def __init__(self, thread_count=4):
         super(CommandQueueThread, self).__init__()
         self.setObjectName('QueueThread')
         self.mutex = QMutex()
+        self.condition = QWaitCondition()
         self.queue = deque()
-        self.pool = []
-        for i in range(thread_count):
-            thread = QThread()
-            thread.setObjectName(f'Thread{i}')
-            self.pool.append(thread)
+        self.pool = QThreadPool.globalInstance()
+        self.pool.setMaxThreadCount(thread_count)
+        self.pool.setThreadPriority(QThread.NormalPriority)
 
     def addToQueue(self, command):
         with QMutexLocker(self.mutex):
             self.queue.append(command)
+        self.condition.wakeOne()
 
-    @Slot(int, object)
-    def printit(self, frame, data):
-        #msg = 'signalling frame: %d in thread %s'
+    @Slot(list)
+    def route(self, framedata):
+        #msg = 'Route frame: %d in %s'
         #log.debug(msg % (frame, str(QThread.currentThread().objectName())))
-        self.onFrameReady.emit(frame, data)
+        self.onFrameReady.emit(framedata)
+        #sender = self.sender()
+        #del sender
+        with QMutexLocker(self.mutex):
+            self.condition.wakeOne()
 
     def run(self):
         while True:
-            args = False
+            args = None
             with QMutexLocker(self.mutex):
-                if self.queue:
+                try:
                     command, args = self.queue.popleft()
+                except:
+                    self.condition.wait(self.mutex)
 
             if args:
-                #msg = '%s in thread %s'
-                #log.debug(msg % (self.__class__.__name__, str(QThread.currentThread().objectName())))
-                if command is ReadImage:
-                    for thread in self.pool:
-                        if not thread.isRunning():
-                            break
-                    if thread.isRunning():
-                        thread.wait()
-                    
-                    worker = command(*args)
-                    worker.moveToThread(thread)
-                    worker.finished.connect(self.printit, Qt.DirectConnection)
-                    thread.started.connect(worker.run)
-                    thread.start()
-                else:
-                    result = command.execute(*args)
-                    self.onFrameReady.emit(result)
+                #if command is ReadImage:
+                worker = command(*args)
+                worker.signals.finished.connect(self.route, Qt.DirectConnection)
+                with QMutexLocker(self.mutex):
+                    self.pool.start(worker)
+                #else:
+                #    result = command.execute(*args)
+                #    command.callback.emit(result)
+            with QMutexLocker(self.mutex):
+                self.condition.wait(self.mutex)
+            #log.debug('looping')
 
 
 

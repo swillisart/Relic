@@ -5,6 +5,7 @@ import sys
 import json
 import shutil
 from fractions import Fraction
+import timeit
 
 from functools import partial
 from collections import defaultdict
@@ -103,7 +104,7 @@ class TimelineControl(QTimeLine):
             log.debug('Playing')
             self.resume()
         elif state == QTimeLine.State.Running:
-            log.debug('stopping')
+            log.debug('Stopping')
             self.stop()
 
     def jumpFirst(self):
@@ -147,11 +148,12 @@ class FrameEngine(QObject):
         #self.frame_thread.signals.frame_ready.connect(self.updateCache)
         #self.frame_thread.signals.finished.connect(self.onCacheFinished)
         #self.frame_thread.start(priority=QThread.LowPriority)
-        self.mov_thread = io.workers.FramesThread(FrameEngine.CACHE, self)
-        self.mov_thread.signals.frame_ready.connect(self.updateCache)
-        self.mov_thread.signals.finished.connect(self.onCacheFinished)
-        self.mov_thread.start()
+        #self.mov_thread = io.workers.FramesThread(FrameEngine.CACHE, self)
+        #self.mov_thread.signals.frame_ready.connect(self.updateCache)
+        #self.mov_thread.signals.finished.connect(self.onCacheFinished)
+        #self.mov_thread.start()
         self.bg_thread = QThread(self)
+        self.bg_thread.setPriority(QThread.HighPriority)
         self.command_queue = io.workers.CommandQueueThread()
         self.command_queue.moveToThread(self.bg_thread)
         self.command_queue.onFrameReady.connect(self.updateCache, Qt.DirectConnection)
@@ -181,33 +183,34 @@ class FrameEngine(QObject):
         self.bg_thread.start()
 
     def cacheClip(self, clip):
-        for i in range(clip.duration):
-            command = (io.workers.ReadImage, (clip, i, self.cache))
-            #worker.result.connect(self.updateCache)
+        reader = lambda x: io.workers.fastRead(x, clip.sequence, clip.timeline_in, clip.first, clip.path)
+        for i in range(1, clip.duration, 8):
+            command = (io.workers.ReadImage, (reader, i))
             self.command_queue.addToQueue(command)
-        print('DONE')
+        self.CACHE_TIME = timeit.default_timer()
 
     @Slot(int)
     def realFrameChanged(self, timeline_frame: int):
         viewport = self.viewport
         timeline = self.timeline
         clip, clip_frame = timeline.updatedFrame(timeline_frame)
- 
-        if clip:
+
+        if clip: 
             planes = self.cache.get(timeline_frame, [])
             for pixels in planes:
                 geo = clip.geometry
                 viewport.image_plane = geo
                 geo.texture.push(pixels)
+
         #    #self.startCaching(clip, clip_frame, timeline_frame, new_clip=True)
         #    #self.startCaching(clip, clip_frame, timeline_frame)
 
-            if timeline_frame == clip.timeline_in:
-                if clip.framerate != self.timeline_control.fps:
-                    self.parent.playbackToggle()
-                    self.timeline_control.setFramerate(clip.framerate)
-                    self.timeline_control.setFrame(timeline_frame)
-                    self.parent.playbackToggle()
+            #if timeline_frame == clip.timeline_in:
+            #    if clip.framerate != self.timeline_control.fps:
+            #        self.parent.playbackToggle()
+            #        self.timeline_control.setFramerate(clip.framerate)
+            #        self.timeline_control.setFrame(timeline_frame)
+            #        self.parent.playbackToggle()
 
         viewport.update()
         timeline.drawViewport()
@@ -273,23 +276,27 @@ class FrameEngine(QObject):
         if self.cache_finished_callback:
             self.cache_finished_callback()
 
-    @Slot(int, object)
-    def updateCache(self, frame, data):
-        #msg = 'slot connected on frame %d in thread %s'
+    @Slot(list)
+    def updateCache(self, framedata):
+        for frame, data in framedata:
+            start = timeit.default_timer()
+            self.cache[frame] = [data]
+        #msg = 'Caching frame: %d in %s'
         #log.debug(msg % (frame, QThread.currentThread().objectName()))
-        self.cache[frame].append(data)
+        
         if frame < self.minc:
             self.minc = frame
         elif frame > self.maxc:
             self.maxc = frame
         self.cache_length += 1
+        if frame >= 199:
+            print(timeit.default_timer() - self.CACHE_TIME)
+
         # clear tail frames past threshold seconds 
         #if isinstance(sender, io.workers.QuicktimeSignals):
         #    if self.cache_length > 480:
         #        self.removeTailFrames(120)
-        #elif isinstance(sender, io.workers.FrameSignals):
-        #    if self.cache_length > 192:
-        #        self.removeTailFrames(48)
+
 
     def multiFrameChange(self, timeline_frame):
         viewport = self.viewport
@@ -1121,6 +1128,7 @@ def main(args):
     server = Server('peak')
     server.incomingFile.connect(window.addClipFromFile)
     app.processEvents() # draw the initial ui before loading stuff
+
     if args and args.path:
         #for x in range(125):
         for file_path in args.path.replace('peak://', '').split(','):

@@ -32,6 +32,7 @@ import capture.resources
 from capture.history_view import (CaptureItem, HistoryTreeFilter, HistoryTreeView, TypesIndicator)
 from capture.ui.dialog import Ui_ScreenCapture
 from capture.cursor import get_cursor_arrays, build_cursor_data
+from capture.windowing import getForegroundWindow, isWindowOccluded
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
@@ -411,6 +412,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         # -- System Tray --
         self.tray = QSystemTrayIcon(QIcon(':/resources/icons/capture.svg'), self)
         self.tray.activated.connect(self.toggleVisibility)
+        self.tray.setToolTip('Screen Capture')
         self.tray.show()
         tray_menu = QMenu(self)
         self.tray.setContextMenu(tray_menu)
@@ -712,7 +714,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 buttons=QMessageBox.Yes | QMessageBox.No
                 )
 
-        if message == QMessageBox.NoRole:
+        if message == QMessageBox.No:
             return
 
         while indices := selection_model.selectedIndexes():
@@ -823,14 +825,27 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @Slot()
     def toggleVisibility(self, reason):
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+        fg_hwnd = getForegroundWindow()
+        this_hwnd = self.winId()
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.setVisible(False)
+            self.perform_screenshot()
+        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
+            self.setVisible(False)
+            self.recordButton.click()
+
+        if self.isVisible():
+            if isWindowOccluded(this_hwnd):
+                self.grab()
+                self.activateWindow()
+                self.raise_()
+            else:
+                self.hide()
+        elif reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.grab()
             self.setVisible(not self.isVisible())
             self.activateWindow()
             self.raise_()
-        elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            self.setVisible(False)
-            self.perform_screenshot()
 
     @staticmethod
     def imageToClipboard(image):

@@ -400,6 +400,45 @@ class ScreenOverlay(QDialog):
             )
         self.repaint()
 
+
+class TrayOverlay(QDialog):
+
+    def __init__(self):
+        """A transparent tool dialog for annotating a hilight overly to the screen.
+        """
+        super(TrayOverlay, self).__init__()
+        self.setWindowFlags(
+            Qt.FramelessWindowHint
+            | Qt.WindowStaysOnTopHint
+            | Qt.X11BypassWindowManagerHint
+            | Qt.Tool
+        )
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.tray = None
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        pen = QPen(QColor(232, 114, 109), 1, Qt.SolidLine)
+        brush = QBrush(QColor(150, 70, 68), Qt.SolidPattern)
+        painter.setPen(pen)
+        painter.setBrush(brush)
+        
+        tray_rect = self.tray.geometry()
+
+        r = event.rect()
+        baseline = r.height() - tray_rect.height() - 1
+        painter.drawLine(r.left(), baseline, r.right(), baseline)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        chip = self.mapFromGlobal(tray_rect.center() - QPoint(-1, (tray_rect.height() / 4) + 1))
+        other = tray_rect.width() / 4 
+        a = QPoint(chip.x() - other, baseline+1)
+        b = QPoint(chip.x() + other, baseline+1)
+        c = chip
+        positions = [a, b, c]
+        painter.drawPolygon(positions, Qt.OddEvenFill)
+
+
 class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     onConvertedGif = Signal(object)
@@ -410,10 +449,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.setupUi(self)
 
         # -- System Tray --
-        self.tray = QSystemTrayIcon(QIcon(':/resources/icons/capture.svg'), self)
+        self.tray_icon = QIcon(':/resources/icons/capture.svg')
+        self.tray_icon_hilight = QIcon(':/resources/icons/capture_hilight.svg')
+        self.tray = QSystemTrayIcon(self.tray_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.setToolTip('Screen Capture')
         self.tray.show()
+
         tray_menu = QMenu(self)
         self.tray.setContextMenu(tray_menu)
         self.separator = QAction()
@@ -529,20 +571,47 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.setWindowFlags(self.windowFlags() & ~Qt.FramelessWindowHint)
             self.setProperty('pinned', '0')
             self.show()
+            this_rect = self.frameGeometry() + QMargins(1, 1, 0, 0)
         else:
             self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
             self.setProperty('pinned', '1')
+            this_rect = self.geometry()
         self.style().unpolish(self)
         self.style().polish(self)
+
+        # Reposition the resized window to the tray icon
         self.update()
+        tray_rect = self.tray.geometry()
+        for screen in QGuiApplication.screens():
+            screen_rect = screen.geometry()
+            if screen_rect.contains(tray_rect):
+                break
+        distance_to_edge = screen_rect.width() - tray_rect.x()
+        diff = this_rect.width() - distance_to_edge
+
+        self.move(tray_rect.x() - diff, tray_rect.y() - this_rect.height())
         self.pinned = not self.pinned
 
     def changeEvent(self, event):
         if self.pinned:
             if event.type() == QEvent.ActivationChange:
-                if not self.isActiveWindow():
+                if not self.isActiveWindow():   
+                    self.tray.setIcon(self.tray_icon)
                     self.hide()
+                    self.overlay.hide()
+                else:
+                    self.createTrayOverlay()
+                    self.tray.setIcon(self.tray_icon_hilight)
         return super(CaptureWindow, self).changeEvent(event)
+
+    def createTrayOverlay(self):
+        tray_rect = self.tray.geometry()
+        tray_pad = QMargins(0, 0, 0, tray_rect.height())
+        goemetry_with_tray = self.geometry() + tray_pad
+        self.overlay = TrayOverlay()
+        self.overlay.tray = self.tray
+        self.overlay.setGeometry(goemetry_with_tray)
+        self.overlay.show()
 
     @Slot()
     def adjustSizes(self, val):
@@ -888,6 +957,8 @@ def main(args):
     window.show()
     server = Server('capture')
     server.incomingFile.connect(window.perform_screenshot)
+    window.taskbar_pin()
+    window.show()
     sys.exit(app.exec())
 
 if __name__ == "__main__":

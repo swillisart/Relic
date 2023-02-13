@@ -4,45 +4,51 @@ h1, h2, h3, h4, h5, h6,
 p, ol, ul, pre {
 	margin: 0;
 }
-h1, h2, h3, h4, h5, h6, p {
+h1, h2, h3, h4, h5, h6 {
+	font-weight: bold;
+	margin-top: 1.5em;
+	margin-left: 0.5em;
+	margin-right: 0.5em;
+	margin-bottom: 0em;
+}
+h4, h5, h6 {
+	margin-left: 1.5em;
+}
+h1 {
+	margin-top: 1.75em;
+	margin-bottom: 0em;
+}
+p {
 	font-weight: normal;
-	margin-bottom: 0.25em;
-	margin-left: 12px;
-	margin-right: 12px;
+	margin-top: 0.0em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1em;
 }
-p { 
-	margin-top: 0.75em;
-	margin-bottom: 0.75em;
-}
-ol,
-ul {
-	margin-bottom: 8px;
-}
-ol li,
-ul li {
+ol, li, ul, li {
 	margin: 3px;
+	padding: 5px 8px;
 }
-
 /* Tables */
 table {
 	border-collapse: collapse;
-	margin-top: 0.7em;
-	margin-bottom: 0.7em;
-	margin-left: 12px;
-	margin-right: 12px;
-}
-table > tbody > tr > td {
-	border: 1px solid rgb(32,32,32);
+	margin-top: 1em;
+	margin-bottom: 0.5em;
+	margin-left: 1.5em;
+	margin-right: 1em;
 }
 /* th = "Table Header", td = "Table Data" (cell) */
 th,
 td {
 	padding: 5px 8px;
+    empty-cells: hide;
 }
 th {
 	text-align: left;
-	border: 1px solid rgb(32, 32, 32);
 	background-color: rgb(68, 68, 68);
+}
+table > tbody > tr > td,  th {
+	border: 1px solid rgb(32,32,32);
 }
 /* Indented code */
 code {
@@ -52,12 +58,11 @@ code {
 }
 pre {
     background-color: rgb(43, 43, 43);
-	margin-left: 12px;
 	margin-right: 12px;
+	margin-left: 1.5em;
 }
 /* Horizontal line*/
 hr {
-	margin: 0.0em;
 	margin-left: 12px;
 	margin-right: 12px;
 }
@@ -74,8 +79,7 @@ a:hover {
 
 blockquote {
     background-color: rgb(68,68,68);
-	margin: 0 3px 0 3px;
-	padding: 0 3px 0 3px;
+	margin-left: 0em;
 }
 ul.checklist {
 	list-style-type: square;

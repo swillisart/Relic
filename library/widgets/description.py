@@ -7,7 +7,7 @@ import markdown
 from library.config import RELIC_PREFS, peakLoad
 from library.io.util import readMovieFrames
 from PySide6.QtCore import (QEvent, QFile, QObject, QTextStream, QTimer, QUrl,
-                            Signal, Slot)
+                            Signal, Slot, QSignalBlocker)
 from PySide6.QtGui import (QColor, QFontMetrics, QImage, QKeySequence, QMovie,
                            QShortcut, Qt, QTextCursor, QTextDocument, QTextOption)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog,
@@ -18,6 +18,7 @@ from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
 HEADER_REGEX = re.compile(r'(#{1,2}.+\n)')
+TEXT_REGEX = re.compile(r'[^a-zA-Z0-9]')
 
 def readTextFromResource(path):
     this_file = QFile(path)
@@ -139,7 +140,7 @@ class TextBrowser(QTextBrowser):
         paths = map(root_append, matcher)
         list(map(self.addAnimation, paths))
         # Set the modified markdown using HTML.
-        self.setHtml(MARKDOWN_STYLE + gen_html + '<br>'*3)
+        self.setHtml(MARKDOWN_STYLE + gen_html + '<br>'*2)
 
     @Slot(QUrl)
     def handleLink(self, url):
@@ -172,7 +173,7 @@ class TextBrowser(QTextBrowser):
             self.search_matches.append(match)
         self.setExtraSelections(self.search_matches)
         self.setTextCursor(textCursor)
-        self.changeMatch()
+        self.changeMatchCount()
 
     @Slot(bool)
     def findNextInPage(self, *args, **kwargs):
@@ -180,12 +181,12 @@ class TextBrowser(QTextBrowser):
         if self.current_match_index == len(self.search_matches):
             return self.searchPage(sender.text())
         self.current_match_index += 1
-        f'{self.current_match_index}/{len(self.search_matches)}'
-        self.changeMatch()
+        self.changeMatchCount()
         self.find(sender.text())
 
-    def changeMatch(self):
-        self.matchCountChanged.emit(f'{self.current_match_index}/{len(self.search_matches)}')
+    def changeMatchCount(self):
+        counter = f'{self.current_match_index}/{len(self.search_matches)}'
+        self.matchCountChanged.emit(counter)
 
     def addAnimation(self, url):
         if not url.endswith('mp4') or not Path(url).exists or url in self.movies.keys():
@@ -200,17 +201,9 @@ class TextBrowser(QTextBrowser):
         key = event.key()
         mods = event.modifiers()
         if mods == Qt.ControlModifier and key == Qt.Key_C:
-            clipboard = self.copy()
-            if not clipboard:
+            if not self.textCursor().selectedText():
                 self.linkToDescription.emit('description')
 
-    @Slot(str)
-    def onPlainTextEditChanged(self):
-        text_edit = self.sender()
-        markdown_text = text_edit.toPlainText()
-        self.setMarkdown(markdown_text)
-        v = text_edit.verticalScrollBar().value()
-        self.verticalScrollBar().setValue(v)
 
 from library.ui.description import Ui_DescriptionDialog
 
@@ -227,10 +220,81 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.filter_box.editor.returnPressed.connect(self.text_browser.findNextInPage)
         self.filter_layout.insertWidget(0, self.filter_box)
         self.button_box.clicked.connect(self.onDescriptionButtonClicked)
-        self.text_edit.textChanged.connect(self.text_browser.onPlainTextEditChanged)
+        self.text_edit.textChanged.connect(self.onTextEditorChanged)
+
         QShortcut(QKeySequence('ctrl+f'), self, self.filter_box.editor.setFocus)
+        QShortcut(QKeySequence('ctrl+b'), self, self.emboldenSelection)
+        QShortcut(QKeySequence('ctrl+i'), self, self.italicizeSelection)
         self.base_width = self.width()
+        self.edit_scroller = self.text_edit.verticalScrollBar()
+        self.view_scroller = self.text_browser.verticalScrollBar()
+        self.edit_scroller.valueChanged.connect(self.moveOtherSlider)
+        self.view_scroller.valueChanged.connect(self.moveOtherSlider)
     
+    @Slot()
+    def moveOtherSlider(self, value: int):
+        sender = self.sender()
+        edit = self.edit_scroller
+        view = self.view_scroller
+        if sender is edit:
+            other = view
+            this = edit
+        elif sender is view:
+            this = view
+            other = edit
+        normalized = self.normalizedScrollValue(this)
+        other.valueChanged.disconnect(self.moveOtherSlider)
+        other.setValue(normalized * other.maximum())
+        other.valueChanged.connect(self.moveOtherSlider)
+
+    @staticmethod
+    def normalizedScrollValue(scroller):
+        v = scroller.value() or 1
+        m = scroller.maximum() or 1
+        return v / m
+
+    @Slot()
+    def onTextEditorChanged(self, content=True):
+        markdown_text = self.text_edit.toPlainText()
+        self.text_browser.setMarkdown(markdown_text)
+
+        cursor = self.text_edit.textCursor()
+        position = cursor.block().position()
+        
+        normalized_position = position / len(self.text_edit.toPlainText())
+        edit_scroller = self.text_edit.verticalScrollBar()
+        view_scroller = self.text_browser.verticalScrollBar()
+        mult = view_scroller.maximum() / edit_scroller.maximum()
+        value = edit_scroller.maximum() * normalized_position
+        if normalized_position > 0.95:
+            tc = self.text_browser.textCursor()
+            tc.movePosition(QTextCursor.End, QTextCursor.MoveAnchor, 1)
+            self.text_browser.setTextCursor(tc)
+        else:
+            view_scroller.setValue(int(value * mult))
+
+    def italicizeSelection(self):
+        this_cursor = self.text_edit.textCursor()
+        start = this_cursor.selectionStart()
+        end = this_cursor.selectionEnd()
+        this_cursor.beginEditBlock()
+        this_cursor.setPosition(start)
+        this_cursor.insertText('_')
+        this_cursor.setPosition(end+1)
+        this_cursor.insertText('_')
+        this_cursor.endEditBlock()
+
+    def emboldenSelection(self):
+        this_cursor = self.text_edit.textCursor()
+        start = this_cursor.selectionStart()
+        end = this_cursor.selectionEnd()
+        this_cursor.beginEditBlock()
+        this_cursor.setPosition(start)
+        this_cursor.insertText('**')
+        this_cursor.setPosition(end+2)
+        this_cursor.insertText('**')
+        this_cursor.endEditBlock()
+
     @Slot(Path)
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:

@@ -39,7 +39,7 @@ class RelicPreferences(Preferences):
         'assets_per_page': 25,
         'renderer': '',
         'edit_mode': False,
-        'view_scale': 2,
+        'view_scale': 'Icon',
         'recurse_subcategories': 1,
         'denoise' : 0,
     }

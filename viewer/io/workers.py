@@ -11,7 +11,6 @@ import av
 import numpy as np
 from .image import simpleRead
 from sequence_path.main import Path
-import cv2
 
 from viewer.config import log
 
@@ -136,7 +135,6 @@ def fastRead(index, sequence, frame, clip_frame, path):
     timeline_frame = frame + index
     fp = path.padSequence(clip_frame + index)
     start = timeit.default_timer()
-    #data = cv2.imread(str(fp))
     data = simpleRead(str(fp))
     return timeline_frame, data
 

@@ -113,10 +113,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
 
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
-        self.description_window.text_browser.assetClicked.connect(self.browseTo) 
-        self.scaleView(RELIC_PREFS.view_scale)
+        self.description_window.text_browser.assetClicked.connect(self.browseTo)
+        view_scale_value = int(ViewScale[RELIC_PREFS.view_scale])
+        self.scaleView(view_scale_value)
         self.viewScaleSlider.valueChanged.connect(self.scaleView)
-        self.viewScaleSlider.setValue(RELIC_PREFS.view_scale)
+        self.viewScaleSlider.setValue(view_scale_value)
         self.actionAdministration_Mode.setChecked(RELIC_PREFS.edit_mode)
         self.edit_status.setVisible(RELIC_PREFS.edit_mode)
 
@@ -553,7 +554,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.attributeDock.show()
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
         self.category_manager.blockSignals(False)
-        self.scaleView(RELIC_PREFS.view_scale)
+        self.scaleView(int(ViewScale[RELIC_PREFS.view_scale]))
 
     def hideDocks(self, state):
         self.categoryExpandButton.setChecked(state)

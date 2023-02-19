@@ -43,33 +43,19 @@ class UserPrefs(object):
 
     class Fields(AutoEnum):
         assets_per_page = {'data': IntField, 'parent': Group.GENERAL}
+        renderer = {'data': TextField, 'parent': Group.INGEST}
         denoise = {'data': CheckField, 'parent': Group.INGEST}
         edit_mode = {'data': CheckField, 'parent': Group.GENERAL}
         recurse_subcategories = {'data': CheckField, 'parent': Group.GENERAL}
         user_id = {'data': IntField, 'parent': Subgroup.USER}
         view_scale = {'data': ViewScale, 'parent': Group.GENERAL}
 
-        host = {'data': TextField, 'parent': Group.SITE}
-        socket = {'data': TextField, 'parent': Group.SITE}
-        local_storage = {'data': TextField, 'parent': Group.SITE}
-        network_storage = {'data': TextField, 'parent': Group.SITE}
-        project_variable = {'data': TextField, 'parent': Group.SITE}
-
     def __init__(self):
         user_settings = RELIC_PREFS.getUserSettings()
-        user_keys = user_settings.childKeys()
-
+        user_keys = set(user_settings.childKeys())
+        [user_keys.add(x.name) for x in self.Fields]
         for key in user_keys:
             value = user_settings.value(key)
-            if isinstance(value, str) and value.isnumeric():
-                value = int(value)
-            setattr(self, key, self.getPref(key, value))
-
-        site_settings = RELIC_PREFS.getSiteSettings()
-        site_keys = site_settings.childKeys()
-
-        for key in site_keys:
-            value = site_settings.value(key)
             if isinstance(value, str) and value.isnumeric():
                 value = int(value)
             setattr(self, key, self.getPref(key, value))
@@ -80,6 +66,7 @@ class UserPrefs(object):
         except:
             pref_value = UserPrefs.Fields[key].data[value]
         return pref_value
+
 
 class PreferencesView(QWidget):
     def __init__(self, *args, **kwargs):

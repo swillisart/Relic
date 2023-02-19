@@ -10,15 +10,15 @@ from relic.base import Fields
 from relic.local import (Alusers, Category, buildObjectMixinMap, Relationships,
                         Subcategory, Tags, TempAsset)
 from relic.scheme import Table, AssetType
+from relic import config
 from sequence_path.main import SequencePath as Path
 
-from library.config import RELIC_PREFS
 from library.io.networking import RelicClientSession
 
 session = RelicClientSession(RelicClientSession.URI)
 
-LOCAL_STORAGE = Path(RELIC_PREFS.local_storage.format(project='relic'))
-NETWORK_STORAGE = Path(RELIC_PREFS.network_storage)
+PROJECT_STORAGE = Path(config.PROJECT_STORAGE.format(project='relic'))
+NETWORK_STORAGE = Path(config.NETWORK_STORAGE)
 
 colors = {x.name: QColor(*x.data.color) for x in Category}
 res_uri = ':{}/{}'
@@ -90,7 +90,7 @@ class FieldMixin(object):
 
     @property
     def local_path(self):
-        return LOCAL_STORAGE / str(self.relativePath)
+        return PROJECT_STORAGE / str(self.relativePath)
 
     @property
     def network_path(self):

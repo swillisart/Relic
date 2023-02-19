@@ -259,9 +259,9 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.text_browser.setMarkdown(markdown_text)
 
         cursor = self.text_edit.textCursor()
-        position = cursor.block().position()
-        
-        normalized_position = position / len(self.text_edit.toPlainText())
+        position = cursor.block().position() or 1
+        length = len(self.text_edit.toPlainText()) or 1
+        normalized_position = position / length
         edit_scroller = self.text_edit.verticalScrollBar()
         view_scroller = self.text_browser.verticalScrollBar()
         mult = view_scroller.maximum() / edit_scroller.maximum()

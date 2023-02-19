@@ -6,7 +6,7 @@ from enum import IntEnum
 # -- Third-party --
 from PySide6.QtCore import QCoreApplication, QSettings
 from sequence_path.main import SequencePath as Path
-from qtshared6.settings import Preferences
+from qt_settings import Preferences
 
 from relic.scheme import Classification
 from relic.local import Extension
@@ -35,24 +35,15 @@ def peakPreview(path):
 
 class RelicPreferences(Preferences):
 
-    defaults = {
+    DEFAULTS = {
         'assets_per_page': 25,
-        'render_using': '',
+        'renderer': '',
         'edit_mode': False,
         'view_scale': 2,
         'recurse_subcategories': 1,
         'denoise' : 0,
     }
 
-    options = {
-        'host': ['ws://localhost:8000/session', 'https://yoursite.shotgunstudio.com/api/v1/'],
-    }
-
-    def __getattr__(self, name):
-        result = super(RelicPreferences, self).__getattr__(name)
-        if result is None:
-            result = RelicPreferences.defaults.get(name)
-        return result
 
 RELIC_PREFS = RelicPreferences('Relic')
 
@@ -63,34 +54,3 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-
-def logFunction(message=None):
-    def logExceptions(func):
-        def logWrapper(*args, **kwargs):
-            try:
-                value = func(*args, **kwargs)
-                if message:
-                    msg = '{}: {} returning: {}'
-                    log.debug(msg.format(func.__name__, message, value))
-                return value
-            except Exception as exerr:
-                log.error('\n\tModule: {}\n\tFunction: {}\n\tError: {}'.format(
-                    func.__module__, func.__name__, verboseException()) #exerr)
-                )
-
-        return logWrapper
-    return logExceptions
-
-def verboseException():
-    import linecache
-    import sys
-    exc_type, exc_obj, tb = sys.exc_info()
-    f = tb.tb_frame
-    lineno = tb.tb_lineno
-    filename = f.f_code.co_filename
-    linecache.checkcache(filename)
-    line = linecache.getline(filename, lineno, f.f_globals)
-    exception_message = 'LINE {} "{}"): {}'.format(
-        lineno, line.strip(), exc_obj
-    )
-    return exception_message

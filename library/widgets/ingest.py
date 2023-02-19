@@ -661,10 +661,10 @@ class IngestForm(Ui_IngestForm, QDialog):
     def getColorMatrix(self):
         index = self.collectedListView.selectedIndexes()[-1]
         temp_path, temp_asset = self.getCollectedPath(index)
-        if getattr(temp_asset, 'class') ^ FileType.EXR or not temp_asset.path.exists():
-            msg = f'Wrong image type "{temp_asset.path.stem}" must be an exr.'
-            self.failTask(temp_asset, msg)
-            return
+        #if getattr(temp_asset, 'class') ^ FileType.EXR or not temp_asset.path.exists():
+        #    msg = f'Wrong image type "{temp_asset.path.stem}" must be an exr.'
+        #    self.failTask(temp_asset, msg)
+        #    return
         func = partial(self.colorMatrixFromAsset, temp_asset)
         worker = self.setupTask(temp_asset, func)
         worker.signals.completed.connect(self.updateClipboard)

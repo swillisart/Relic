@@ -99,7 +99,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         # Signals / Slots
         self.actionPortal.toggled.connect(self.hideDocks)
-        self.actionRecurseSubcategory.setChecked(int(RELIC_PREFS.recurse_subcategories))
+        self.actionRecurseSubcategory.setChecked(RELIC_PREFS.recurse_subcategories)
         self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
         self.actionIngest.triggered.connect(self.beginIngest)
         self.actionPreferences.triggered.connect(self.showPreferences)
@@ -114,11 +114,11 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         self.description_window.text_browser.linkToDescription.connect(self.assets_view.clipboardCopy) 
         self.description_window.text_browser.assetClicked.connect(self.browseTo) 
-        self.scaleView(int(ViewScale[RELIC_PREFS.view_scale]))
+        self.scaleView(RELIC_PREFS.view_scale)
         self.viewScaleSlider.valueChanged.connect(self.scaleView)
-        self.viewScaleSlider.setValue(int(ViewScale[RELIC_PREFS.view_scale]))
-        self.actionAdministration_Mode.setChecked(int(RELIC_PREFS.edit_mode))
-        self.edit_status.setVisible(int(RELIC_PREFS.edit_mode))
+        self.viewScaleSlider.setValue(RELIC_PREFS.view_scale)
+        self.actionAdministration_Mode.setChecked(RELIC_PREFS.edit_mode)
+        self.edit_status.setVisible(RELIC_PREFS.edit_mode)
 
         self.clearSearchButton.clicked.connect(self.clearSearch)
         self.clearSubcategoryButton.clicked.connect(self.clearSubcategorySelection)
@@ -553,7 +553,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.attributeDock.show()
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
         self.category_manager.blockSignals(False)
-        self.scaleView(int(ViewScale[RELIC_PREFS.view_scale]))
+        self.scaleView(RELIC_PREFS.view_scale)
 
     def hideDocks(self, state):
         self.categoryExpandButton.setChecked(state)
@@ -641,7 +641,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                         matched_assets.append(asset)
 
         asset_total = len(matched_assets)
-        page_count = math.ceil(asset_total / int(RELIC_PREFS.assets_per_page)) or 1
+        page_count = math.ceil(asset_total / RELIC_PREFS.assets_per_page) or 1
         self.pageSpinBox.setSuffix(f'/{page_count}')
         self.pageSpinBox.setMaximum(page_count)
         self.statusbar.showMessage(f'Search results: {asset_total} Assets...')
@@ -690,7 +690,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     def filterAssets(self):
         categories = self.category_manager.selected_subcategories.copy()
-        limit = int(RELIC_PREFS.assets_per_page)
+        limit = RELIC_PREFS.assets_per_page
         page = self.pageSpinBox.value()
         offset = int(((page * limit) - limit)) if page else 0
 
@@ -918,7 +918,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot()
     def browseDocumentation(self):
-        site = RELIC_PREFS.host
+        import relic
+        site = relic.config.HOST
         url = f'{site}documentation/index.html'
         os.startfile(url)
 

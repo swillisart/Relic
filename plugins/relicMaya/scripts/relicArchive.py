@@ -8,7 +8,7 @@ import maya.cmds as cmds
 from relic.local import (INGEST_PATH, Category, FileType, Nuketools, TempAsset,
                          getAssetSourceLocation)
 from relic.scheme import AssetType, TagType, UserType, Class
-from relic.plugin import project_variable
+from relic.config import PROJECT_VARIABLE
 from sequence_path import Path
 
 # -- Module --
@@ -41,7 +41,7 @@ def archiveScene(path=None):
     asset.type = AssetType.ASSET.index
     asset.duration = 0
     asset.resolution = ''
-    asset.tags = [{'name': 'archive', 'type': 0}, {'name': os.getenv(project_variable, 'noshow'), 'type': 0}]
+    asset.tags = [{'name': 'archive', 'type': 0}, {'name': os.getenv(PROJECT_VARIABLE, 'noshow'), 'type': 0}]
     generateThumbnails(selection, asset.path)
 
     file_info = {}

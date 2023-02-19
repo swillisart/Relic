@@ -6,11 +6,9 @@ from PySide6.QtCore import (QObject, QUrl, Signal, Slot)
 from PySide6.QtWebSockets import QWebSocket
 from PySide6.QtWidgets import QApplication
 
-# -- Module -- 
-from library.config import RELIC_PREFS
+# -- First-Party --
+from relic import config
 
-# -- Globals --
-URL_REGEX = re.compile(r'(\w+):\/\/(\w+):(\d{4})')
 
 class RelicCommand(QObject):
 
@@ -107,7 +105,7 @@ class InitializePrimaryAsset(RelicCommand):
 
 class RelicClientSession(QObject):
 
-    URI = RELIC_PREFS.socket
+    URI = config.SOCKET
     IMAGE = 0
     VIDEO = 1
     onVideoReceived = Signal(bytes)

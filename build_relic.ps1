@@ -4,8 +4,6 @@
 ls -Path .\library\ui -Filter "*.ui" | % {.\Scripts\pyside6-uic.exe $_.FullName -o $_.FullName.Replace(".ui", ".py")}
 
 C:\Users\Resartist\AppData\Local\Programs\Python\Python37\Scripts\pyside2-uic.exe .\library\plugins\Lib\relic_base\ui\title_bar.ui -o .\library\plugins\Lib\relic_base\ui\title_bar.py
-C:\Users\Resartist\AppData\Local\Programs\Python\Python37\Scripts\pyside2-uic.exe .\library\ui\compact_delegate.ui -o .\library\plugins\Lib\relic_base\ui\compact_delegate.py
-C:\Users\Resartist\AppData\Local\Programs\Python\Python37\Scripts\pyside2-uic.exe .\library\ui\expandableTabs.ui -o .\library\plugins\Lib\relic_base\ui\expandableTabs.py
 .\Scripts\pyside6-rcc.exe .\plugins\LibShared\relic\qt\resources\resources.qrc -o .\plugins\LibShared\relic\qt\relic_resources6.py
 C:\Users\Resartist\AppData\Local\Programs\Python\Python37\Scripts\pyside2-rcc.exe .\plugins\LibShared\relic\qt\resources\resources.qrc -o .\plugins\LibShared\relic\qt\relic_resources2.py
 .\Scripts\pyside6-uic.exe .\plugins\LibShared\relic\qt\ui\expandable_group.ui -o .\plugins\LibShared\relic\qt\ui\expandable_group6.py

@@ -559,15 +559,20 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @cached_property
     def tray_actions(self):
+        pin_action = QAction('Pinned To Taskbar', self)
+        pin_action.setCheckable(True)
+        pin_action.setChecked(True)
+        pin_action.toggled.connect(self.taskbar_pin)
         result = [
-            QAction('Taskbar Pin Toggle', self, triggered=self.taskbar_pin),
+            pin_action,
             self.separator,
             QAction('Exit', self, triggered=self._close),
         ]
         return result
 
-    def taskbar_pin(self):
-        if self.pinned:
+    @Slot()
+    def taskbar_pin(self, state):
+        if not state:
             self.setWindowFlags(self.windowFlags() & ~Qt.FramelessWindowHint)
             self.setProperty('pinned', '0')
             self.show()
@@ -590,7 +595,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         diff = this_rect.width() - distance_to_edge
 
         self.move(tray_rect.x() - diff, tray_rect.y() - this_rect.height())
-        self.pinned = not self.pinned
+        self.pinned = state
 
     def changeEvent(self, event):
         if self.pinned:
@@ -957,7 +962,7 @@ def main(args):
     window.show()
     server = Server('capture')
     server.incomingFile.connect(window.perform_screenshot)
-    window.taskbar_pin()
+    window.taskbar_pin(True)
     window.show()
     sys.exit(app.exec())
 

@@ -17,12 +17,13 @@ from relic.local import Relational, Grouping
 from relic.scheme import Table, AssetType, Classification
 from relic.qt.widgets import DockTitle, GroupView, GroupBox
 from relic.qt.delegates import BaseItemDelegate, ItemDispalyModes
-from relic.qt.util import loadStylesheet, polymorphicItem
+from relic.qt.util import readAllContents, polymorphicItem
 from relic.qt.expandable_group import ExpandableGroup
 
 from sequence_path.main import SequencePath as Path
 from intercom import Server
 
+import library
 from library.config import RELIC_PREFS, peakPreview
 from library.io.util import LocalThumbnail
 from library.objectmodels import (Library, alusers,
@@ -417,8 +418,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             pass 
         if value == 1:
             BaseItemDelegate.VIEW_MODE = ItemDispalyModes.COMPACT
+            BaseItemDelegate.DRAW_PROGRESS = False
         elif value == 2:
             BaseItemDelegate.VIEW_MODE = ItemDispalyModes.THUMBNAIL
+            BaseItemDelegate.DRAW_PROGRESS = True
         self.asset_item_model.endResetModel()
         self.links_view.model.endResetModel()
         RELIC_PREFS.view_scale = ViewScale(value).name
@@ -938,8 +941,14 @@ def main(args):
     app = qApp or QApplication(sys.argv)
     ctypes.windll.kernel32.SetConsoleTitleW("Relic")
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic")
-    loadStylesheet(app, path=':app_style.qss')
+
+    base_style = readAllContents(':/base_style.qss')
+    app_style = readAllContents(':/resources/style/app_style.qss')
+    app.setStyleSheet(base_style + app_style)
+
     window = RelicMainWindow()
+    window.setWindowTitle(f'Relic {library.__version__}')
+
     # Startup the plugin server
     ingest_server = Server('relic')
     ingest_server.incomingData.connect(window.externalPluginCommand)

@@ -23,9 +23,6 @@
    <iconset resource="../../resources.qrc">
     <normaloff>:/resources/app/relic.svg</normaloff>:/resources/app/relic.svg</iconset>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
   <property name="animated">
    <bool>true</bool>
   </property>
@@ -388,7 +385,7 @@
         <item>
          <widget class="QCheckBox" name="previewCheckBox">
           <property name="text">
-           <string>Preview On-Select</string>
+           <string>View On-Select</string>
           </property>
           <property name="icon">
            <iconset resource="../../plugins/LibShared/relic/qt/resources/resources.qrc">
@@ -633,6 +630,94 @@
      </item>
     </layout>
    </widget>
+  </widget>
+  <widget class="QDockWidget" name="attributeDock">
+   <property name="palette">
+    <palette>
+     <active/>
+     <inactive/>
+     <disabled/>
+    </palette>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+   </property>
+   <property name="windowTitle">
+    <string>Attributes</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="attrDockWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>1</number>
+     </property>
+     <property name="topMargin">
+      <number>1</number>
+     </property>
+     <property name="rightMargin">
+      <number>1</number>
+     </property>
+     <property name="bottomMargin">
+      <number>1</number>
+     </property>
+     <item>
+      <widget class="QScrollArea" name="scrollArea">
+       <property name="minimumSize">
+        <size>
+         <width>355</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="scrollAreaWidgetContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>353</width>
+          <height>300</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="attributesLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="statusTip">
+    <string/>
+   </property>
+   <property name="sizeGripEnabled">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="QDockWidget" name="searchDock">
    <property name="styleSheet">
@@ -907,94 +992,6 @@ QFrame:hover {
      </item>
     </layout>
    </widget>
-  </widget>
-  <widget class="QDockWidget" name="attributeDock">
-   <property name="palette">
-    <palette>
-     <active/>
-     <inactive/>
-     <disabled/>
-    </palette>
-   </property>
-   <property name="features">
-    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
-   </property>
-   <property name="windowTitle">
-    <string>Attributes</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="attrDockWidgetContents">
-    <layout class="QVBoxLayout" name="verticalLayout_3">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="leftMargin">
-      <number>1</number>
-     </property>
-     <property name="topMargin">
-      <number>1</number>
-     </property>
-     <property name="rightMargin">
-      <number>1</number>
-     </property>
-     <property name="bottomMargin">
-      <number>1</number>
-     </property>
-     <item>
-      <widget class="QScrollArea" name="scrollArea">
-       <property name="minimumSize">
-        <size>
-         <width>355</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="autoFillBackground">
-        <bool>true</bool>
-       </property>
-       <property name="widgetResizable">
-        <bool>true</bool>
-       </property>
-       <widget class="QWidget" name="scrollAreaWidgetContents">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>353</width>
-          <height>300</height>
-         </rect>
-        </property>
-        <layout class="QVBoxLayout" name="attributesLayout">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-        </layout>
-       </widget>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-  </widget>
-  <widget class="QStatusBar" name="statusbar">
-   <property name="statusTip">
-    <string/>
-   </property>
-   <property name="sizeGripEnabled">
-    <bool>true</bool>
-   </property>
   </widget>
   <action name="actionPreferences">
    <property name="text">

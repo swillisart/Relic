@@ -1,0 +1,145 @@
+/* subcategoryTreeView -------------------------------------------------------------- */
+subcategoryTreeView::item,
+subcategoryTreeView::item:has-children,
+subcategoryTreeView::item:!has-children {
+    background-color: transparent;
+    border: none;
+    margin: 0px;
+    padding: 0px;
+}
+subcategoryTreeView::item:selected {
+    background-color: rgb(150, 146, 137);
+    color: rgb(24, 24, 24);
+}
+subcategoryTreeView::branch,
+subcategoryTreeView::branch:has-siblings:!adjoins-item,
+subcategoryTreeView::branch:has-siblings:adjoins-item,
+subcategoryTreeView::branch:!has-children:!has-siblings:adjoins-item,
+subcategoryTreeView::branch:!has-children:has-siblings:adjoins-item,
+subcategoryTreeView::branch:has-children:!has-siblings:closed,
+subcategoryTreeView::branch:closed:has-children:has-siblings,
+subcategoryTreeView::branch:open:has-children:!has-siblings,
+subcategoryTreeView::branch:open:has-children:has-siblings {
+    background-color: transparent;
+    border: none;
+    border-top: 1px transparent;
+    border-bottom: 1px transparent;
+}
+
+subcategoryTreeView::branch:has-siblings:!adjoins-item {
+    image: url(:/style/stylesheet-vline.png);
+}
+subcategoryTreeView::branch:has-siblings:adjoins-item {
+    image: url(:/style/stylesheet-branch-more.png);
+}
+subcategoryTreeView::branch:!has-children:!has-siblings:adjoins-item {
+    image: url(:/style/stylesheet-branch-end.png);
+}
+subcategoryTreeView::branch:!has-children:has-siblings:adjoins-item {
+    image: url(:/style/stylesheet-branch-more.png);
+}
+subcategoryTreeView::branch:has-children:!has-siblings:closed,
+subcategoryTreeView::branch:closed:has-children:has-siblings {
+    image: url(:/app/treeExpanded.svg);
+    padding-left: 3px;
+    padding-right: 5px;
+}
+subcategoryTreeView::branch:open:has-children:!has-siblings,
+subcategoryTreeView::branch:open:has-children:has-siblings  {
+    image: url(:/app/treeCollapsed.svg);
+    padding-left: 3px;
+    padding-right: 5px;
+}
+
+/* Scroll Areas, Docks -------------------------------------------------------------- */
+scrollAreaWidgetContents {
+    background-color: rgb(68, 68, 68);
+}
+categoryScrollAreaWidgetContents {
+    background-color: rgb(68, 68, 68);
+}
+
+DockTitle {
+    background-color: rgb(57, 57, 57);
+    padding: 2px;
+}
+/* FILTER / SEARCH BOXES */
+
+FilterBoxButton {
+    background-color: rgb(43, 43, 43);
+    padding: 0px;
+	border: 1px solid transparent;
+	border-radius: 3px;
+    margin: 1px;
+}
+FilterBoxButton:checked {
+    background-color: rgb(43, 43, 43);
+}
+FilterBoxButton:unchecked {
+    background-color: rgb(63, 63, 63);
+}
+FilterBoxButton:hover {
+    background-color: rgb(63, 63, 63);
+}
+FilterBoxButton:hover[search=true] {
+    background-color: rgb(43, 43, 43);
+}
+FilterBox {
+    border: 1px solid rgb(43, 43, 43);
+    background-color: rgb(43, 43, 43);
+    border-radius: 2px;
+}
+FilterBox:hover {
+    border: 1px solid rgb(150, 146, 137);
+}
+SearchBox {
+    border: 2px solid rgb(43, 43, 43);
+    background-color: rgb(43, 43, 43);
+    border-radius: 3px;
+}
+SearchBox:hover {
+    border: 2px solid rgb(150, 146, 137);
+}
+FilterBoxLine {
+    font: 8pt "Segoe UI";
+    border: 1px solid rgb(43, 43, 43);
+    background-color: rgb(43, 43, 43);
+    border-radius: 0px;
+    color: rgb(200, 200, 200);
+    padding: 0px;
+}
+FilterBoxLine:focus,
+FilterBoxLine[search=true]:focus {
+    border: 1px solid rgb(43, 43, 43);
+    background-color: rgb(55, 55, 55);
+}
+FilterBoxLine[search=true] {
+    font: 9pt "Segoe UI";
+    font-weight: bold;
+}
+
+/* EXPANDABLE TABS */
+verticalControl {
+    border: 1px solid rgb(68,68,68);
+    background-color: rgb(52, 52, 52);
+}
+verticalControl:hover {
+    background-color: rgb(92, 92, 92);
+    border: 1px solid rgb(92, 92, 92);
+}
+AssetCompactView {
+    background-color: rgb(43, 43, 43);
+    border: none;
+    margin: 0px;
+    padding: 0px;
+}
+AssetCompactView::item {
+    color: rgb(220,220,220);
+    margin: 0px;
+    padding: 0px;
+}
+interactiveSpinBox {
+    padding: 1px;
+    margin: 1px;
+    border: 1px solid rgb(43, 43, 43);
+}

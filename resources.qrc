@@ -4,6 +4,7 @@
     <file>resources/app/relic.svg</file>
     <file>resources/app/markdown_logo.png</file>
     <file>resources/app/searchLight.svg</file>
+    <file>resources/style/app_style.qss</file>
     <file>resources/style/markdown.png</file>
     <file>resources/style/markdown_style.css</file>
     <file>resources/subcategories/3D.png</file>

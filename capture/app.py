@@ -521,16 +521,19 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.recording_thread = QThread(self)
         self.recorder.moveToThread(self.recording_thread)
         self.recording_thread.start()
+        order_action = QAction('Column Headers', self)
+        order_action.setCheckable(True)
+        order_action.setChecked(True)
+        order_action.toggled.connect(self.toggleOrderingState)
 
         self.actions = [
             QAction('Expand All Tabs', self, triggered=lambda : self.setTabsState(True)),
             QAction('Collapse All Tabs', self, triggered=lambda : self.setTabsState(False)), 
-            QAction('Enable Order', self, triggered=lambda : self.setOrderingState(True)), 
-            QAction('Disable Order', self, triggered=lambda : self.setOrderingState(False)), 
+            order_action,
         ]
 
     @Slot(bool)
-    def setOrderingState(self, state):
+    def toggleOrderingState(self, state):
         [x.group.content.setHeaderHidden(not state) for x in Types]
 
     @Slot(bool)
@@ -548,13 +551,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @cached_property
     def tree_actions(self):
-        result = [
+        result = (
             QAction(QIcon(':resources/icons/app_icon.ico'), 'View', self, shortcut='space', triggered=self.view_item),
             QAction(QIcon(':resources/icons/folder.svg'), 'Open File Location', self, shortcut='Ctrl+O', triggered=self.open_location),
             QAction('Copy To Clipboard', self, shortcut='ctrl+c', triggered=self.copy_to_clipboard),
             QAction('Rename', self, triggered=self.rename_item),
             QAction('Delete', self, shortcut='Del', triggered=self.remove_item),
-        ]
+        )
         return result
 
     @cached_property
@@ -563,11 +566,11 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         pin_action.setCheckable(True)
         pin_action.setChecked(True)
         pin_action.toggled.connect(self.taskbar_pin)
-        result = [
+        result = (
             pin_action,
             self.separator,
             QAction('Exit', self, triggered=self._close),
-        ]
+        )
         return result
 
     @Slot()

@@ -3,7 +3,7 @@ from enum import IntEnum
 
 from extra_types.enums import AutoEnum
 from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot
-from PySide6.QtGui import QColor, QPixmap, QIcon, QStandardItem
+from PySide6.QtGui import QColor, QIcon, QStandardItem
 from relic.qt.delegates import (Indication, ColorIndicator, IconIndicator, Statuses,
                                  TextIndicator)
 from relic.base import Fields

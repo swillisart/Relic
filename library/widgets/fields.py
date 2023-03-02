@@ -224,15 +224,21 @@ class FieldDelegate(QStyledItemDelegate):
 
         opt = QStyleOptionViewItem(option)
         is_zero_column = (index.column() == 0)
+        has_children = index.model().hasChildren(index)
         if is_zero_column:
             opt.font.setWeight(QFont.DemiBold)
-            item = index.model().itemFromIndex(index)
-            if item.hasChildren():
+            if has_children:
                 opt.rect.adjust(opt.rect.height(), 0, 0, 0)
 
         super(FieldDelegate, self).paint(painter, opt, index)
 
-        if is_zero_column and item.hasChildren():
+        if is_zero_column and not has_children:
+            stash_pen = painter.pen()
+            painter.setPen(QPen(QColor(43,43,43), 1))
+            painter.drawLine(opt.rect.topRight(), opt.rect.bottomRight())
+            painter.setPen(stash_pen)
+
+        if is_zero_column and has_children:
             branch = QStyleOptionViewItem()
             branch.rect = QRect(0, opt.rect.y(), opt.rect.height(), opt.rect.height())
             branch.state = option.state
@@ -319,9 +325,10 @@ class RatingField(IntField):
         widget.ensurePolished()
         painter.fillRect(option.rect, bg)
         sub_rect = widget_style.subElementRect(QStyle.SE_ItemViewItemText, option, widget)
+        rect_minus_border = sub_rect.adjusted(0, -1, 0, 0)
         widget_style.drawControl(QStyle.CE_ItemViewItem, option, painter, widget)
 
-        RatingField.widget.paint(painter, sub_rect, value)
+        RatingField.widget.paint(painter, rect_minus_border, value)
 
 
 class QualityField(RatingField):
@@ -350,17 +357,17 @@ class ObjectField(UserList):
         widget_style = widget.style()
 
         rect = option.rect
-        inbound = rect - QMargins(3,3,3,3)
+        inbound = rect - QMargins(2,2,2,2)
         painter.fillRect(inbound, QColor(43,43,43))
         painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        new_size = rect.size() - QSize(37, 0)
-        x_origin = rect.x() + 9
-        rect_width = new_size.width()
-        painter.translate(x_origin, rect.y() + 5)
-        y_offset_count = 0
+        x_origin = rect.x() + 7
+        rect_width = (rect.size() - QSize(37, 0)).width()
+        painter.translate(x_origin, rect.y() + 4)
         x_pos = 0
         margin = 8
+        ico_size = 16
         draw_expander = False
+        y_offset_count = 0
         for i, item in enumerate(items):
             icon = icon_from_item(item)
             x_offset = option.fontMetrics.horizontalAdvance(item.name) + (margin * 2) + 1
@@ -373,9 +380,9 @@ class ObjectField(UserList):
                 draw_expander = True
                 break
             icon.paint(painter, QRect(0, 0, 16, 16))
-            painter.translate(16, 0)
-            x_pos += 16
-            painter.drawText(QRect(margin - 2, 0, x_offset - 2, 16), item.name)
+            painter.translate(ico_size, 0)
+            x_pos += ico_size
+            painter.drawText(QRect(margin - 2, 0, x_offset - 2, ico_size), item.name)
             painter.translate(x_offset, 0)
             x_pos += x_offset
 
@@ -408,25 +415,41 @@ class TextField(UserString):
     def value(self):
         return self
 
+    @staticmethod
+    def draw(painter, option, index, value):
+        painter.save()
+        widget = option.widget
+        rect_minus_border = option.rect.adjusted(0, 1, 0, 0)
+        roi = option.rect - QMargins(4,4,4,0)
+        painter.setFont(option.font)
+        painter.fillRect(rect_minus_border, QColor(68,68,68))
+        painter.setPen(QColor(205,205,205))
+        painter.drawText(roi, str(value))
+        painter.restore()
+
+
 class LinkField(TextField):
 
     @staticmethod
     def draw(painter, option, index, value):
         painter.save()
         widget = option.widget
-        roi = option.rect - QMargins(5,3,4,0)
+        rect_minus_border = option.rect.adjusted(0, 1, 0, 0)
+
+        roi = option.rect - QMargins(4,4,4,0)
+        dark_color = QColor(32,32,32)
         option.font.setUnderline(True)
         painter.setFont(option.font)
+        painter.fillRect(rect_minus_border, QColor(68,68,68))
+        state_select = option.state & QStyle.State_Selected
         if option.state & QStyle.State_MouseOver:
-            painter.setPen(QColor(32,32,32))
+            painter.setPen(dark_color)
             option.font.setWeight(QFont.Bold)
-            if not option.state & QStyle.State_Selected:
-                painter.fillRect(roi, QColor(75,75,75))
+            if not state_select:
                 painter.setPen(QColor(108,128,254))
         else:
-            painter.setPen(QColor(32,32,32))
-            if not option.state & QStyle.State_Selected:
-                painter.fillRect(roi, QColor(68,68,68))
+            painter.setPen(dark_color)
+            if not state_select:
                 painter.setPen(QColor(92,108,245))
 
         painter.drawText(roi, str(value))

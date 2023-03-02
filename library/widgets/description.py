@@ -264,8 +264,10 @@ class Window(Ui_DescriptionDialog, QDialog):
         normalized_position = position / length
         edit_scroller = self.text_edit.verticalScrollBar()
         view_scroller = self.text_browser.verticalScrollBar()
-        mult = view_scroller.maximum() / edit_scroller.maximum()
-        value = edit_scroller.maximum() * normalized_position
+        edit_max = edit_scroller.maximum() or 1
+        view_max = view_scroller.maximum() or 1
+        mult = view_max / edit_max
+        value = edit_max * normalized_position
         if normalized_position > 0.95:
             tc = self.text_browser.textCursor()
             tc.movePosition(QTextCursor.End, QTextCursor.MoveAnchor, 1)

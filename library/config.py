@@ -1,14 +1,10 @@
 import os
 import logging
-from extra_types.enums import AutoEnum, ListEnum
-from enum import IntEnum
 
 # -- Third-party --
-from PySide6.QtCore import QCoreApplication, QSettings
 from sequence_path.main import SequencePath as Path
 from qt_settings import Preferences
 
-from relic.scheme import Classification
 from relic.local import Extension
 from intercom import Client
 

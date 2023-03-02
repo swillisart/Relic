@@ -8,7 +8,7 @@ from PySide6.QtCore import (QEvent, QFile, QItemSelectionModel, QMargins,
                             QSortFilterProxyModel, Qt, QTextStream, Signal,
                             Slot, QPropertyAnimation, Property)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
-                           QIcon, QPainter, QPixmap, QStandardItem,
+                           QIcon, QPainter, QStandardItem,
                            QRegularExpressionValidator, QStandardItemModel, Qt)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QBoxLayout,
                                QDockWidget, QFrame, QLabel, QLineEdit,

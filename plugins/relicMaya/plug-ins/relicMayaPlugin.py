@@ -135,7 +135,7 @@ class RelicPanel(MayaQWidgetDockableMixin, views.RelicSceneForm):
     def __init__(self, parent=None):
         super(RelicPanel, self).__init__(parent=parent)
         self.setWindowTitle('Relic Assets')
-        loadStylesheet(self, path=':app_style.qss')
+        loadStylesheet(self, path=':base_style.qss')
 
     def refreshSceneAssets(self):
         all_nodes_iter = om.MItDependencyNodes()

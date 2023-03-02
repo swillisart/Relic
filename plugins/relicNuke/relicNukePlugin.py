@@ -39,7 +39,7 @@ class RelicPanel(views.RelicSceneForm):
     def __init__(self, *args, **kwargs):
         super(RelicPanel, self).__init__(*args, **kwargs)
         nukescripts.addDropDataCallback(self.assetDropCallback)
-        loadStylesheet(self, path=':app_style.qss')
+        loadStylesheet(self, path=':base_style.qss')
 
     def assetDropCallback(self, mime_type, payload):
         if not payload.startswith('relic://'):

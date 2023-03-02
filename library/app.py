@@ -33,7 +33,7 @@ from library.objectmodels import (Library, alusers,
 from library.ui.dialog import Ui_RelicMainWindow
 from library.widgets import metadata_view, subcategoriesViews, description
 from library.widgets.fields import ItemState
-from library.widgets.assets_alt import AssetItemModel, AssetListView
+from library.widgets.assets_alt import AssetItemModel, AssetListView, THREAD_POOL
 from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.util import DialogOverlay
 from library.io.ingest import DEFAULT_ICONS
@@ -59,7 +59,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.tray = QSystemTrayIcon(self.app_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
-        self.pool = QThreadPool.globalInstance()
+        self.pool = THREAD_POOL
         # Assign the dock's title bar to search widget 
         # then set the dock's widget to an empty widget so separators disappear
         empty_widget = QWidget(self)

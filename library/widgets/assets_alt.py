@@ -274,8 +274,8 @@ class AssetListView(BaseView):
         if asset is not None and not isinstance(asset, TempAsset):
             asset.progress = 0
             on_complete = partial(setattr, asset, 'icon')
-            #worker = LocalThumbnail(asset.icon_path, on_complete)
-            #THREAD_POOL.start(worker)
+            worker = LocalThumbnail(asset.icon_path, on_complete)
+            THREAD_POOL.start(worker)
             self.model.dataChanged.emit(index, index, [Qt.UserRole])
         self.lastIndex = None
 
@@ -290,8 +290,7 @@ class AssetListView(BaseView):
         if index != self.lastIndex:
             self.resetLastIndex()
             self.lastIndex = index
-            THREAD_POOL.clear()
-            THREAD_POOL.waitForDone()
+
             if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
                 has_duration = hasattr(asset, 'duration') and asset.duration
                 if has_duration or getattr(asset, 'class') in PREVIEWABLE:
@@ -304,8 +303,8 @@ class AssetListView(BaseView):
                                 break
                             linked_asset = x.data(Qt.UserRole)
                             # TODO: this is a temporary local implementation.
-                            #worker = LocalThumbnail(linked_asset.icon_path, asset.video.append)
-                            #THREAD_POOL.start(worker)
+                            worker = LocalThumbnail(linked_asset.icon_path, asset.video.append)
+                            THREAD_POOL.start(worker)
 
         if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
             rect = self.visualRect(index)

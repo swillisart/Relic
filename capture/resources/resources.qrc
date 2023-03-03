@@ -1,0 +1,27 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>icons/rec.png</file>
+    <file>icons/stop.png</file>
+    <file>icons/narrowDown.png</file>
+    <file>icons/narrowLeft.png</file>
+    <file>icons/narrowRight.png</file>
+    <file>icons/narrowUp.png</file>
+    <file>icons/video.png</file>
+    <file>icons/timer.png</file>
+    <file>icons/gif.png</file>
+    <file>icons/cursor.png</file>
+    <file>icons/capture.svg</file>
+    <file>icons/capture_hilight.svg</file>
+    <file>icons/snapshot.svg</file>
+    <file>icons/screenshot_20.png</file>
+    <file>icons/expander.png</file>
+    <file>icons/folder.svg</file>
+    <file>icons/app_icon.ico</file>
+    <file>style/app_style.qss</file>
+</qresource>
+<qresource prefix="type/">
+    <file alias="screenshot.png">icons/screenshot_20.png</file>
+    <file alias="video.png">icons/video.png</file>
+    <file alias="gif.png">icons/gif.png</file>
+</qresource>
+</RCC>

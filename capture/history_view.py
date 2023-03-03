@@ -1,56 +1,12 @@
 # -- Third-party --
 from relic.qt import *
 from relic.qt.delegates import (BaseItemDelegate, IconIndicator,
-                                Statuses, Indication)
+                                Statuses, Indication, ItemDispalyModes)
 
-TREE_GROUP_STYLE = """
-QTreeView {
-    border: none;
-	alternate-background-color: rgb(75,75,75);
-    background-color: rgb(48, 48, 48);
-    padding-top: 0px;
-}
-QTreeView::item {
-    border-top: none;
-    padding-right: 8px;
-    padding-left: 3px;
-    margin-top: 1px;
-    margin-bottom: 1px;
-}
-QTreeView::item:has-children {
-    background-color: rgb(93, 93, 93);
-}
-QTreeView::branch {
-    padding: 4px;
-    margin-top: 1px;
-    margin-bottom: 1px;
-    margin-left: 1px;
-    margin-right: -3px;
-    border-left: 2px solid rgb(43,43,43);
-	border-radius: 3px 3px 0px 0px;
-}
-QTreeView::branch:has-siblings:!adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:has-siblings:adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-    border-image: none;
-}
-QTreeView::branch:has-children:!has-siblings:closed,
-QTreeView::branch:closed:has-children:has-siblings {
-    background-color: rgb(93, 93, 93);
-    border-left: 3px solid rgb(93, 93, 93);
-    border-radius: 0px 0px 3px 0px;
-}
-QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    background-color: rgb(93, 93, 93);
-    border-left: 2px solid rgb(93, 93, 93);
-    border-radius: 0px 0px 3px 0px;
-}
-"""
+BaseItemDelegate.MARGIN = QMargins(2, 2, 2, 2)
+BaseItemDelegate.ORIGIN = QPoint(5, 5)
+BaseItemDelegate.FRAME = QMargins(1,1,2,2)
+
 
 class TypesIndicator(IconIndicator):
     Screenshot = ':type/screenshot.png'
@@ -115,14 +71,13 @@ class HistoryTreeView(QTreeView):
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setDefaultDropAction(Qt.IgnoreAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        #self.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.setItemDelegate(BaseItemDelegate(self))
         self.customContextMenuRequested.connect(self.customContextMenu)
         self.clicked.connect(self.expand_index)
         self.setSortingEnabled(True)
-        self.setStyleSheet(TREE_GROUP_STYLE)
         TypesIndicator.cache() # cache icon indicators
 
     @Slot(QModelIndex)

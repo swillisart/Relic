@@ -16,6 +16,9 @@ from PySide6.QtWidgets import *
 from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
 from relic.qt.delegates import ItemDispalyModes, BaseItemModel
 from relic.qt.expandable_group import ExpandableGroup
+from relic.qt.widgets import SearchBox
+from relic.qt.util import readAllContents
+
 from intercom import Client, Server
 from sequence_path.main import SequencePath as Path
 
@@ -36,7 +39,11 @@ from capture.windowing import getForegroundWindow, isWindowOccluded
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
-
+TRAY_TIP = """Screen Capture :
+- Right-click for options.
+- Double-click to capture.
+- Middle-click to record.
+"""
 
 class CaptureType(object):
     __slots__ = ['ext', 'group', 'actions']
@@ -449,11 +456,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.setupUi(self)
 
         # -- System Tray --
-        self.tray_icon = QIcon(':/resources/icons/capture.svg')
-        self.tray_icon_hilight = QIcon(':/resources/icons/capture_hilight.svg')
+        self.tray_icon = QIcon(':icons/capture.svg')
+        self.tray_icon_hilight = QIcon(':icons/capture_hilight.svg')
         self.tray = QSystemTrayIcon(self.tray_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
-        self.tray.setToolTip('Screen Capture')
+        self.tray.setToolTip(TRAY_TIP)
+
         self.tray.show()
 
         tray_menu = QMenu(self)
@@ -471,14 +479,17 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.expandButton.clicked.connect(self.adjustSizes)
         self.captureButton.clicked.connect(self.delay_screenshot)
         self.recordButton.clicked.connect(self.perform_recording)
+        self.pinButton.toggled.connect(self.taskbar_pin)
 
         self.item_model = BaseItemModel(0, 2)
         self.item_model.setHorizontalHeaderLabels(['Item', 'Date'])
 
-        self.searchLine.textChanged.connect(self.searchChanged)
+        self.searchLine = SearchBox(self)
+        self.searchLine.editor.textChanged.connect(self.searchChanged)
 
         model_root = self.item_model.invisibleRootItem()
         history_layout = self.historyGroupBox.layout()
+        history_layout.insertWidget(0, self.searchLine)
         ExpandableGroup.BAR_HEIGHT -= 3
         for item_type in Types:
             tree = HistoryTreeView(self)
@@ -552,8 +563,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     @cached_property
     def tree_actions(self):
         result = (
-            QAction(QIcon(':resources/icons/app_icon.ico'), 'View', self, shortcut='space', triggered=self.view_item),
-            QAction(QIcon(':resources/icons/folder.svg'), 'Open File Location', self, shortcut='Ctrl+O', triggered=self.open_location),
+            QAction(QIcon(':icons/app_icon.ico'), 'View', self, shortcut='space', triggered=self.view_item),
+            QAction(QIcon(':icons/folder.svg'), 'Open File Location', self, shortcut='ctrl+o', triggered=self.open_location),
             QAction('Copy To Clipboard', self, shortcut='ctrl+c', triggered=self.copy_to_clipboard),
             QAction('Rename', self, triggered=self.rename_item),
             QAction('Delete', self, shortcut='Del', triggered=self.remove_item),
@@ -566,8 +577,9 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         pin_action.setCheckable(True)
         pin_action.setChecked(True)
         pin_action.toggled.connect(self.taskbar_pin)
+        self.pin_action = pin_action
         result = (
-            pin_action,
+            self.pin_action,
             self.separator,
             QAction('Exit', self, triggered=self._close),
         )
@@ -599,6 +611,18 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         self.move(tray_rect.x() - diff, tray_rect.y() - this_rect.height())
         self.pinned = state
+
+        if self.sender() is self.pinButton:
+            self.pin_action.setChecked(state)
+            if state:
+                self.createTrayOverlay()
+                self.tray.setIcon(self.tray_icon_hilight)
+                self.show()
+            else:
+                self.tray.setIcon(self.tray_icon)
+                self.overlay.hide()
+        else:
+            self.pinButton.setChecked(state)
 
     def changeEvent(self, event):
         if self.pinned:
@@ -957,10 +981,14 @@ def new_capture_file(out_format='png'):
 
 def main(args):
     app = QApplication(args)
-    window = CaptureWindow()
-    window.setWindowIcon(QIcon(':resources/icons/capture.svg'))
     ctypes.windll.kernel32.SetConsoleTitleW('Capture')
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"resarts.relic-capture")
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u'resarts.capture')
+    base_style = readAllContents(':base_style.qss')
+    app_style = readAllContents(':style/app_style.qss')
+    app.setStyleSheet(base_style + app_style)
+
+    window = CaptureWindow()
+    window.setWindowIcon(QIcon(':icons/capture.svg'))
     app.processEvents()
     window.show()
     server = Server('capture')
@@ -968,6 +996,7 @@ def main(args):
     window.taskbar_pin(True)
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     import argparse

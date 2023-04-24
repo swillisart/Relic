@@ -10,7 +10,7 @@ from PySide6.QtCore import QRect
 IsWindowVisible = cdll.user32.IsWindowVisible
 GetWindowRect = cdll.user32.GetWindowRect
 EnumWindows = cdll.user32.EnumWindows
-EnumWindowsProc = CFUNCTYPE(c_bool, c_int, POINTER(c_int))
+EnumWindowsProc = WINFUNCTYPE(c_bool, POINTER(c_int), POINTER(c_int))
 RECT = c_long * 4
 
 GetWindowText = cdll.user32.GetWindowTextW
@@ -86,11 +86,11 @@ def getRectangle(hwnd):
 
 def isWindowOccluded(hwnd):
     main_rectangle = getRectangle(hwnd)
-    result = []
-    f = partial(_iterateWindowHandles, result, main_rectangle)
-    print('') # CRITICAL. Not sure why this only works if there is a print here.
+    results = []
+    f = partial(_iterateWindowHandles, results, main_rectangle)
+    
     EnumWindows(EnumWindowsProc(f), 0)
-    if len(result) > 0 and result[0] != hwnd:
+    if len(results) > 0 and results[0] != hwnd:
         return True
     else:
         return False
@@ -100,6 +100,7 @@ def _iterateWindowHandles(result, main_rectangle, hwnd, lParam):
         rectangle = getRectangle(hwnd)
         if rectangle.intersects(main_rectangle):
             result.append(hwnd)
+    return True
 
 
 if __name__ == "__main__":

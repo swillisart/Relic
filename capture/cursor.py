@@ -1,13 +1,10 @@
 import ctypes
-import os
 from ctypes import windll, pointer, POINTER, sizeof, byref, Structure
 from ctypes import c_ulong, c_int, c_void_p
 import ctypes.wintypes as wintypes
 from enum import Enum
 
-from PySide6.QtCore import  QSize
-from PySide6.QtGui import Qt, QPixmap, QPainter, QImage
-from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6.QtGui import QPixmap, QImage, QIcon
 import numpy as np
 from extra_types.enums import IndexedEnum
 
@@ -50,21 +47,15 @@ GetCursorInfo = windll.user32.GetCursorInfo
 GetCursorInfo.argtypes = [POINTER(CursorInfo)]
 
 
-CURSOR_ROOT = '{}/cursors/'.format(os.getenv('SystemRoot').replace('\\', '/'))
-EXTENSION = '.svg'
-
 def build_cursor_data(cursor_size):
+    CURSOR_LOCATION = ':cursors/{}.svg'
     results = []
-    SVG_WIDGET = QSvgWidget()
-    SVG_RENDERER = SVG_WIDGET.renderer()
+
     for cursor in Cursors:
-        SVG_WIDGET.load(CURSOR_ROOT + cursor.name.lower() + EXTENSION)
+        path = CURSOR_LOCATION.format(cursor.name.lower())
+        cursor = QIcon(path)
         w = cursor_size; h = cursor_size
-        svg_pix = QPixmap(QSize(w, h))
-        svg_pix.fill(Qt.transparent)
-        painter = QPainter(svg_pix)
-        SVG_RENDERER.render(painter)
-        painter.end()
+        svg_pix = cursor.pixmap(w, h)
         img = svg_pix.toImage().mirrored(False, True)
 
         # Bit Mask
@@ -81,11 +72,13 @@ def build_cursor_data(cursor_size):
         results.append([color_array, mask_array])
     return results
 
+
 def get_cursor_info():
     cursor_info = CursorInfo()
     cursor_info.cbSize = sizeof(cursor_info)
     GetCursorInfo(byref(cursor_info))
     return cursor_info
+
 
 def get_cursor_arrays(cursor_list):
     cursor_info = get_cursor_info() 

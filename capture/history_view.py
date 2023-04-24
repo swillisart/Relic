@@ -44,7 +44,7 @@ class CaptureItem(object):
 
     INDICATIONS = [
         Indication('type', TypesIndicator, QRect(12, -22, 16, 16)),
-        Indication('status', Statuses,  QRect(28, -22, 16, 16))
+        Indication('status', Statuses, QRect(28, -22, 16, 16))
     ]
 
     def __init__(self, path):
@@ -89,7 +89,8 @@ class HistoryTreeView(QTreeView):
     def customContextMenu(self, pos):
         index = self.indexAt(pos)
         if not index:
-            return # Selection was empty.
+            # Selection was empty.
+            return super(HistoryTreeView, self).customContextMenu(pos) 
         context_menu = QMenu(self)
         obj = index.data(Qt.UserRole)
         if isinstance(obj, CaptureItem):
@@ -97,7 +98,7 @@ class HistoryTreeView(QTreeView):
             actions = self.actions() + obj_type.actions
         else:
             actions = self.actions()
-        [context_menu.addAction(action) for action in actions]
+        context_menu.addActions(actions)
         context_menu.exec(QCursor.pos())
 
     def keyPressEvent(self, event):

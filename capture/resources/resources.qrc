@@ -1,5 +1,6 @@
-<!DOCTYPE RCC><RCC version="1.0">
+<!DOCTYPE RCC><RCC version='1.0'>
 <qresource>
+    <file>style/app_style.qss</file>
     <file>icons/rec.png</file>
     <file>icons/stop.png</file>
     <file>icons/narrowDown.png</file>
@@ -16,12 +17,25 @@
     <file>icons/screenshot_20.png</file>
     <file>icons/expander.png</file>
     <file>icons/folder.svg</file>
-    <file>icons/app_icon.ico</file>
-    <file>style/app_style.qss</file>
+    <file>cursors/arrow.svg</file>
+    <file>cursors/busy.svg</file>
+    <file>cursors/cross.svg</file>
+    <file>cursors/ns.svg</file>
+    <file>cursors/nesw.svg</file>
+    <file>cursors/nwse.svg</file>
+    <file>cursors/ew.svg</file>
+    <file>cursors/helpsel.svg</file>
+    <file>cursors/ibeam.svg</file>
+    <file>cursors/link.svg</file>
+    <file>cursors/move.svg</file>
+    <file>cursors/pen.svg</file>
+    <file>cursors/unavail.svg</file>
+    <file>cursors/up.svg</file>
+    <file>cursors/wait.svg</file>
 </qresource>
-<qresource prefix="type/">
-    <file alias="screenshot.png">icons/screenshot_20.png</file>
-    <file alias="video.png">icons/video.png</file>
-    <file alias="gif.png">icons/gif.png</file>
+<qresource prefix='type/'>
+    <file alias='screenshot.png'>icons/screenshot_20.png</file>
+    <file alias='video.png'>icons/video.png</file>
+    <file alias='gif.png'>icons/gif.png</file>
 </qresource>
 </RCC>

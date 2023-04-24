@@ -1,13 +1,13 @@
-import ctypes
 import os
 import sys
 import operator
+import timeit
 import subprocess
-
+from fractions import Fraction
 from datetime import datetime
 from functools import partial, cached_property
 from enum import IntEnum
-from extra_types.enums import DataAutoEnum
+from collections import deque
 
 # -- Third-party --
 from PySide6.QtCore import *
@@ -17,17 +17,17 @@ from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAud
 from relic.qt.delegates import ItemDispalyModes, BaseItemModel
 from relic.qt.expandable_group import ExpandableGroup
 from relic.qt.widgets import SearchBox
-from relic.qt.util import readAllContents
 
-from intercom import Client, Server
+from intercom import Client
 from sequence_path.main import SequencePath as Path
+from extra_types.enums import DataAutoEnum
 
-from d3dshot.d3dshot import D3DShot, Singleton
 import av
+import numpy as np
 from av.filter import Graph
 from av import AudioFrame, VideoFrame
-import numpy as np
-from fractions import Fraction
+from PyGif.gifski import GifEncoder
+from d3dshot.d3dshot import D3DShot, Singleton
 
 # -- Module --
 import resources
@@ -39,11 +39,189 @@ from capture.windowing import getForegroundWindow, isWindowOccluded
 
 # -- Globals --
 OUTPUT_PATH = "{}/Videos".format(os.getenv("USERPROFILE"))
+
 TRAY_TIP = """Screen Capture :
 - Right-click for options.
 - Double-click to capture.
 - Middle-click to record.
 """
+DELAYS = (0, 1, 3, 5)
+AUDIO_RATE = 48000
+VIDEO_RATE = 25
+CHUNK_SIZE = 3840
+# 24fps and 48000Hz (48000hz/24fps) = 2000 sample
+# 25fps and 48000Hz: (48000hz/25fps) = 1920 sample
+
+# -- Functions --
+def newCaptureFile(out_format='png'):
+    date = datetime.utcnow()
+    result = Path("{dir}/{name}.{ext}".format(
+        dir=OUTPUT_PATH,
+        name=date.strftime("%y-%m-%d_%H-%M-%S"),
+        ext=out_format,
+    ))
+    return result
+
+
+def getPreviewPath(path):
+    preview = (path.parent / 'previews' / path.stem)
+    preview.ext = '.jpg'
+    return preview
+
+
+def videoToGif(path):
+    out_path = path.suffixed('', ext='.gif')
+    in_container = av.open(str(path))
+    in_stream = in_container.streams.video[0]
+    in_stream.thread_type = "AUTO"
+    width = in_stream.width
+    height = in_stream.height
+    encoder = GifEncoder(str(out_path), width, height)
+    solid_alpha = np.empty(shape=(height, width, 4), dtype=np.uint8)
+    solid_alpha.fill(255)
+    try:
+        frame_count = 0
+        for frame_number, frame in enumerate(in_container.decode(video=0)):
+            if frame_number % 2 == 0:
+                array = frame.to_rgb().to_ndarray()
+                solid_alpha[:, :, :3] = array
+                timestamp = (frame_count+1)/15
+                encoder.add_frame(solid_alpha.tobytes(), frame_count, timestamp)
+                frame_count += 1
+    except Exception as exerr:
+        print(exerr)
+        return None
+    finally:
+        in_container.close()
+
+    return out_path
+
+
+def createCropGraph(screen_geo, rect):
+    graph = Graph()
+    input_buffer = graph.add_buffer(
+        width=screen_geo.width(), height=screen_geo.height(), format='bgra'
+    )
+    pos = rect.topLeft()
+    crop_filter = graph.add(
+        'crop',
+        f'w={rect.width()}:h={rect.height()}:x={pos.x()}:y={pos.y()}'
+    )
+    last = graph.add('buffersink')
+    input_buffer.link_to(crop_filter)
+    crop_filter.link_to(last)
+    graph.configure()
+    return graph
+
+
+def createContainer(out_path, rect):
+    # PyAv container and streams
+    container = av.open(out_path, 'w')
+    args = {
+        'tune': 'zerolatency',
+        'preset': 'ultrafast',
+        'b:v': '3000',
+        'minrate:v': '3000',
+        'maxrate:v': '3000',
+        'probesize': '32M',
+        'bufsize': '166M',
+        'sc_threshold': '0',
+        'fflags': 'nobuffer',
+        'crf': '28',
+    }
+    # Video
+    video_stream = container.add_stream('libx264', rate=VIDEO_RATE, options=args)
+    video_stream.pix_fmt = 'yuv420p'
+    video_stream.width = rect.width()
+    video_stream.height = rect.height()
+    video_stream.thread_type = 'NONE'
+    video_stream.time_base = Fraction(1, 1000)
+    # Audio 
+    audio_stream = container.add_stream(
+        codec_name='mp3', rate=AUDIO_RATE, layout='mono', format='s16'
+    )
+    audio_stream.thread_type = 'NONE'
+    audio_stream.time_base = Fraction(1, AUDIO_RATE)
+    return container
+
+
+def makeThumbnail(pixmap):
+    out_size = ItemDispalyModes.THUMBNAIL.thumb_size
+    out_img = QImage(out_size, QImage.Format_RGBA8888)
+    out_img.fill(QColor(68, 68, 68, 255))
+
+    src_img = pixmap.toImage()
+    alpha_img = src_img.scaled(out_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+    painter = QPainter(out_img)
+    painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+    painter.drawImage(0, 0, alpha_img)
+    painter.end()
+    return out_img
+
+
+class EncodeImage(QRunnable):
+
+    def __init__(self, container, array, audio, crop_graph, pts, screen, cursor_cache):
+        super(EncodeImage, self).__init__()
+        self.container = container
+        self.array = array
+        self.crop_graph = crop_graph
+        self.pts = pts
+        self.screen = screen
+        self.cursor_cache = cursor_cache
+        self.audio = audio
+
+    def injectCursor(self):
+        screen_geo = self.screen.geometry()
+        width = screen_geo.width()
+        height = screen_geo.height()
+        image = np.reshape(self.array, (height, width, 4))
+
+        # get the proper cursor and copy / paint into image.
+        cursor, cursor_data = get_cursor_arrays(self.cursor_cache[self.screen.name()])
+        try:
+            if cursor_data is not None:
+                color, mask = cursor_data
+                top_left = screen_geo.topLeft()
+                pos = QCursor.pos() - top_left
+                x, y = pos.x(), pos.y()
+                h, w, _ = color.shape
+                #x, y = int(cursor.ptScreenPos.x), int(cursor.ptScreenPos.y) # global position
+                slicer = np.s_[y:y+h, x:x+w, :3]
+                np.copyto(image[slicer], color, where=mask)
+        except ValueError as exerr:
+            # cursor intersecting or completely out of the capture boundary.
+            #print('Cursor Error:', exerr)
+            pass
+        return image
+
+    def encodeAudio(self):
+        audio_stream = self.container.streams.audio[0]
+        raw_signal = np.frombuffer(self.audio, np.int16)
+        bf = raw_signal.reshape(1, raw_signal.shape[0])
+        #bf = np.zeros((1, 1920), dtype=np.int16)
+        audio_frame = AudioFrame.from_ndarray(bf, format='s16', layout='mono')
+        audio_frame.sample_rate = AUDIO_RATE
+        audio_frame.time_base = Fraction(1, AUDIO_RATE)
+        audio_frame.pts = (1/VIDEO_RATE) * AUDIO_RATE * self.pts
+        packets = audio_stream.encode(audio_frame)
+        self.container.mux(packets)
+
+    def run(self):
+        # process
+        image = self.injectCursor()
+        video_frame = VideoFrame.from_ndarray(image, format='bgra')
+        self.crop_graph.push(video_frame)
+        frame = self.crop_graph.pull()
+        frame.time_base = Fraction(1, VIDEO_RATE)
+        frame.pts = self.pts
+        # encode
+        video_stream = self.container.streams.video[0]
+        video_packets = video_stream.encode(frame)
+        self.container.mux(video_packets)
+        self.encodeAudio()
+
 
 class CaptureType(object):
     __slots__ = ['ext', 'group', 'actions']
@@ -51,6 +229,7 @@ class CaptureType(object):
         self.ext = ext
         self.group = None
         self.actions = []
+
 
 class Types(DataAutoEnum):
     Screenshot = CaptureType(['.png'])
@@ -70,41 +249,6 @@ class Types(DataAutoEnum):
             super().__setattr__(name, value)
 
 
-def video_to_gif(path):
-    out_path = path.suffixed('', ext='.gif')
-    in_container = av.open(str(path))
-    in_stream = in_container.streams.video[0]
-    in_stream.thread_type = "AUTO"
-    temp_path = str(path.suffixed('.%04d.', ext='png'))
-
-    try:
-        frame_count = 0
-        for frame_number, frame in enumerate(in_container.decode(video=0)):
-            if frame_number % 2 == 0:
-                array = frame.to_rgb().to_ndarray()
-                h, w, c = array.shape
-                img = QImage(array, w, h, QImage.Format_RGB888)
-                img.save(temp_path % frame_count)
-                frame_count += 1
-    except Exception as exerr:
-        print(exerr)
-    finally:
-        in_container.close()
-
-    png_frames = temp_path.replace('.%04d.', '.*.') 
-    cmd = f'gifski -o {out_path} -W {w} -H {h} --fps 15 {png_frames}'
-    subprocess.call(cmd)
-    [os.remove(temp_path % i) for i in range(frame_count)]
-
-    return out_path
-
-
-class Delay(IntEnum):
-    NONE = 0
-    ONE = 1
-    THREE = 2
-    FIVE = 3
-
 class Recorder(QObject):
 
     def __init__(self, parent=None):
@@ -112,54 +256,21 @@ class Recorder(QObject):
         self.d3d = D3DShot()
         self.input_device = QMediaDevices.defaultAudioInput()
         audio_format = QAudioFormat()
-        audio_format.setSampleRate(48000)
+        audio_format.setSampleRate(AUDIO_RATE)
         audio_format.setChannelCount(1) # 1 mono, 2 stereo
         audio_format.setSampleFormat(QAudioFormat.Int16)
 
         if not self.input_device.isNull():
             self._audio_input = QAudioSource(self.input_device, audio_format, self)
 
-        self.time_base = Fraction(1, 1000)
         cursor_cache = {}
         for screen in reversed(QGuiApplication.screens()):
             scale = screen.devicePixelRatio()
             cursor_size = int(32 * scale)
             cursor_cache[screen.name()] = build_cursor_data(cursor_size)
         self.cursor_cache = cursor_cache
-
-    def createContainer(self, out_path):
-        # PyAv container and streams
-        container = av.open(out_path, "w")
-        args = {'tune': 'zerolatency', 'bitrate': '6000', 'bufsize': '166', 'maxrate': '6000', 'crf': '28'}
-        # Video
-        video_stream = container.add_stream('libx264', rate=24, options=args)
-        video_stream.pix_fmt = 'yuv420p'
-        video_stream.width = self.rect.width()
-        video_stream.height = self.rect.height()
-        video_stream.thread_type = 'NONE'
-        video_stream.codec_context.time_base = self.time_base
-        # Audio
-        audio_stream = container.add_stream(codec_name='mp3', rate=48000, layout='mono', format='s16')
-        audio_stream.thread_type = 'NONE'
-        audio_stream.codec_context.time_base = Fraction(1, 48000) #self.time_base
-        return container
-
-    def createCropGraph(self):
-        graph = Graph()
-        screen_width = self.screen.geometry().width()
-        screen_height = self.screen.geometry().height()
-        input_buffer = graph.add_buffer(
-            width=screen_width, height=screen_height, format='bgra'
-        )
-        pos = self.rect.topLeft()
-        crop_filter = graph.add("crop", 'w={}:h={}:x={}:y={}'.format(
-            self.rect.width(), self.rect.height(), pos.x(), pos.y())
-        )
-        last = graph.add('buffersink')
-        input_buffer.link_to(crop_filter)
-        crop_filter.link_to(last)
-        graph.configure()
-        return graph
+        self.encode_pool = QThreadPool()
+        self.encode_pool.setMaxThreadCount(1)
 
     def start(self, out_path, rect, screen):
         self.rect = rect
@@ -168,20 +279,18 @@ class Recorder(QObject):
         br = rect.bottomRight()
         tl = rect.topLeft()
         self.capture_func = partial(self.d3d.screenshot, region=(tl.x(), tl.y(), br.x(), br.y()))
-        self.container = self.createContainer(out_path)
+        self.container = createContainer(out_path, rect)
 
-        self.crop_graph = self.createCropGraph()
+        self.crop_graph = createCropGraph(self.screen.geometry(), rect)
 
         if self.input_device.isNull():
             return
         self.container.start_encoding()
-        self.later = 0
 
         # audio timer
+        self.pts = 0
         self._io_device = self._audio_input.start()
         self._io_device.readyRead.connect(self.onFrameReady)
-        self.reference_time = QElapsedTimer()
-        self.reference_time.start()
 
     def stop(self):
         if not self.input_device.isNull(): 
@@ -204,87 +313,19 @@ class Recorder(QObject):
             pass
         container.close()
 
-
     @Slot()
     def onFrameReady(self):
-        pts = self.reference_time.elapsed()
-        data = self._io_device.readAll()
-        audio_data = data.data()
-        container = self.container
+        # audio
+        audio_data = self._io_device.read(CHUNK_SIZE).data()
 
         # video
-        video_stream = container.streams.video[0]
         img_data = self.capture_func()
+        #img_data = np.zeros((9216000,), dtype=np.uint8)
         screen = self.screen.screen()
-
-        screen_geo = screen.geometry()
-        width = screen_geo.width()
-        height = screen_geo.height()
-        image = np.reshape(img_data, (height, width, 4))
-
-        # get the proper cursor and copy / paint into image.
-        cursor, cursor_data = get_cursor_arrays(self.cursor_cache[screen.name()])
-        try:
-            if cursor_data is not None:
-                color, mask = cursor_data
-                top_left = screen_geo.topLeft()
-                pos = QCursor.pos() - top_left
-                x, y = pos.x(), pos.y()
-                h, w, _ = color.shape
-                #x, y = int(cursor.ptScreenPos.x), int(cursor.ptScreenPos.y) # global position
-                slicer = np.s_[y:y+h, x:x+w, :3]
-                np.copyto(image[slicer], color, where=mask)
-        except ValueError as exerr:
-            pass # cursor intersecting or completely out of the capture boundary.
-
-        video_frame = VideoFrame.from_ndarray(image, format='bgra')
-
-        self.crop_graph.push(video_frame)
-        filtered_frame = self.crop_graph.pull()
-        filtered_frame.pts = pts
-        # muxing
-        try:
-            video_packet = video_stream.encode(filtered_frame)
-            container.mux(video_packet)
-        except Exception as exerr:
-            print(exerr)
-
-        # audio
-        audio_stream = container.streams.audio[0]
-        if data.size() == 0:
-            return
-
-        raw_signal = np.frombuffer(audio_data, np.int16)
-        bf = raw_signal.reshape(1, raw_signal.shape[0])
-
-        audio_frame = AudioFrame.from_ndarray(bf, format='s16', layout='mono')
-        audio_frame.sample_rate = 48000
-        filtered_frame.pts = pts
-        try:
-            audio_packet = audio_stream.encode(audio_frame)
-            container.mux(audio_packet)
-        except Exception as exerr:
-            print(exerr)
-
-
-def get_preview_path(path):
-    preview = (path.parent / 'previews' / path.stem)
-    preview.ext = '.jpg'
-    return preview
-
-def makeThumbnail(pixmap):
-    out_size = ItemDispalyModes.THUMBNAIL.thumb_size
-    out_img = QImage(out_size, QImage.Format_RGBA8888)
-    out_img.fill(QColor(68, 68, 68, 255))
-
-    src_img = pixmap.toImage()
-    alpha_img = src_img.scaled(out_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-
-    painter = QPainter(out_img)
-    painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
-    painter.drawImage(0, 0, alpha_img)
-    painter.end()
-    return out_img
+        self.pts += 1
+        worker = EncodeImage(
+            self.container, img_data, audio_data, self.crop_graph, self.pts, screen, self.cursor_cache)
+        self.encode_pool.start(worker)
 
 
 class ScreenOverlay(QDialog):
@@ -310,7 +351,6 @@ class ScreenOverlay(QDialog):
         self.origin_pos = QPoint(0,0)
         self.active_pos = QPoint(0,0)
         self.selection_rect = QRect()
-        self.pad_point = QPoint(2, 2)
         self.screens_snapshot = screen.grabWindow(
             0, 0, 0, rect.width(), rect.height()
         )
@@ -372,24 +412,16 @@ class ScreenOverlay(QDialog):
         pen : QPen
             Styled pen for the markers.
         """
-        # Painting at origin click position.
-        active = self.active_pos
-        origin = self.origin_pos
         painter.setPen(pen)
-        painter.drawLine(
-            rect.left(), origin.y(), rect.right(), origin.y()
-        )
-        painter.drawLine(
-            origin.x(), rect.top(), origin.x(), rect.bottom()
-        )
+        # Painting at cursors "origin" initial click position.
+        origin = self.origin_pos
+        painter.drawLine(rect.left(), origin.y(), rect.right(), origin.y())
+        painter.drawLine(origin.x(), rect.top(), origin.x(), rect.bottom())
 
-        # Painting at current / active mouse position.
-        painter.drawLine(
-            rect.left(), active.y(), rect.right(), active.y()
-        )
-        painter.drawLine(
-            active.x(), rect.top(), active.x(), rect.bottom()
-        )
+        # Painting at cursors current "active" movement position.
+        active = self.active_pos
+        painter.drawLine(rect.left(), active.y(), rect.right(), active.y())
+        painter.drawLine(active.x(), rect.top(), active.x(), rect.bottom())
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -402,23 +434,23 @@ class ScreenOverlay(QDialog):
             pos_compare.manhattanLength() >= 16
         ]):
             self.selection_rect = QRect(
-                (self.origin_pos + self.pad_point),
-                (self.active_pos - self.pad_point)
+                (self.origin_pos),
+                (self.active_pos)
             )
         self.repaint()
 
 
 class TrayOverlay(QDialog):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """A transparent tool dialog for annotating a hilight overly to the screen.
         """
-        super(TrayOverlay, self).__init__()
+        super(TrayOverlay, self).__init__(*args, **kwargs)
         self.setWindowFlags(
             Qt.FramelessWindowHint
             | Qt.WindowStaysOnTopHint
             | Qt.X11BypassWindowManagerHint
-            | Qt.Tool
+            | Qt.ToolTip
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.tray = None
@@ -454,14 +486,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         super(CaptureWindow, self).__init__(*args, **kwargs)
         self.pinned = False
         self.setupUi(self)
-
         # -- System Tray --
         self.tray_icon = QIcon(':icons/capture.svg')
         self.tray_icon_hilight = QIcon(':icons/capture_hilight.svg')
         self.tray = QSystemTrayIcon(self.tray_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.setToolTip(TRAY_TIP)
-
         self.tray.show()
 
         tray_menu = QMenu(self)
@@ -472,13 +502,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         tray_menu.addActions(self.tray_actions)
 
         gif_action = QAction('Convert To GIF')
-        gif_action.triggered.connect(self.convert_to_animated)
+        gif_action.triggered.connect(self.convertToGif)
 
         Types.Video.actions.extend([gif_action])
 
         self.expandButton.clicked.connect(self.adjustSizes)
-        self.captureButton.clicked.connect(self.delay_screenshot)
-        self.recordButton.clicked.connect(self.perform_recording)
+        self.captureButton.clicked.connect(self.delayScreenshot)
+        self.recordButton.clicked.connect(self.performRecording)
         self.pinButton.toggled.connect(self.taskbar_pin)
 
         self.item_model = BaseItemModel(0, 2)
@@ -493,6 +523,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         ExpandableGroup.BAR_HEIGHT -= 3
         for item_type in Types:
             tree = HistoryTreeView(self)
+            header = tree.header()
+
             proxy_model = HistoryTreeFilter(item_type)
             proxy_model.setDynamicSortFilter(True)
             proxy_model.setSourceModel(self.item_model)
@@ -518,6 +550,10 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             header = tree.header()
             header.resizeSection(0, 200)
             header.resizeSection(1, 80)
+            header.setSectionsMovable(True)
+            header.setFirstSectionMovable(True)
+            header.setContextMenuPolicy(Qt.CustomContextMenu)
+            header.customContextMenuRequested.connect(self.onHeaderContextMenu)
             item_type.group = group
     
         spacer = QSpacerItem(100, 1, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
@@ -532,40 +568,52 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.recording_thread = QThread(self)
         self.recorder.moveToThread(self.recording_thread)
         self.recording_thread.start()
-        order_action = QAction('Column Headers', self)
-        order_action.setCheckable(True)
-        order_action.setChecked(True)
+        order_action = QAction('Column Headers', self, checkable=True, checked=True)
         order_action.toggled.connect(self.toggleOrderingState)
 
-        self.actions = [
-            QAction('Expand All Tabs', self, triggered=lambda : self.setTabsState(True)),
-            QAction('Collapse All Tabs', self, triggered=lambda : self.setTabsState(False)), 
+        self.group_actions = [
+            QAction('Expand All Groups', self, triggered=lambda : self.setGroupState(True)),
+            QAction('Collapse All Groups', self, triggered=lambda : self.setGroupState(False)), 
             order_action,
         ]
+        self.header_menu = QMenu(self)
+        for action in ('Date', 'User', 'Item'):
+            checkbox = QCheckBox(action, self.header_menu)
+            action = QWidgetAction(self.header_menu)
+            action.setDefaultWidget(checkbox)
+            self.header_menu.addAction(action)
+
+    def onHeaderContextMenu(self):
+        self.header_menu.exec(QCursor.pos())
+
+    def onContextMenu(self):
+        menu = QMenu(self)
+        menu.addActions(self.group_actions)
+        menu.exec(QCursor.pos())
 
     @Slot(bool)
     def toggleOrderingState(self, state):
         [x.group.content.setHeaderHidden(not state) for x in Types]
 
     @Slot(bool)
-    def setTabsState(self, state):
+    def setGroupState(self, state):
         if state:
             [x.group.expandState() for x in Types]
         else:
             [x.group.collapseState() for x in Types]
 
-    @Slot()
-    def onContextMenu(self):
-        context_menu = QMenu(self)
-        [context_menu.addAction(action) for action in self.actions]
-        context_menu.exec(QCursor.pos())
+    def setVerticalHandleState(self, state):
+        [x.group.verticalControl.setVisible(not state) for x in Types]
 
     @cached_property
     def tree_actions(self):
+        sep = QAction(self)
+        sep.setSeparator(True)
         result = (
-            QAction(QIcon(':icons/app_icon.ico'), 'View', self, shortcut='space', triggered=self.view_item),
+            QAction(QIcon(':resources/app/peak.svg'), 'View', self, shortcut='space', triggered=self.view_item),
             QAction(QIcon(':icons/folder.svg'), 'Open File Location', self, shortcut='ctrl+o', triggered=self.open_location),
-            QAction('Copy To Clipboard', self, shortcut='ctrl+c', triggered=self.copy_to_clipboard),
+            QAction('Copy To Clipboard', self, shortcut='ctrl+c', triggered=self.copyItemToClipboard),
+            sep,
             QAction('Rename', self, triggered=self.rename_item),
             QAction('Delete', self, shortcut='Del', triggered=self.remove_item),
         )
@@ -573,15 +621,13 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     @cached_property
     def tray_actions(self):
-        pin_action = QAction('Pinned To Taskbar', self)
-        pin_action.setCheckable(True)
-        pin_action.setChecked(True)
+        pin_action = QAction('Pinned To Taskbar', self, checkable=True, checked=True)
         pin_action.toggled.connect(self.taskbar_pin)
         self.pin_action = pin_action
         result = (
             self.pin_action,
             self.separator,
-            QAction('Exit', self, triggered=self._close),
+            QAction(QIcon(':/style/close.svg'), 'Exit', self, triggered=self._close),
         )
         return result
 
@@ -590,10 +636,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         if not state:
             self.setWindowFlags(self.windowFlags() & ~Qt.FramelessWindowHint)
             self.setProperty('pinned', '0')
+            self.setVerticalHandleState(False)
             self.show()
             this_rect = self.frameGeometry() + QMargins(1, 1, 0, 0)
         else:
             self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
+            self.setVerticalHandleState(True)
             self.setProperty('pinned', '1')
             this_rect = self.geometry()
         self.style().unpolish(self)
@@ -620,30 +668,39 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 self.show()
             else:
                 self.tray.setIcon(self.tray_icon)
-                self.overlay.hide()
+
+                self.tray_overlay.hide()
         else:
             self.pinButton.setChecked(state)
 
     def changeEvent(self, event):
         if self.pinned:
             if event.type() == QEvent.ActivationChange:
-                if not self.isActiveWindow():   
+                if self.tray_overlay.isActiveWindow():
+                    self.tray_overlay.hide()
+                elif not self.isActiveWindow():
                     self.tray.setIcon(self.tray_icon)
                     self.hide()
-                    self.overlay.hide()
+                    self.tray_overlay.hide()
                 else:
                     self.createTrayOverlay()
                     self.tray.setIcon(self.tray_icon_hilight)
         return super(CaptureWindow, self).changeEvent(event)
 
+    @cached_property
+    def tray_overlay(self):
+        overlay = TrayOverlay()
+        overlay.tray = self.tray
+        return overlay
+
     def createTrayOverlay(self):
+        tray_over = self.tray_overlay
         tray_rect = self.tray.geometry()
         tray_pad = QMargins(0, 0, 0, tray_rect.height())
         goemetry_with_tray = self.geometry() + tray_pad
-        self.overlay = TrayOverlay()
-        self.overlay.tray = self.tray
-        self.overlay.setGeometry(goemetry_with_tray)
-        self.overlay.show()
+        tray_over.setGeometry(goemetry_with_tray)
+        tray_over.raise_()
+        tray_over.show()
 
     @Slot()
     def adjustSizes(self, val):
@@ -700,7 +757,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def appendItem(self, item_type, in_file):
         model_root = self.item_model.invisibleRootItem()
         mtime = datetime.fromtimestamp(in_file.datemodified)
-        image = QPixmap(str(get_preview_path(in_file)))
+        image = QPixmap(str(getPreviewPath(in_file)))
         capture = CaptureItem(in_file)
         capture.date = mtime
         capture.icon = image
@@ -766,24 +823,23 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     @Slot()
     def rename_item(self):
         item_type, selection_model = self.getActiveSelectionModel()
-        indices = selection_model.selectedIndexes()
+        proxy_model = selection_model.model()
+        indices = [proxy_model.index(x.row(), 0) for x in selection_model.selectedIndexes()]
         if not indices:
             return
-        items = [self.item_model.indexToItem(x).data(Qt.UserRole) for x in indices]
-        filtered = [x for x in items if isinstance(x, CaptureItem)]
-        obj = filtered[-1]
+        obj = self.item_model.indexToItem(indices[-1]).data(Qt.UserRole)
         pin_state = self.pinned
         self.pinned = False # prevent popup focus from hiding pin
         new_name, ok = QInputDialog.getText(self, 'Rename',
                 "New name:", QLineEdit.Normal,
                 obj.path.name)
         if ok:
-            old_preview_path = get_preview_path(obj.path)
+            old_preview_path = getPreviewPath(obj.path)
             old_path = Path(str(obj.path))
             obj.path.name = new_name
             obj.name = new_name
             self.renameFile(old_path, new_name)
-            preview_path = get_preview_path(obj.path)
+            preview_path = getPreviewPath(obj.path)
             self.renameFile(old_preview_path, new_name)
         self.pinned = pin_state
 
@@ -807,17 +863,27 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         if not selection_model.hasSelection():
             return
-        count = len(selection_model.selectedRows())
         pin_state = self.pinned # prevent popup focus from hiding pin
         self.pinned = False
         message = QMessageBox.question(self,
                 'Confirm', 'Are you sure?',
                 buttons=QMessageBox.Yes | QMessageBox.No
-                )
+        )
 
         if message == QMessageBox.No:
             return
 
+        model = self.item_model
+        # Shared captures will re-use thumbnails across multiple items.
+        # If removing an item with a shared preview dont delete its preview image.
+        shared_captures = []
+        for row in range(model.rowCount()):
+            item = model.item(row)
+            capture = item.data(Qt.UserRole)
+            if capture.type not in (item_type, Types.Screenshot):
+                shared_captures.append(capture)
+
+        count = 0
         while indices := selection_model.selectedIndexes():
             index = indices[0]
             obj = index.data(Qt.UserRole)
@@ -825,25 +891,32 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 selection_model.select(index, QItemSelectionModel.Deselect)
                 continue
 
-            item = self.item_model.indexToItem(index)
+            item = model.indexToItem(index)
             item_parent = item.parent()
             if item_parent:
                 item_parent.removeRow(item.index().row())
             else:
-                self.item_model.removeRow(item.index().row())
+                model.removeRow(item.index().row())
 
-            preview_path = get_preview_path(obj.path)
-            # Don't delete animated icons. (they may still have a video)
-            if obj.type != int(Types.Animated) and preview_path.exists():
-                os.remove(str(preview_path))
+            preview_path = getPreviewPath(obj.path)
+            if preview_path.exists():
+                # If the preview is shared by another item dont delete it.
+                hase_shared_preview = False
+                for shared_capture in shared_captures:
+                    if shared_capture.name == obj.name:
+                        hase_shared_preview = True
+                        break
+                if not hase_shared_preview:
+                    os.remove(str(preview_path))
             if obj.path.exists():
                 os.remove(str(obj.path))
+            count += 1
 
         self.change_count(operator.sub, item_type, count)
         self.pinned = pin_state
 
     @Slot()
-    def convert_to_animated(self):
+    def convertToGif(self):
         item_type, selection_model = self.getActiveSelectionModel()
 
         if not selection_model.hasSelection():
@@ -853,17 +926,19 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             obj = index.data(Qt.UserRole)
             if not isinstance(obj, CaptureItem):
                 continue
-            new_path = video_to_gif(obj.path)
+            new_path = videoToGif(obj.path)
+            if new_path is None:
+                return
             item = self.appendItem(Types.Animated, new_path)
 
     @Slot()
-    def delay_screenshot(self):
-        msg = 'Delaying the capture for {} seconds. /n/nSingle-Click to exit.'
+    def delayScreenshot(self):
+        msg = 'Delaying the capture for {} seconds. /n/Click to cancel.'
         index = self.delayComboBox.currentIndex()
-        seconds = Delay(index)
-        self.deferred_snap = QTimer.singleShot(seconds*1000, self.perform_screenshot)
+        seconds = DELAYS[index]
+        self.deferred_snap = QTimer.singleShot(seconds*1000, self.performScreenshot)
 
-    def perform_screenshot(self, record=False):
+    def performScreenshot(self, record=False):
         slot = self.startRecording if record else self.saveScreenshot
         self.hide()
         self.screens = []
@@ -874,13 +949,12 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.screens.append(screen_overlay)
 
     @Slot()
-    def perform_recording(self, state):
+    def performRecording(self, state):
         if state:
-            self.perform_screenshot(record=True)
+            self.performScreenshot(record=True)
         else:
             self.recorder.stop()
             item = self.appendItem(Types.Video, self.out_video)
-
 
     def startRecording(self, rect, pixmap, screen):
         self.finishCapture()
@@ -898,21 +972,20 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             if self.screen == screen.screen():
                 self.recorder.d3d.display = self.recorder.d3d.displays[i]
 
-        self.out_video = new_capture_file(out_format='mp4')
+        self.out_video = newCaptureFile(out_format='mp4')
         self.recorder.start(str(self.out_video), rect, screen)
 
-        out_preview = get_preview_path(self.out_video)
+        out_preview = getPreviewPath(self.out_video)
         size = ItemDispalyModes.COMPACT.thumb_size
         out_img = makeThumbnail(pixmap)
         out_img.save(str(out_preview))
 
-
     @Slot()
     def saveScreenshot(self, rect, pixmap, screen):
-        path = new_capture_file()
+        path = newCaptureFile()
         pixmap.save(str(path))
         icon_pixmap = makeThumbnail(pixmap)
-        icon_pixmap.save(str(get_preview_path(path)))
+        icon_pixmap.save(str(getPreviewPath(path)))
         self.imageToClipboard(pixmap.toImage())
         self.finishCapture()
         item = self.appendItem(Types.Screenshot, path)
@@ -928,10 +1001,11 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def toggleVisibility(self, reason):
         fg_hwnd = getForegroundWindow()
         this_hwnd = self.winId()
-        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+        reasons = QSystemTrayIcon.ActivationReason
+        if reason == reasons.DoubleClick:
             self.setVisible(False)
-            self.perform_screenshot()
-        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
+            self.performScreenshot()
+        elif reason == reasons.MiddleClick:
             self.setVisible(False)
             self.recordButton.click()
 
@@ -942,7 +1016,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 self.raise_()
             else:
                 self.hide()
-        elif reason == QSystemTrayIcon.ActivationReason.Trigger:
+        elif reason == reasons.Trigger:
             self.grab()
             self.setVisible(not self.isVisible())
             self.activateWindow()
@@ -959,7 +1033,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         clipboard = QApplication.clipboard()
         clipboard.setMimeData(mime_data)
 
-    def copy_to_clipboard(self):
+    def copyItemToClipboard(self):
         text_types = [Types.Animated, Types.Video]
         item_type, selection_model = self.getActiveSelectionModel()
         if indices := selection_model.selectedIndexes():
@@ -969,48 +1043,3 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             else:
                 img = QImage(str(obj.path))
                 self.imageToClipboard(img)
-
-def new_capture_file(out_format='png'):
-    date = datetime.utcnow()
-    result = Path("{dir}/{name}.{ext}".format(
-        dir=OUTPUT_PATH,
-        name=date.strftime("%y-%m-%d_%H-%M-%S"),
-        ext=out_format,
-    ))
-    return result
-
-def main(args):
-    app = QApplication(args)
-    ctypes.windll.kernel32.SetConsoleTitleW('Capture')
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u'resarts.capture')
-    base_style = readAllContents(':base_style.qss')
-    app_style = readAllContents(':style/app_style.qss')
-    app.setStyleSheet(base_style + app_style)
-
-    window = CaptureWindow()
-    window.setWindowIcon(QIcon(':icons/capture.svg'))
-    app.processEvents()
-    window.show()
-    server = Server('capture')
-    server.incomingFile.connect(window.perform_screenshot)
-    window.taskbar_pin(True)
-    window.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description='Capture the screen')
-    parser.add_argument('--screenshot', nargs='?', metavar='')
-    parser.add_argument('--record', nargs='?', metavar='')
-    args = parser.parse_args()
-
-    # Define our Environment
-    os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
-    os.environ['PYAV_LOGGING'] = 'off'
-    from intercom import Client
-    client = Client('capture')
-    client.sendPayload('')
-    if client.errored:
-        import capture
-        capture.app.main(sys.argv)

@@ -1,0 +1,1 @@
+<b>Video</b>.<br>Multi-Frame video capture from the screen.

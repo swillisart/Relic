@@ -1,89 +1,97 @@
+from datetime import datetime
+
 # -- Third-party --
 from relic.qt import *
-from relic.qt.delegates import (BaseItemDelegate, IconIndicator,
-                                Statuses, Indication, ItemDispalyModes)
+from relic.qt.delegates import (ImageableMixin, BaseDelegateMixin, CompactImageIndicator, Title, BaseItemDelegate, IconIndicator, TextDecorationIndicator, ProgressIndicator,
+                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis)
+from relic.qt.widgets import BaseTreeView
 
-BaseItemDelegate.MARGIN = QMargins(2, 2, 2, 2)
-BaseItemDelegate.ORIGIN = QPoint(5, 5)
-BaseItemDelegate.FRAME = QMargins(1,1,2,2)
-
-
-class TypesIndicator(IconIndicator):
-    Screenshot = ':type/screenshot.png'
-    Video = ':type/video.png'
-    Animated = ':type/gif.png'
+from extra_types.flag_enum import EnumAuto, Enumerant
+from extra_types.composable import Attributable
+from extra_types.properties import slot_property
 
 
-class HistoryTreeFilter(QSortFilterProxyModel):
-    def __init__(self, filter_id):
-        super(HistoryTreeFilter, self).__init__()
-        self.filter_id = filter_id
-
-    def lessThan(self, left, right):
-        leftData = self.sourceModel().data(left)
-        rightData = self.sourceModel().data(right)
-        return leftData > rightData
-
-    def filterAcceptsRow(self, sourceRow, sourceParent):
-        index = self.sourceModel().index(sourceRow, 0, sourceParent)
-
-        if index.isValid():
-            obj = index.data(Qt.UserRole)
-            if not obj: # Top level items are not filterable so keep them
-                return True
-            else:
-                if obj.type == self.filter_id:
-                    match = self.filterRegularExpression().match(obj.name)
-                    if match.hasMatch():
-                        return True
-        return False
+class CaptureType(Attributable, Enumerant):
+    __slots__ = ['ext', 'actions']
 
 
-class CaptureItem(object):
-    __slots__ = ['name', 'path', 'count', 'status', 'type', 'progress', 'date', 'icon']
+class Types(EnumAuto):
+    Screenshot = CaptureType(['.png'], [])
+    Video = CaptureType(['.mp4'], [])   
+    Animated = CaptureType(['.gif'], [])
+
+
+class TypesIndicator(EnumAuto):
+    Screenshot = IconIndicator(':type/screenshot.png')
+    Video = IconIndicator(':type/video.png')
+    Animated = IconIndicator(':type/gif.png')
+
+#Types.Screenshot.bro = 'noway'
+#TypesIndicator.Screenshot.bro = 'nope'
+
+tl = Qt.AlignTop | Qt.AlignLeft
+tr = Qt.AlignTop | Qt.AlignRight
+bl = Qt.AlignBottom | Qt.AlignLeft
+br = Qt.AlignBottom | Qt.AlignRight
+
+class CaptureItem(ImageableMixin):
+    __slots__ = ['path', 'status', 'type', 'progress', 'description', '_image', '_date', '_size', '_title']
 
     INDICATIONS = [
-        Indication('type', TypesIndicator, QRect(12, -22, 16, 16)),
-        Indication('status', Statuses, QRect(28, -22, 16, 16))
+        Indication('progress', ProgressIndicator, bl, AdvanceAxis.Y),
+        Indication('image', CompactImageIndicator, tl, AdvanceAxis.X),
+        Indication('type', TypesIndicator, bl, AdvanceAxis.NONE),
+        Indication('status', Statuses, bl, AdvanceAxis.NONE),
+        Indication('title', TitleIndicator, tl, AdvanceAxis.NONE),
+        #Indication('resolution', TextIndicator, tr, AdvanceAxis.NONE),
+        #Indication('count', TextDecorationIndicator, br, AdvanceAxis.NONE),
     ]
 
     def __init__(self, path):
-        self.name = path.name
         self.path = path
-        self.count = 1
         self.status = int(Statuses.Local)
         self.type = 1
         self.progress = 0
-        self.date = None
-        self.icon = None
+        self._image = None
+        self.description = ''
+
+    @property
+    def name(self):
+        return self.path.name
+
+    @slot_property
+    def title(self):
+        return Title(self.path.name)
+
+    @slot_property
+    def date(self):
+        return datetime.fromtimestamp(self.path.datemodified).strftime('%m/%d/%y\n%H:%M')
+
+    @slot_property
+    def size(self):
+        return str(self.path.size)
 
 
-class HistoryTreeView(QTreeView):
+class HistoryTreeView(BaseDelegateMixin, BaseTreeView):
 
     onExecuted = Signal(QModelIndex)
 
     def __init__(self, *args, **kwargs):
         super(HistoryTreeView, self).__init__(*args, **kwargs)
-        self.setMouseTracking(True)
-        self.setIndentation(3)
+        self.setIndentation(3) # 3
         self.setDragEnabled(True)
+        self.setAcceptDrops(False)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setDragDropMode(QAbstractItemView.DragOnly)
-        self.setDefaultDropAction(Qt.IgnoreAction)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.setDefaultDropAction(Qt.IgnoreAction)  
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.setItemDelegate(BaseItemDelegate(self))
+        # For performance if the widget/delegates are not animated
+        #self.setAttribute(Qt.WA_StaticContents, True)
         self.customContextMenuRequested.connect(self.customContextMenu)
-        self.clicked.connect(self.expand_index)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        #self.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.setSortingEnabled(True)
-        TypesIndicator.cache() # cache icon indicators
-
-    @Slot(QModelIndex)
-    def expand_index(self, index):
-        state = not self.isExpanded(index)
-        self.setExpanded(index, state)
+        self.setUniformRowHeights(True)
 
     @Slot(QPoint)
     def customContextMenu(self, pos):
@@ -94,7 +102,7 @@ class HistoryTreeView(QTreeView):
         context_menu = QMenu(self)
         obj = index.data(Qt.UserRole)
         if isinstance(obj, CaptureItem):
-            obj_type = obj.type
+            obj_type = Types(obj.type)
             actions = self.actions() + obj_type.actions
         else:
             actions = self.actions()

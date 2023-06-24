@@ -1,0 +1,1 @@
+<b>Screenshot</b>.<br>Single-Frame image capture.

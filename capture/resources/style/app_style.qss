@@ -1,7 +1,4 @@
-QTreeView:item {
+QTreeView:item,
+QTreeView:branch {
     background-color: rgb(43, 43, 43);
-}
-QTreeView:item:selected {
-    background-color: rgb(120, 120, 120);
-    color: rgb(24, 24, 24);
 }

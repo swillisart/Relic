@@ -38,4 +38,9 @@
     <file alias='video.png'>icons/video.png</file>
     <file alias='gif.png'>icons/gif.png</file>
 </qresource>
+<qresource prefix="tooltip/">
+    <file alias="Screenshot">descriptions/type/screenshot.txt</file>
+    <file alias="Video">descriptions/type/video.txt</file>
+    <file alias="Animated">descriptions/type/animated.txt</file>
+</qresource>
 </RCC>

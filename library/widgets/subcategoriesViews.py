@@ -3,9 +3,10 @@ import json
 import os
 from collections import defaultdict
 # -- Module --
-from library import objectmodels
 from library.config import RELIC_PREFS
-from library.objectmodels import relationships, subcategory, CategoryColor
+from library.objectmodels import relationships, subcategory
+from relic.gui import CategoryColor, CategoryIndicator
+
 from library.widgets.util import ListViewFocus
 from relic.qt.expandable_group import ExpandableGroup
 from relic.qt.util import polymorphicItem, indexToItem
@@ -737,15 +738,13 @@ class ExpandableTab(ExpandableGroup):
     BASE_HEIGHT = 320
 
     def __init__(self, category):
-        super(ExpandableTab, self).__init__(content=None)
-        self.category = category
-
-        icon = QIcon(category.icon)
-        self.iconButton.setIcon(icon)
+        category_icon = CategoryIndicator[category.id].value
+        super(ExpandableTab, self).__init__(content=None, icon=category_icon)
+        self.category = category # used by updateCollapsedItems
         self.nameLabel.setText(category.name)
         self.setCount(category.count)
         for widget in (self.styledLine, self.styledLine_1):
-            color = CategoryColor(category.id).data
+            color = CategoryColor(category.id).value
             widget.setStyleSheet(
                 'QFrame {{background-color: rgb({}, {}, {});border: none;border-radius: 1px;}}'.format(
                     color.red(),
@@ -753,3 +752,4 @@ class ExpandableTab(ExpandableGroup):
                     color.blue(),
                     )
             )
+            widget.show()

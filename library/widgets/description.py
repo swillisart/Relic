@@ -312,6 +312,7 @@ class Window(Ui_DescriptionDialog, QDialog):
     @Slot(Path)
     def showMarkdown(self, path):
         edit_mode = int(RELIC_PREFS.edit_mode)
+
         if isinstance(path, Path):
             self.editor_frame.setVisible(edit_mode)
             with open(str(path), 'r', encoding='utf-8') as fp:
@@ -329,7 +330,8 @@ class Window(Ui_DescriptionDialog, QDialog):
         width = self.base_width * (edit_mode + 1) # double width in edit mode
         self.resize(width, self.height())
         self.show()
-        self.activateWindow()
+        # Raise to front in case where we are launching via documentation link.
+        self.activateWindow() 
 
     @Slot(QAbstractButton)
     def onDescriptionButtonClicked(self, button):

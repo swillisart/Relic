@@ -8,46 +8,56 @@ from functools import partial
 
 # -- Third-party --
 from PySide6.QtCore import (QItemSelectionModel, QModelIndex, QThreadPool,
-                            QTimer, Slot, QSize, QPoint)
-from PySide6.QtGui import QIcon, QPixmap, Qt, QImage, QShortcut, QKeySequence, QCursor
+                            QTimer, Slot, QSize, QPoint, QThread, QMutex)
+from PySide6.QtGui import QIcon, QPixmap, Qt, QImage, QShortcut, QKeySequence, QCursor, QAction
 from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
                                QSystemTrayIcon, QToolButton, QWidget, QLabel)
 
-from relic.local import Relational, Grouping
+# -- First-party --
+from relic.local import Relational
 from relic.scheme import Table, AssetType, Classification
+from relic.gui import Grouping
 from relic.qt.widgets import DockTitle, GroupView, GroupBox
 from relic.qt.delegates import BaseItemDelegate, ItemDispalyModes
 from relic.qt.util import readAllContents, polymorphicItem
 from relic.qt.expandable_group import ExpandableGroup
 
+from qt_logger import registerLogConsoleMenu, attachLogger
 from sequence_path.main import SequencePath as Path
 from intercom import Server
 
+# -- Module --
 import library
-from library.config import RELIC_PREFS, peakPreview
-from library.io.util import LocalThumbnail
-from library.objectmodels import (Library, alusers,
+from library.config import RELIC_PREFS, LOG, peakPreview
+from library.io.util import loadIcon, LocalVideo
+from library.objectmodels import (Library, alusers, FieldMixin,
                                   attachLinkToAsset, getCategoryConstructor,
                                   relationships, session, subcategory)
-# -- Module --
 from library.ui.dialog import Ui_RelicMainWindow
 from library.widgets import metadata_view, subcategoriesViews, description
 from library.widgets.fields import ItemState
-from library.widgets.assets_alt import AssetItemModel, AssetListView, THREAD_POOL
+from library.widgets.assets_view import AssetItemModel, AssetListView
 from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.util import DialogOverlay
 from library.io.ingest import DEFAULT_ICONS
 
+ExpandableGroup.ICON_SIZE = QSize(20, 20)
+
 class LinkTab(ExpandableGroup):
     BASE_HEIGHT = 300
+
 
 class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def __init__(self, *args, **kwargs):
         super(RelicMainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        
+        self.log = attachLogger(self)
+        self.log.debug('Initializing main window.')
+        registerLogConsoleMenu(self.menuHelp, before=self.actionDocumentation, parent=self)
+
         self.edit_icon  = QIcon(':status/editing.png')
         self.edit_status = QToolButton(self)
+        self.edit_status.setProperty('borderless', True)
         self.edit_status.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.edit_status.setText('Admin Mode')
         self.edit_status.setIcon(self.edit_icon)
@@ -59,7 +69,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.tray = QSystemTrayIcon(self.app_icon, self)
         self.tray.activated.connect(self.toggleVisibility)
         self.tray.show()
-        self.pool = THREAD_POOL
         # Assign the dock's title bar to search widget 
         # then set the dock's widget to an empty widget so separators disappear
         empty_widget = QWidget(self)
@@ -76,6 +85,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.collectionRadioButton.toggled.connect(self.searchLibrary)
 
         # Creates asset view
+
         self.assets_view = AssetListView(self)
         self.asset_item_model = AssetItemModel(self.assets_view)
         self.assets_view.setModel(self.asset_item_model)
@@ -146,7 +156,6 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.asset_startup_path = None
         self._ingester = None
         self.preferences_dialog = None
-        self.block_search = False
         QShortcut(QKeySequence('ctrl+f'), self, self.toFilterBox)
 
     @Slot()
@@ -278,20 +287,22 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     setattr(asset, attr_name, value)
                     asset.update(fields=[attr_name])
 
-    @Slot(bytes)
-    def setVideo(self, data):
+    @Slot(str, bytes)
+    def setVideo(self, path, data):
         views = [view for view in self.links_view.views]
         views.insert(0, self.assets_view)
-
+        pool = QThreadPool.globalInstance()
         for view in views:
-            if not view.lastIndex or not view.lastIndex.isValid():
+            asset = view.current_asset
+            if not asset:
                 continue
-            asset = view.lastIndex.data(Qt.UserRole)
-            if asset:
-                # TODO: this is a temporary local implementation.
+            video_path_tail = asset.relativePath.suffixed('_icon', ext='.mp4')
+
+            if str(video_path_tail) == path:
                 on_complete = partial(setattr, asset, 'video')
-                worker = LocalThumbnail(data, on_complete)
-                self.pool.start(worker)
+                worker = LocalVideo(data)
+                worker.signals.finished.connect(on_complete)
+                pool.start(worker)
 
     @Slot(dict)
     def recieveNewSubcategory(self, data):
@@ -413,15 +424,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot()
     def scaleView(self, value):
-        if value == 0:
-            # TODO Grouping tree view.
-            pass 
-        if value == 1:
-            BaseItemDelegate.VIEW_MODE = ItemDispalyModes.COMPACT
-            BaseItemDelegate.DRAW_PROGRESS = False
-        elif value == 2:
-            BaseItemDelegate.VIEW_MODE = ItemDispalyModes.THUMBNAIL
-            BaseItemDelegate.DRAW_PROGRESS = True
+        FieldMixin.setIndications(value)
         self.asset_item_model.endResetModel()
         self.links_view.model.endResetModel()
         RELIC_PREFS.view_scale = ViewScale(value).name
@@ -570,13 +573,17 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     @Slot()
     def assetViewing(self):
         self.links_view.clear()
+        self.links_view.updateGroups()
         self.linksDock.hide()
         self.assets_view.show()
 
     @Slot()
-    def updateAssetView(self, arg=None):
-        self.pool.clear()
+    def updateAssetView(self):
+        pool = QThreadPool.globalInstance()
+        pool.waitForDone(3000)
+        pool.clear()
         self.assets_view.clear()
+        self.links_view.clear()
         # Re-apply asset filtering.
         self.filterAssets()
 
@@ -585,11 +592,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         """
         Re-queries the database if the searchbox or categories have changed
         """
-        if self.block_search:
-            QTimer.singleShot(500, self.searchLibrary)
-            return
-        else:
-            self.block_search = True
+        #print('searchLibrary', self.sender())
         self.assetViewing()
         subcategories = self.category_manager.selected_subcategories.copy()
         search_filter = self.library.validateCategories(subcategories)
@@ -607,12 +610,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             session.searchkeywords.execute(search_filter)
         else:
             session.searchcategories.execute(search_filter)
-        
-        unblocker = lambda : setattr(self, 'block_search', False)
-        QTimer.singleShot(700, unblocker)
 
     @Slot(dict)
     def onSearchResults(self, search_results):
+        #print('onSearchResults', self.sender())
         self.assets_view.clear()
         if not search_results:
             self.assets_view.hide()
@@ -656,6 +657,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot(list)
     def onFilterResults(self, filter_results):
+        #print('onFilterResults', self.sender())
         load_icons = True #not self.assets_grid.isVisible()
         item_model = self.asset_item_model
         category_list = self.library.categories
@@ -683,16 +685,16 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             if load_icons and asset.classification == Classification.DOCUMENT.value:
                 asset.icon = DEFAULT_ICONS.document
             elif load_icons:
-                self.loadIcon(asset)
+                loadIcon(item)
             item_model.appendRow(item)
             link_ids.append(asset.links)
         session.retrievelinks.execute(link_ids)
-        self.assets_view.scrollTo(self.assets_view.model.index(0, 0, QModelIndex()))
-        self.block_search = False
+        self.assets_view.scrollTo(self.assets_view.model().index(0, 0, QModelIndex()))
         [call() for call in self.result_callbacks]
         self.result_callbacks = []
 
     def filterAssets(self):
+        #print('filterAssets')
         categories = self.category_manager.selected_subcategories.copy()
         limit = RELIC_PREFS.assets_per_page
         page = self.pageSpinBox.value()
@@ -725,6 +727,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
     @Slot(QModelIndex)
     def loadAssetData(self, selection):
+        #print('loadAssetData')
         sender = self.sender()
         if sender.parent().drag_select:
             # Better multi-select performance
@@ -816,7 +819,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 if link_item_asset.id == _id and link_item_asset.relationMap == _map:
                     link_map.append(link_item)
         main_view = self.assets_view
-        model = main_view.model if main_view.isVisible() else self.links_view.model
+        model = main_view.model() if main_view.isVisible() else self.links_view.model
         for i in range(model.rowCount()):
             asset = model.index(i, 0).data(Qt.UserRole)
             for index, link in enumerate(links):
@@ -887,24 +890,14 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         if self.assets_view.isVisible():
             self.assets_view.hide()
         self.assets_view.selectionModel().select(index, QItemSelectionModel.Deselect)
-
-        self.links_view.updateGroups(linked_assets, clear=True)
-        load_icon = self.loadIcon
-        [load_icon(x.data(Qt.UserRole)) for x in linked_assets]
+        self.links_view.clear()
+        self.links_view.updateGroups(linked_assets)
+        list(map(loadIcon, linked_assets))
         if not self.linksDock.isVisible():
             self.linksDock.show()
 
         # Fetch the upstream asset sub-links
         session.retrievelinks.execute(link_ids)
-
-    def loadIcon(self, asset):
-        on_complete = partial(setattr, asset, 'icon')
-        icon_path = asset.network_path.suffixed('_icon', '.jpg')
-        worker = LocalThumbnail(icon_path, on_complete)
-        self.pool.start(worker)
-        #asset_obj.fetchIcon()
-        #asset.setTextAlignment(Qt.AlignLeft | Qt.AlignTop)
-        #asset.setCheckable(True)
 
     @Slot(QSystemTrayIcon.ActivationReason)
     def toggleVisibility(self, reason, force=False):
@@ -926,6 +919,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         site = relic.config.HOST
         url = f'{site}documentation/index.html'
         os.startfile(url)
+
 
 def copyRelatedIcon(asset):
     # TODO: Re-assess if this is really needed.

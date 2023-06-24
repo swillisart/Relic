@@ -8,4 +8,5 @@ logging.basicConfig(
     filename='{}/.relic/capture.log'.format(os.environ.get('USERPROFILE')),
     level=os.environ.get('LOGLEVEL', logging.WARNING),
 )
-#attachHandler(logging.getLogger('libav'))
+attachHandler(logging.getLogger('libav'))
+LOG = logging.getLogger('Relic.capture')

@@ -1,11 +1,13 @@
+from functools import partial
 import av
 import io
 import glm
 from oiio.OpenImageIO import ImageSpec
 
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtCore import QRunnable
+from PySide6.QtCore import QRunnable, QObject, Signal, Qt, QThreadPool
 from sequence_path.main import SequencePath as Path
+
 
 def videoToFrames(data):
     buffer = io.BytesIO()
@@ -22,29 +24,52 @@ def readMovieFrames(file_obj):
             array = rgb.to_ndarray()
             h, w, c = array.shape
             img = QImage(array, w, h, QImage.Format_RGB888)
-            px = QPixmap.fromImageInPlace(img)
-            frames.append(px)
+            frames.append(img)
     return frames
 
-class LocalThumbnail(QRunnable):
+def loadIcon(index, slot=None):
+    on_complete = partial(slot or onIconLoad, index)
+    asset = index.data(Qt.UserRole)
+    icon_path = asset.network_path.suffixed('_icon', '.jpg')
+    worker = LocalThumbnail(icon_path)
+    worker.signals.finished.connect(on_complete)
+    QThreadPool.globalInstance().start(worker)
 
-    def __init__(self, data, callback, item=False):
-        super(LocalThumbnail, self).__init__()
-        self.callback = callback
-        self.item = item
+def onIconLoad(index, image):
+    asset = index.data(Qt.UserRole)
+    asset.icon = image
+    index.emitDataChanged()
+
+class ImageSignals(QObject):
+    finished = Signal(QImage)
+
+class VideoSignals(QObject):
+    finished = Signal(list)
+
+class LocalVideo(QRunnable):
+
+    def __init__(self, data):
+        super(LocalVideo, self).__init__()
+        self.signals = VideoSignals()
         self.data = data
 
     def run(self):
-        if isinstance(self.data, Path):
-            if not self.data.exists():
-                return
-            image = QPixmap(str(self.data))
-            self.callback(image)
-        else:
-            frames = videoToFrames(self.data)
-            self.callback(frames)
-        if self.item:
-            self.item.emitDataChanged()
+        frames = videoToFrames(self.data)
+        self.signals.finished.emit(frames)
+
+class LocalThumbnail(QRunnable):
+
+    def __init__(self, path):
+        super(LocalThumbnail, self).__init__()
+        self.signals = ImageSignals()
+        self.path = path
+
+    def run(self):
+        if not self.path.exists():
+            return
+        image = QImage()
+        image.load((str(self.path)))
+        self.signals.finished.emit(image)
 
 
 class ImageDimensions(glm.vec2):
@@ -75,6 +100,11 @@ class ImageDimensions(glm.vec2):
         elif qimage.hasAlphaChannel():
             channels = 4
         obj = cls(w, h, channels)
+        return obj
+
+    @classmethod
+    def fromQSize(cls, size, channels=3):
+        obj = cls(size.width(), size.height(), channels)
         return obj
 
     def makeDivisble(self, height=False):

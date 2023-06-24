@@ -40,7 +40,7 @@ QTabWidget,
 QStackedWidget {background-color: rgb(72, 72, 72);}</string>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="collectTab">
          <property name="styleSheet">
@@ -102,6 +102,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="documentsLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -127,6 +128,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="texturesReferencesLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -145,6 +147,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="rawLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -160,6 +163,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="lightsLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -215,6 +219,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="toolsLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -244,6 +249,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="moviesLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -260,6 +266,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                 <property name="font">
                  <font>
                   <pointsize>10</pointsize>
+                  <weight>75</weight>
                   <bold>true</bold>
                   <underline>false</underline>
                   <kerning>true</kerning>
@@ -288,6 +295,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                <widget class="QLabel" name="scenesLabel">
                 <property name="font">
                  <font>
+                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -327,6 +335,7 @@ QWidget {background-color: rgb(72, 72, 72);}</string>
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
+                  <weight>75</weight>
                   <bold>true</bold>
                   <underline>false</underline>
                   <kerning>true</kerning>
@@ -504,6 +513,7 @@ QFrame#collected_frame {background-color: rgb(72, 72, 72);}</string>
                   <property name="font">
                    <font>
                     <pointsize>12</pointsize>
+                    <weight>50</weight>
                     <bold>false</bold>
                     <underline>false</underline>
                     <kerning>true</kerning>
@@ -534,31 +544,6 @@ QFrame#collected_frame {background-color: rgb(72, 72, 72);}</string>
               <widget class="Line" name="line_2">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="AssetListView" name="collectedListView">
-               <property name="styleSheet">
-                <string notr="true">QWidget#collectedListView {
-background-color: rgb(72, 72, 72);
-border: none;
-}</string>
-               </property>
-               <property name="frameShape">
-                <enum>QFrame::NoFrame</enum>
-               </property>
-               <property name="resizeMode">
-                <enum>QListView::Adjust</enum>
-               </property>
-               <property name="uniformItemSizes">
-                <bool>true</bool>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-               <property name="selectionRectVisible">
-                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -614,6 +599,7 @@ border: none;
                <property name="font">
                 <font>
                  <pointsize>12</pointsize>
+                 <weight>50</weight>
                  <bold>false</bold>
                  <underline>false</underline>
                  <kerning>true</kerning>
@@ -731,6 +717,7 @@ QFrame#processed_frame {background-color: rgb(72, 72, 72);}
                   <property name="font">
                    <font>
                     <pointsize>12</pointsize>
+                    <weight>50</weight>
                     <bold>false</bold>
                     <underline>false</underline>
                     <kerning>true</kerning>
@@ -761,31 +748,6 @@ QFrame#processed_frame {background-color: rgb(72, 72, 72);}
               <widget class="Line" name="line_4">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="AssetListView" name="newAssetListView">
-               <property name="styleSheet">
-                <string notr="true">QWidget#newAssetListView {
-background-color: rgb(72, 72, 72);
-border: none;
-}</string>
-               </property>
-               <property name="frameShape">
-                <enum>QFrame::NoFrame</enum>
-               </property>
-               <property name="resizeMode">
-                <enum>QListView::Adjust</enum>
-               </property>
-               <property name="uniformItemSizes">
-                <bool>true</bool>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-               <property name="selectionRectVisible">
-                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -883,11 +845,6 @@ border: none;
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>AssetListView</class>
-   <extends>QListView</extends>
-   <header>library.widgets.assets_alt.h</header>
-  </customwidget>
   <customwidget>
    <class>AssetNameListView</class>
    <extends>QWidget</extends>

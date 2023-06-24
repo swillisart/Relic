@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'ingestion.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.2
+## Created by: Qt User Interface Compiler version 6.5.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -16,11 +16,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QListView, QPlainTextEdit,
-    QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
-    QVBoxLayout, QWidget)
+    QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
+    QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout,
+    QWidget)
 
-from library.widgets.assets_alt import AssetListView
 from library.widgets.util import AssetNameListView
 import resources_rc
 
@@ -310,20 +309,6 @@ class Ui_IngestForm(object):
 
         self.verticalLayout.addWidget(self.line_2)
 
-        self.collectedListView = AssetListView(self.collected_frame)
-        self.collectedListView.setObjectName(u"collectedListView")
-        self.collectedListView.setStyleSheet(u"QWidget#collectedListView {\n"
-"background-color: rgb(72, 72, 72);\n"
-"border: none;\n"
-"}")
-        self.collectedListView.setFrameShape(QFrame.NoFrame)
-        self.collectedListView.setResizeMode(QListView.Adjust)
-        self.collectedListView.setUniformItemSizes(True)
-        self.collectedListView.setWordWrap(True)
-        self.collectedListView.setSelectionRectVisible(True)
-
-        self.verticalLayout.addWidget(self.collectedListView)
-
 
         self.horizontalLayout.addWidget(self.collected_frame)
 
@@ -437,20 +422,6 @@ class Ui_IngestForm(object):
 
         self.verticalLayout_6.addWidget(self.line_4)
 
-        self.newAssetListView = AssetListView(self.processed_frame)
-        self.newAssetListView.setObjectName(u"newAssetListView")
-        self.newAssetListView.setStyleSheet(u"QWidget#newAssetListView {\n"
-"background-color: rgb(72, 72, 72);\n"
-"border: none;\n"
-"}")
-        self.newAssetListView.setFrameShape(QFrame.NoFrame)
-        self.newAssetListView.setResizeMode(QListView.Adjust)
-        self.newAssetListView.setUniformItemSizes(True)
-        self.newAssetListView.setWordWrap(True)
-        self.newAssetListView.setSelectionRectVisible(True)
-
-        self.verticalLayout_6.addWidget(self.newAssetListView)
-
 
         self.horizontalLayout.addWidget(self.processed_frame)
 
@@ -505,7 +476,7 @@ class Ui_IngestForm(object):
         self.retranslateUi(IngestForm)
         self.cancelButton.clicked.connect(IngestForm.close)
 
-        self.ingestTabWidget.setCurrentIndex(0)
+        self.ingestTabWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(IngestForm)

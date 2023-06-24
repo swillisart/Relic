@@ -56,7 +56,7 @@ def collapseAllNamespaces(selection):
     cmds.namespace(setNamespace=':')
     namespaces = cmds.namespaceInfo(listOnlyNamespaces=True, recurse=False)
     DEFAULT_NAMESPACES = ['shared', 'UI']
-    if not len(namespaces) > 2: 
+    if len(namespaces) <= 2: 
         return selection # means only default namespaces remain... exit the infinite loop.
     for namespace in namespaces[:-2]:
         if namespace in DEFAULT_NAMESPACES:

@@ -1,16 +1,20 @@
 from collections import Sequence, UserString
 from enum import IntEnum
 
-from extra_types.enums import AutoEnum
+from extra_types.flag_enum import FlagEnumAuto, EnumAuto, Flag, Enumerant
+from extra_types.properties import slot_property
+
 from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot
-from PySide6.QtGui import QColor, QIcon, QStandardItem
-from relic.qt.delegates import (Indication, ColorIndicator, IconIndicator, Statuses,
-                                 TextIndicator)
+from PySide6.QtGui import QColor, QIcon, QStandardItem, QImage
+import relic.config as config
+from relic.qt.delegates import (IMAGE_CACHE, CompactImageIndicator,PreviewImageIndicator, ColorIndicator, Title, BaseItemDelegate, IconIndicator, TextDecorationIndicator, ProgressIndicator,
+                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis)
+from relic.gui import CategoryColor, TypeIndicator
+
 from relic.base import Fields
 from relic.local import (Alusers, Category, buildObjectMixinMap, Relationships,
                         Subcategory, Tags, TempAsset)
 from relic.scheme import Table, AssetType
-from relic import config
 from sequence_path.main import SequencePath as Path
 
 from library.io.networking import RelicClientSession
@@ -20,23 +24,103 @@ session = RelicClientSession(RelicClientSession.URI)
 PROJECT_STORAGE = Path(config.PROJECT_STORAGE.format(project='relic'))
 NETWORK_STORAGE = Path(config.NETWORK_STORAGE)
 
-colors = {x.name: QColor(*x.data.color) for x in Category}
-res_uri = ':{}/{}'
-types = {x.name: QIcon(res_uri.format(AssetType.__name__, x.name)) for x in AssetType}
-CategoryColor = ColorIndicator('CategoryColor', colors)
+#res_uri = ':{}/{}'
+#types = {x.name: QIcon(res_uri.format(AssetType.__name__, x.name)) for x in AssetType}
+'''
+CategoryColor = EnumAuto.fromDataConstructor('CategoryColor',
+    {
+        '__order__': Category.__order__,
+        'REFERENCES': (168, 58, 58),
+        'MODELING': (168, 58, 58),
+        'REFERENCES': (168, 58, 58),
+        'REFERENCES': (168, 58, 58),
+    },
+    ColorIndicator,
+)
+'''
+
+TL = Qt.AlignTop | Qt.AlignLeft
+TR = Qt.AlignTop | Qt.AlignRight
+BL = Qt.AlignBottom | Qt.AlignLeft
+BR = Qt.AlignBottom | Qt.AlignRight
+'''
+print('display', int(Qt.DisplayRole))
+print('decor', int(Qt.DecorationRole))
+print('edit', int(Qt.EditRole))
+print('tooltip', int(Qt.ToolTipRole))
+print('statusbartip', int(Qt.StatusTipRole))
+print('sizehint', int(Qt.SizeHintRole))
+print('checkable', int(Qt.CheckStateRole))
+print('user', int(Qt.UserRole))
+'''
 
 class FieldMixin(object):
+    # TODO: Add ImageableMixin for the image handling in delegates
     __slots__ = ()
 
-    INDICATIONS = [
-        Indication('type', IconIndicator('Type', types), QRect(12, -22, 16, 16)),
-        Indication('category', CategoryColor, QRect(6, -6, 3, -48)),
-        Indication('status', Statuses, QRect(30, -22, 16, 16)),
-        Indication('resolution', TextIndicator, QRect(50, -22, 0, 16))
-    ]
+    INDICATIONS = []
 
     def __init__(self, *args, **kwargs):
         super(FieldMixin, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def setIndications(value):
+        BaseItemDelegate.VIEW_MODE = ItemDispalyModes[value]
+        if value == ItemDispalyModes.TREE:
+           FieldMixin.INDICATIONS = [
+                Indication('category', CategoryColor, BL, AdvanceAxis.X),
+                Indication('title', TitleIndicator, TL, AdvanceAxis.X),
+                #Indication('type', TypeIndicator, BR, AdvanceAxis.X),
+                Indication('count', TextIndicator, BR, AdvanceAxis.X),
+                Indication('status', Statuses, BR, AdvanceAxis.X),
+            ]
+        if value == ItemDispalyModes.COMPACT:
+            FieldMixin.INDICATIONS = [
+                Indication('image', CompactImageIndicator, TL, AdvanceAxis.X),
+                Indication('category', CategoryColor, BL, AdvanceAxis.X),
+                Indication('title', TitleIndicator, TL, AdvanceAxis.NONE),
+                Indication('type', TypeIndicator, BL, AdvanceAxis.NONE),
+                Indication('status', Statuses, BL, AdvanceAxis.NONE),
+                Indication('count', TextIndicator, BR, AdvanceAxis.NONE),
+            ]
+        elif value == ItemDispalyModes.THUMBNAIL:
+            FieldMixin.INDICATIONS = [
+                Indication('image', PreviewImageIndicator, TL, AdvanceAxis.Y),
+                Indication('progress', ProgressIndicator, TL, AdvanceAxis.Y),
+                Indication('category', CategoryColor, BL, AdvanceAxis.X),
+                Indication('title', TitleIndicator, TL, AdvanceAxis.NONE),
+                Indication('type', TypeIndicator, BL, AdvanceAxis.NONE),
+                Indication('status', Statuses, BL, AdvanceAxis.NONE),
+                Indication('count', TextIndicator, BR, AdvanceAxis.NONE),
+            ]
+
+    @property
+    def icon(self):
+        return self._icon
+
+    @icon.setter
+    def icon(self, image):
+        if isinstance(image, QImage):
+            key = image.cacheKey()
+            IMAGE_CACHE[key] = image
+        else:
+            key = image
+        self._icon = key
+
+    def __del__(self):
+        try:
+            IMAGE_CACHE.pop(self._icon)
+            [IMAGE_CACHE.pop(x) for x in self.video]
+        except:
+            pass # already deleted or not in cache
+
+    @property
+    def image(self):
+        return self.icon
+
+    @slot_property
+    def title(self):
+        return Title(self.name)
 
     @property
     def relationMap(self):
@@ -112,9 +196,6 @@ class FieldMixin(object):
 
     def stream_video_to(self, slot=None):
         video_path = self.relativePath.suffixed('_icon', ext='.mp4')
-        #rc = 'retrieveVideo/{}/0/0'.format(video_path)
-        #db.accessor.videoStreamData.connect(slot)
-        #db.accessor.doStream(rc, self.id)
         session.videostream.execute(str(video_path))
 
     @property
@@ -206,7 +287,6 @@ class category(object):
         self.name = name.capitalize()
         self.id = id
         self.count = 0
-        self.icon = f':/Category/{name}'
         self.subcategory_by_id = {}
         self.tree = None # QTreeView
         self.tab = None # TabWidget

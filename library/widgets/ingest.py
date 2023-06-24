@@ -9,7 +9,7 @@ from library.io import ingest
 from library.objectmodels import (alusers, getCategoryConstructor,
                                   relationships, session, tags)
 from library.ui.ingestion import Ui_IngestForm
-from library.widgets.assets_alt import AssetItemModel
+from library.widgets.assets_view import AssetItemModel, AssetListView
 from library.widgets.util import SimpleAsset
 from PySide6.QtCore import (Property, QEvent, QFile, QItemSelectionModel,
                             QMargins, QObject, QPoint, QPropertyAnimation,
@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 from relic.local import (INGEST_PATH, Category, ClassGroup, Extension,
                          FileType, TempAsset, getAssetSourceLocation)
 from relic.qt.delegates import Statuses
-from relic.qt.util import polymorphicItem, indexToItem
+from relic.qt.util import polymorphicItem, _indexToItem
 from relic.scheme import Class, AssetType
 from sequence_path import Path
 
@@ -58,7 +58,9 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.nextButton.clicked.connect(self.nextStage)
         self.next_enabled = partial(self.nextButton.setEnabled, True)
         self.next_disabled = partial(self.nextButton.setEnabled, False)
-        self.collectedListView.onDeleted.connect(self.removeIngestFiles)
+        self.collectedListView = AssetListView(self)
+        self.collected_frame.layout().addWidget(self.collectedListView)
+        self.collectedListView.itemDeleted.connect(self.removeIngestFiles)
         self.collectedListView.additional_actions.extend([
             QAction('Detect Color Matrix', self, triggered=self.getColorMatrix),
             QAction('Align And Blend Exposures', self, triggered=self.alignBlendExposures),
@@ -70,6 +72,8 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.collectedListView.setModel(self.collect_item_model)
         self.collectedListView.selectionModel().selectionChanged.connect(self.filterCategories)
 
+        self.newAssetListView = AssetListView(self)
+        self.processed_frame.layout().addWidget(self.newAssetListView)
         self.newAssetListView.setModel(self.new_asset_item_model)
 
         self.collect_item_model.rowsInserted.connect(self.updateLabelCounts)
@@ -199,7 +203,8 @@ class IngestForm(Ui_IngestForm, QDialog):
             asset = TempAsset(**fields)
             asset.path = Path(asset.path)
             icon_path = asset.path.suffixed('_icon', ext='.jpg')
-            asset.icon = QPixmap.fromImage(QImage(str(icon_path)))
+            image = QImage()
+            asset.icon = image.load(str(icon_path))
             item = polymorphicItem(fields=asset)
             item_model.appendRow(item)
 
@@ -263,7 +268,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         # upate the group item with new count.
         total = self.increment + len(selection)
         index = self.existingNamesList.list_view.selectedIndexes()[0]
-        qitem = indexToItem(self.existingNamesList.itemModel, index)
+        qitem = _indexToItem(index)
         simple_asset.name = f'{base} {total}'
         qitem.setData(simple_asset.name, Qt.DisplayRole)
 
@@ -402,7 +407,7 @@ class IngestForm(Ui_IngestForm, QDialog):
 
     def updateSubcategoryCounts(self, index):
         tab = self.category_widgets[self.current_category_id]
-        item = indexToItem(tab.category.tree.model, index)
+        item = _indexToItem(index)
         tab.category.tree.updateSubcategoryCounts(item)
 
     @Slot()

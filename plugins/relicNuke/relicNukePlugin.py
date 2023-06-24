@@ -80,7 +80,7 @@ class RelicPanel(views.RelicSceneForm):
             asset.name = str(node['name'].value())
             asset.id = int(node['RELIC_id'].value())
             asset.filehash = str(node['RELIC_hash'].value())
-            asset.progress = 288
+            asset.progress = 100
             asset.status = Statuses.Local
             if not self.content.assetInModel(asset):
                 asset.callbacks = [self.content.addAsset, views.updateIcon]

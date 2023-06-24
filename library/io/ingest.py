@@ -14,15 +14,16 @@ from av import VideoFrame
 
 #from imagine.colorchecker_detection import autoExpose
 from imagine.exif import EXIFTOOL
-from library.config import RELIC_PREFS, log
+from library.config import RELIC_PREFS, LOG
 from library.io.util import ImageDimensions
 from PySide6.QtCore import (Property, QDir, QDirIterator, QMutex, QMutexLocker,
                             QObject, QRunnable, Qt, QThread, QWaitCondition,
                             Signal, Slot)
-from PySide6.QtGui import QColor, QImage, QPainter, QPixmap, Qt, QImageWriter, QImageReader
+from PySide6.QtGui import QColor, QImage, QPainter, Qt, QImageWriter, QImageReader
 from relic.local import (INGEST_PATH, Extension, TempAsset, Category,
                         FileType, getAssetSourceLocation)
 from relic.scheme import Class, AssetType
+from relic.qt.delegates import ItemDispalyModes
 from sequence_path.main import SequencePath as Path
 
 QImageReader.setAllocationLimit(0)
@@ -30,7 +31,7 @@ av.logging.set_level(av.logging.CRITICAL)
 
 CREATE_NO_WINDOW = 0x08000000
 
-THUMBNAIL_SIZE = ImageDimensions(288, 192)
+THUMBNAIL_SIZE = ImageDimensions.fromQSize(ItemDispalyModes.THUMBNAIL.thumb_size) #(288, 192)
 
 PS_CMD = 'powershell -ExecutionPolicy bypass -command "{}"'
 
@@ -171,7 +172,7 @@ def tempAssetFromImage(in_path, out_path, src_img):
         duration=0,
         resolution=str(dimensions),
         path=in_path,
-        icon=QPixmap.fromImage(icon_img),
+        icon=icon_img,
     )
     return temp_asset
 
@@ -220,11 +221,12 @@ class DefaultIcons(object):
 
     @cached_property
     def raw(self):
-        return QPixmap.fromImage(makeImagePreview(QImage(':app/RedLogo.png')))
+        return makeImagePreview(QImage(':app/RedLogo.png'))
 
     @cached_property
     def document(self):
-        return QPixmap.fromImage(makeImagePreview(QImage(':resources/app/markdown_logo.png')))
+        return makeImagePreview(QImage(':resources/app/markdown_logo.png'))
+
 
 DEFAULT_ICONS = DefaultIcons()
 
@@ -240,7 +242,7 @@ def processTOOL(in_path, out_path, flag):
         in_path = out_path
     else:
         preview_img = QImage(':app/noicon.jpg')
-    icon = QPixmap.fromImage(preview_img)
+    icon = preview_img
     icon.save(str(out_path.suffixed('_icon', ext='.jpg')))
 
     asset = TempAsset(
@@ -294,7 +296,7 @@ def processMOV(in_path, out_path, flag):
         framerate=int(framerate),
         resolution=f'{stream.width}x{stream.height}x3',
         path=in_path,
-        icon=QPixmap.fromImage(icon_img),
+        icon=icon_img,
     )
     asset.classification = flag.value
     return asset
@@ -355,7 +357,7 @@ def processSEQ(in_path, out_path, flag):
         framerate=24,
         resolution=f'{w}x{h}x{c}',
         path=in_path,
-        icon=QPixmap.fromImage(icon_img),
+        icon=icon_img,
     )
     asset.classification = flag.value
     return asset
@@ -405,7 +407,7 @@ def processHDR(in_path, out_path, flag):
         duration=0,
         resolution=f'{w}x{h}x{c}',
         path=in_path,
-        icon=QPixmap.fromImage(icon_img),
+        icon=icon_img,
     )
     return asset
 
@@ -596,7 +598,7 @@ def applyImageModifications(img_path, temp_asset):
     
     temp_asset.classification = FileType.EXR.value
     temp_asset.resolution = str(dimensions)
-    temp_asset.icon = QPixmap.fromImage(icon_img)
+    temp_asset.icon = icon_img
     if is_raw: # Clean up
         del img_buf
         del img_data

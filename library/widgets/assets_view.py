@@ -1,23 +1,19 @@
-import copy
-import datetime
-import os
-import time
 import json
 import subprocess
 from functools import partial
 from sequence_path import Path
 from collections import defaultdict
-from relic.qt.util import polymorphicItem
-from relic.qt.delegates import BaseView, BaseItemDelegate, ColorIndicator, BaseItemModel, ItemDispalyModes
+from relic.qt.delegates import BaseDelegateMixin, BaseItemDelegate, BaseItemModel, ItemDispalyModes, PreviewImageIndicator
 
 # -- Module --
 import library.config as config
+from relic.qt.util import _indexToItem
 from relic.local import Category, TempAsset, FileType, AssetType, EXTENSION_MAP
 from relic.scheme import Classification as Class
 from library.io import ingest
-from library.io.util import LocalThumbnail
+from library.io.util import loadIcon
 
-from library.objectmodels import subcategory, getCategoryConstructor, Library
+from library.objectmodels import subcategory, getCategoryConstructor
 
 # -- Third-party --
 from PySide6.QtCore import (QByteArray, QItemSelectionModel, QMargins, QThreadPool,
@@ -27,18 +23,50 @@ from PySide6.QtGui import (QAction, QIcon, QColor, QCursor, QDrag, QFont, QMovie
                            QPainterPath, QPen, QPixmap, QRegion,
                            QStandardItemModel, Qt, QImage, QMouseEvent, QStandardItem)
 from PySide6.QtWidgets import (QAbstractItemView, QLineEdit, QInputDialog, QLabel,
-                               QListView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
+                               QListView, QTreeView, QMenu, QStyle, QStyledItemDelegate, QWidgetAction,
                                QStyleOption, QStyleOptionViewItem, QWidget, QApplication, QCheckBox, QMessageBox)
 
 # -- Globals --
-THREAD_POOL = QThreadPool.globalInstance()
 PREVIEWABLE = [Class.MODEL, Class.TOOL, Class.ANIMATION, Class.MOVIE, Class.PLATE]
+
+
+def iterateUpstreamForPreview(asset):
+    """Yields only the first 15 upstream assets for previewing.
+
+    Parameters
+    ----------
+    asset : object
+        input asset to iterate over
+
+    Yields
+    ------
+    QStandardItem
+    """
+    if isinstance(asset.upstream, list):
+        for num, x in enumerate(asset.upstream):
+            if num > 15:
+                break
+            yield x
+
+
+def loadHoverImage(asset):
+    has_duration = hasattr(asset, 'duration') and asset.duration
+    if has_duration or getattr(asset, 'class') in PREVIEWABLE:
+        if asset.video is None:
+            asset.stream_video_to()
+    elif asset.type == int(AssetType.COLLECTION):
+        for x in iterateUpstreamForPreview(asset):
+            loadIcon(x)
 
 
 class AssetItemModel(BaseItemModel):
 
+    def __init__(self, *args, **kwargs):
+        super(AssetItemModel, self).__init__(*args, **kwargs)
+
     def mimeData(self, indices):
-        # Removes unserializable data
+        # TODO: this is completely stupid. 
+        # Item data should not contain unserializable data that has to be removed.
         paths = []
         assets = {}
 
@@ -83,21 +111,9 @@ class AssetItemModel(BaseItemModel):
         return mime_data
 
 
-class AssetListView(BaseView):
-
-    onSelection = Signal(QModelIndex)
-    onLinkLoad = Signal(QModelIndex)
-    onLinkRemove = Signal(QModelIndex)
-    onDeleted = Signal(QModelIndex)
-    assetsDeleted = Signal(defaultdict)
-    onExecuted = Signal(QModelIndex)
-
+class DraggableView(BaseDelegateMixin):
     def __init__(self, *args, **kwargs):
-        super(AssetListView, self).__init__(*args, **kwargs)
-        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-        scroller = self.verticalScrollBar()
-        scroller.setSingleStep(40)
-        self.setResizeMode(QListView.Adjust)
+        super(DraggableView, self).__init__(*args, **kwargs)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         # Drag & Drop
         self.setAcceptDrops(True)
@@ -108,7 +124,26 @@ class AssetListView(BaseView):
         self.setDefaultDropAction(Qt.LinkAction)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.showContextMenus)
+
+
+class AssetTreeView(DraggableView, QTreeView):
+    def __init__(self, *args, **kwargs):
+        super(AssetTreeView, self).__init__(*args, **kwargs)
+
+
+class AssetListView(DraggableView, QListView):
+    onLinkRemove = Signal(QModelIndex)
+    assetsDeleted = Signal(defaultdict)
+    onExecuted = Signal(QModelIndex)
+
+    def __init__(self, parent=None):
+        super(AssetListView, self).__init__(parent)
+        self.verticalScrollBar().setSingleStep(40)
+        self.setViewMode(QListView.IconMode)
+        self.setFlow(QListView.LeftToRight)
+        self.setResizeMode(QListView.Adjust)
+        self.setUniformItemSizes(True)
+
         self.setSpacing(4)
 
         self.lastIndex = None
@@ -126,48 +161,22 @@ class AssetListView(BaseView):
         self.advanced_label = QLabel(' Advanced')
         self.advanced_label.setStyleSheet('background-color: rgb(68,68,68); color: rgb(150, 150, 150);')
         self.additional_actions = []
-        self.drop_index = None
+        self.entered.connect(self.onEnter)
+        self.current_asset = None
+        self.customContextMenuRequested.connect(self.showContextMenus)
 
     def dragMoveEvent(self, event):
         super(AssetListView, self).dragMoveEvent(event)
         index = self.indexAt(event.pos())
         if not index.isValid() or index in self.selectedIndexes():
             event.ignore()
-            self.drop_index = None
         elif event.mimeData().hasUrls():
             self.setFocus()
             event.acceptProposedAction()
-            self.drop_index = index
-
-    def dragLeaveEvent(self, event):
-        super(AssetListView, self).dragLeaveEvent(event)
-        self.drop_index = None
-
-    def paintEvent(self, event):
-        super(AssetListView, self).paintEvent(event)
-        if self.drop_index:
-            r = self.visualRect(self.drop_index)
-            r = r - QMargins(1,1,1,1)
-            painter = QPainter(self.viewport())
-            painter.drawRect(r)
-            self.update(self.drop_index)
-
-    def leaveEvent(self, event):
-        super(AssetListView, self).leaveEvent(event)
-        self.lastIndex = None # Essential! last index will be deleted by Qt
-        self.drop_index = None
-
-    def enterEvent(self, event):
-        super(AssetListView, self).enterEvent(event)
-        self.lastIndex = None # Essential! last index will be deleted by Qt
-        self.drop_index = None
-
-    def setModel(self, model):
-        super(AssetListView, self).setModel(model)
-        self.model = model
 
     def clear(self):
-        self.model.clear()
+        self.current_asset = None
+        self.model().clear()
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -181,8 +190,10 @@ class AssetListView(BaseView):
         elif mods == Qt.ControlModifier and key == Qt.Key_G:
             self.groupSelectedItems()
         elif key == Qt.Key_Space:
-            if self.lastIndex and self.lastIndex.isValid():
-                self.onExecuted.emit(self.lastIndex)
+            sel_mod = self.selectionModel()
+            if sel_mod.hasSelection():
+                selection = sel_mod.selectedIndexes()
+                self.onExecuted.emit(selection[-1])
 
     def clipboardCopy(self, description=None):
         clipboard = QApplication.clipboard()
@@ -212,7 +223,7 @@ class AssetListView(BaseView):
             out_path = asset.network_path.suffixed('_icon', ext='.jpg')
             out_path.path.parent.mkdir(parents=True, exist_ok=True)
             out_img.save(str(out_path))
-            asset.icon = QPixmap.fromImage(out_img) # fromImageInPlace
+            asset.icon = out_img
         elif mime_data.hasUrls():
             for url in mime_data.urls():
                 if not url.isLocalFile():
@@ -259,65 +270,55 @@ class AssetListView(BaseView):
             return None
         return selection[-1].data(Qt.UserRole)
 
-    def indexToItem(self, index):
-        proxy_model = index.model()
-        remapped_index = proxy_model.mapToSource(index)
-        item = self.model.itemFromIndex(remapped_index)
+    @Slot(QModelIndex)
+    def onEnter(self, index):
+        self.invalidateCurrentAsset()
+        self.current_asset = index.data(Qt.UserRole)
+        if self.itemDelegate().VIEW_MODE == ItemDispalyModes.THUMBNAIL:
+            loadHoverImage(self.current_asset)
 
-        return item
-
-    def resetLastIndex(self):
-        if self.lastIndex is None:
-            return
-        index = self.lastIndex
-        asset = index.data(Qt.UserRole)
+    def invalidateCurrentAsset(self):
+        asset = self.current_asset
         if asset is not None and not isinstance(asset, TempAsset):
             asset.progress = 0
-            on_complete = partial(setattr, asset, 'icon')
-            worker = LocalThumbnail(asset.icon_path, on_complete)
-            THREAD_POOL.start(worker)
-            self.model.dataChanged.emit(index, index, [Qt.UserRole])
-        self.lastIndex = None
+            video = asset.video
+            if video is not None:
+                asset.icon = video[(len(video) // 2)]
+        self.current_asset = None
 
     def mouseMoveEvent(self, event):
-        super(AssetListView, self).mouseMoveEvent(event)
         mouse_pos = event.pos()
         index = self.indexAt(mouse_pos)
         if not index.isValid():
-            self.resetLastIndex()
-            return
-        asset = index.data(Qt.UserRole)
-        if index != self.lastIndex:
-            self.resetLastIndex()
-            self.lastIndex = index
+            self.invalidateCurrentAsset()
+            return super(AssetListView, self).mouseMoveEvent(event)
 
-            if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
-                has_duration = hasattr(asset, 'duration') and asset.duration
-                if has_duration or getattr(asset, 'class') in PREVIEWABLE:
-                    asset.stream_video_to()
-                elif asset.type == int(AssetType.COLLECTION):
-                    asset.video = []
-                    if isinstance(asset.upstream, list):
-                        for num, x in enumerate(asset.upstream):
-                            if num > 15:
-                                break
-                            linked_asset = x.data(Qt.UserRole)
-                            # TODO: this is a temporary local implementation.
-                            worker = LocalThumbnail(linked_asset.icon_path, asset.video.append)
-                            THREAD_POOL.start(worker)
+        delegate = self.itemDelegate()
+        if isinstance(delegate.active_indicator, PreviewImageIndicator):
+            asset = index.data(Qt.UserRole)
+            if asset.type == AssetType.COLLECTION and asset.video is None:
+                previews = [x.data(Qt.UserRole).icon for x in iterateUpstreamForPreview(asset)]
+                if all(previews):
+                    asset.video = previews
+            self.updateHoverImage(index, mouse_pos, delegate)
 
-        if BaseItemDelegate.VIEW_MODE == ItemDispalyModes.THUMBNAIL:
-            rect = self.visualRect(index)
-            a = rect.bottomLeft()
-            relative_pos = mouse_pos.x() - a.x()
-            if relative_pos > 0 and relative_pos < 292:
-                if asset.video:
-                    duration = len(asset.video)
-                    pos_idx = int(relative_pos * duration / rect.width())
+        super(AssetListView, self).mouseMoveEvent(event)
+
+    def updateHoverImage(self, index, mouse_pos, delegate):
+        rect = self.visualRect(index)
+        relative_pos = mouse_pos.x() - rect.topLeft().x()
+        image_width = delegate.VIEW_MODE.item_size.width()
+        if relative_pos > 0 and relative_pos < image_width:
+            asset = index.data(Qt.UserRole)
+            if asset.video is not None and len(asset.video) > 0:
+                duration = len(asset.video)
+                pos_idx = int(relative_pos * duration / rect.width())
+                try:
                     asset.icon = asset.video[pos_idx]
-                    asset.progress = relative_pos
-
-                self.model.dataChanged.emit(index, index, [Qt.UserRole])
+                except IndexError:
+                    print(duration, pos_idx)
+                asset.progress = ((pos_idx+1) * 100) / duration
+            self.model().dataChanged.emit(index, index, [Qt.UserRole])
 
     def dropEvent(self, event):
         if not int(config.RELIC_PREFS.edit_mode):
@@ -404,7 +405,7 @@ class AssetListView(BaseView):
             if not isinstance(asset, TempAsset):
                 asset.remove()
             self.setRowHidden(index.row(), True)
-            self.onDeleted.emit(index)
+            self.itemDeleted.emit(index)
 
         # Update the subcategories with new counts
         self.assetsDeleted.emit(count_data)
@@ -446,8 +447,3 @@ class AssetListView(BaseView):
                 winpath = str(asset.network_path.parent).replace('/', '\\')
             cmd = 'explorer /select, "{}"'.format(winpath)
             subprocess.Popen(cmd)
-    
-    def assetPreview(self):
-        index = self.selectedIndexes()[-1]
-        asset = index.data(Qt.UserRole)
-        config.peakPreview(asset.network_path)

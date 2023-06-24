@@ -1,14 +1,24 @@
 import json
-import re
+import logging
 
 # -- Third-Party --
-from PySide6.QtCore import (QObject, QUrl, Signal, Slot)
+from PySide6.QtCore import (QObject, QUrl, Signal, Slot, QThread, Qt)
 from PySide6.QtWebSockets import QWebSocket
 from PySide6.QtWidgets import QApplication
 
 # -- First-Party --
-from relic import config
+from qt_logger import attachHandler
 
+# -- Module --
+import relic.config as config
+LOG = logging.getLogger('RelicClientSession')
+attachHandler(LOG)
+
+
+class QSocket(QWebSocket):
+    def sendTextMessage(self, message):
+        LOG.debug('Sending command to server : %s' % message)
+        super(QSocket, self).sendTextMessage(message)
 
 class RelicCommand(QObject):
 
@@ -35,7 +45,7 @@ class RetrieveAssetNames(RelicCommand):
         super(RetrieveAssetNames, self).execute(category_id)
 
 class VideoStream(RelicCommand):
-    callback = Signal(dict)
+    callback = Signal(str)
 
     def execute(self, data: str):
         self.socket.sendTextMessage(json.dumps({self.__class__.__name__: data}))
@@ -108,19 +118,16 @@ class RelicClientSession(QObject):
     URI = config.SOCKET
     IMAGE = 0
     VIDEO = 1
-    onVideoReceived = Signal(bytes)
+    onVideoReceived = Signal(str, bytes)
     onImageReceived = Signal(str, bytes)
 
     def __init__(self, url: str = None):
         super(RelicClientSession, self).__init__()
         qApp or QApplication() # need QApplication instance for event loop.
         self.count = 0
-        self.mode = self.IMAGE
-        self.video_info = None
-        self.image_info = None
-        self.socket = QWebSocket()
+        self.socket = QSocket()
         self.socket.textMessageReceived.connect(self.receiveText)
-        self.socket.binaryMessageReceived.connect(self.receiveBinary)
+        self.socket.binaryMessageReceived.connect(self.receiveBinary)#, Qt.QueuedConnection)
         if url:
             self.bindTo(url)
         RelicCommand.socket = self.socket
@@ -148,18 +155,20 @@ class RelicClientSession(QObject):
         self.retrieveassetnames = RetrieveAssetNames()
         self.initializeprimaryasset = InitializePrimaryAsset()
         self.videostream = VideoStream()
-        self.videostream.callback.connect(self.setupVideo)
-        #self.imagestream.callback.connect(image_callback)
+        self.videostream.callback.connect(self.prepVideo)
+        #self.imagestream.callback.connect(self.prepImage)
+        self.video_path = None
+        self.image_path = None
 
     @Slot(str)
-    def setupVideo(self, data):
-        self.video_info = data
-        self.mode = self.VIDEO
+    def prepVideo(self, data):
+        self.video_path = data
+        self._binaryReciever = self.receiveVideo
 
     @Slot(str)
-    def setupImage(self, data):
-        self.image_info = data
-        self.mode = self.IMAGE
+    def prepImage(self, data):
+        self.image_path = data
+        self._binaryReciever = self.receiveImage
 
     def bindTo(self, hostname: str):
         self.socket.close()
@@ -170,6 +179,7 @@ class RelicClientSession(QObject):
 
     @Slot(str)
     def receiveText(self, text):
+        LOG.debug(f'Received message: {text}')
         result = json.loads(text)
         for cmd, data in result.items():
             caller = getattr(self, cmd.lower())
@@ -177,14 +187,21 @@ class RelicClientSession(QObject):
 
     @Slot(bytes)
     def receiveBinary(self, data):
-        self._receiver(data)
+        self._binaryReciever(data)
 
-    def _receiver(self, data):
-        if self.mode == self.IMAGE:
-            self.onImageReceived.emit(self.image_info, data)
-        elif self.mode == self.VIDEO:
-            self.onVideoReceived.emit(data)
+    def _binaryReciever(self, data):
+        pass
 
+    def receiveImage(self, data):
+        self.onImageReceived.emit(self.image_path, data)
+
+    def receiveVideo(self, data):
+        if self.video_path is None:
+            LOG.warning('Late video data received.')
+            return # late video data received.
+        path = self.video_path
+        self.onVideoReceived.emit(path, data)
+        self.video_path = None
 
 if __name__ == '__main__':
     import sys

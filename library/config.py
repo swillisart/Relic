@@ -4,12 +4,13 @@ import logging
 # -- Third-party --
 from sequence_path.main import SequencePath as Path
 from qt_settings import Preferences
+from qt_logger import attachHandler
 
 from relic.local import Extension
 from intercom import Client
 
 PEAK = Client('peak')
-USERPROFILE = os.getenv('userprofile')
+USERPROFILE = os.getenv('USERPROFILE')
 
 def peakLoad(path):
     PEAK.sendPayload(str(path))
@@ -46,7 +47,7 @@ RELIC_PREFS = RelicPreferences('Relic')
 # -- Logging --
 logging.basicConfig(
     filename=f'{USERPROFILE}/.relic/relic.log',
-    format='%(asctime)-10s %(filename)s: %(funcName)10s %(message)s'
+    level=os.environ.get('LOGLEVEL', logging.WARNING),
 )
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+LOG = logging.getLogger('Relic.library')
+attachHandler(LOG)

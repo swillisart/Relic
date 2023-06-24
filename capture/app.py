@@ -1,19 +1,17 @@
 import os
 import sys
-import operator
-import timeit
-import subprocess
+from collections import deque
 from fractions import Fraction
 from datetime import datetime
 from functools import partial, cached_property
 from enum import IntEnum
-from logging import getLogger
 
 # -- Third-party --
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource
+
 from relic.qt.delegates import ItemDispalyModes, BaseItemModel
 from relic.qt.expandable_group import ExpandableGroup
 from relic.qt.widgets import SearchBox, AnnotationOverlay, GroupView, GroupViewFilter, BaseItemHeader
@@ -21,18 +19,19 @@ from relic.qt.util import _indexToItem
 
 from intercom import Client
 from sequence_path.main import SequencePath as Path
-from qt_logger import registerLogConsoleMenu, attachLogger, attachHandler
+from qt_logger import registerLogConsoleMenu, attachLogger
 
 import av
 import numpy as np
 from av.filter import Graph
 from av import AudioFrame, VideoFrame
 from PyGif.gifski import GifEncoder
-from d3dshot.d3dshot import D3DShot, Singleton
+from d3dshot.d3dshot import D3DShot
 
 # -- Module --
 import resources
 import capture.resources
+from capture.config import LOG
 from capture.history_view import (Types, CaptureItem, HistoryTreeView, TypesIndicator)
 from capture.ui.dialog import Ui_ScreenCapture
 from capture.cursor import get_cursor_arrays, build_cursor_data 
@@ -171,6 +170,7 @@ class EncodeImage(QRunnable):
 
     def __init__(self, container, array, audio, crop_graph, pts, screen, cursor_cache):
         super(EncodeImage, self).__init__()
+        self.log = attachLogger(self)
         self.container = container
         self.array = array
         self.crop_graph = crop_graph
@@ -198,8 +198,8 @@ class EncodeImage(QRunnable):
                 slicer = np.s_[y:y+h, x:x+w, :3]
                 np.copyto(image[slicer], color, where=mask)
         except ValueError as exerr:
-            # cursor intersecting or completely out of the capture boundary.
-            pass
+            msg = '%s cursor is likely intersecting or completely out of the capture boundary.'
+            self.log.info(msg % exerr)
         return image
 
     def encodeAudio(self):
@@ -231,28 +231,101 @@ class EncodeImage(QRunnable):
         self.encodeAudio()
 
 
+class CircleQueue:
+    __slots__ = ('mutex', 'queue', 'availibility', 'input_needs')
 
-class Recorder(QObject):
+    def __init__(self):
+        # Queues and the worker threads.
+        self.queue = deque()
+        # Circular semaphores and mutex for locking resources.
+        self.mutex = QMutex()
+        self.availibility = QSemaphore(0)
+        self.input_needs = QSemaphore(1)
 
-    def __init__(self, parent=None):
-        super(Recorder, self).__init__(parent)
+    def addToQueue(self, data):
+        # __enter__
+        self.input_needs.acquire()
+        self.mutex.lock()
+        # __call__
+        self.queue.append(data)
+        # __exit__
+        self.mutex.unlock()
+        self.availibility.release(1)
+
+
+FRAME_QUEUE = CircleQueue()
+
+def getAudioDevice():
+    input_device = QMediaDevices.defaultAudioInput()
+    if input_device.isNull():
+        LOG.warning('No audio input device found, audio will not be recorded.')
+        return None
+    msg = ','.join(x.description() for x in QMediaDevices.audioInputs())
+    LOG.info('Audio Input Devices Availible: [%s]' % msg)
+    LOG.info('Initializing input device for audio source: %s' % (input_device.description()))
+    audio_format = QAudioFormat()
+    audio_format.setSampleRate(AUDIO_RATE)
+    audio_format.setChannelCount(1) # 1 mono, 2 stereo
+    audio_format.setSampleFormat(QAudioFormat.Int16)
+    audio_input = QAudioSource(input_device, audio_format)
+    return audio_input
+
+
+class Interval(QObject):
+    def __init__(self):
+        QObject.__init__(self)
+        self.audio_input = getAudioDevice()
+        if self.audio_input is None:
+            self.start = self._videoStart
+            self.timerEvent = self._vTimerEvent
+        else:
+            self.start = self._audioStart
+            self.timerEvent = self._avTimerEvent
+        self.audio_data = None
+
+    def _videoStart(self):
+        """Start the capture timer at 24fps in precise milisecond intervals"""
+        self.startTimer(1000/25, Qt.PreciseTimer)
+
+    def _audioStart(self):
+        """Start the capture timer at 24fps in precise milisecond intervals"""
+        self.io_device = self.audio_input.start()
+        self.startTimer(1000/25, Qt.PreciseTimer)
+
+    def _avTimerEvent(self, event):
+        audio_data = self.io_device.read(CHUNK_SIZE).data()
+        FRAME_QUEUE.addToQueue(audio_data)
+
+    def _vTimerEvent(self, event):
+        FRAME_QUEUE.addToQueue(None)
+
+
+class Recorder(QThread):
+    
+    started = Signal(object)
+    stopped = Signal(object)
+
+    def __init__(self, out_path, rect, screen, has_audio):
+        #super(Recorder, self).__init__(parent)
+        QThread.__init__(self)
+        self.setObjectName('<Recording> Thread')
+        FRAME_QUEUE.queue.clear()
+        self.circle = FRAME_QUEUE
         self.log = attachLogger(self)
+        self.rect = rect
+        self.screen = screen
+        self.out_path = out_path
+        # Initialize Devices
         self.d3d = D3DShot()
-        self.input_device = QMediaDevices.defaultAudioInput()
-        
-        msg = ','.join(x.description() for x in QMediaDevices.audioInputs())
-        self.log.debug('Audio Input Devices Availible: [%s]' % msg)
-        audio_format = QAudioFormat()
-        audio_format.setSampleRate(AUDIO_RATE)
-        audio_format.setChannelCount(1) # 1 mono, 2 stereo
-        audio_format.setSampleFormat(QAudioFormat.Int16)
+        self.capture_func = self.d3d.screenshot
 
-        if not self.input_device.isNull():
-            self._audio_input = QAudioSource(self.input_device, audio_format, self)
-            self.log.debug('Initializing input device for audio source: %s' % (
-                self.input_device.description()
-            ))
+        # AV
+        self.container = createContainer(out_path, rect, has_audio)
+        self.crop_graph = createCropGraph(screen.geometry(), rect)
 
+        self.log.debug('Initialized image encoding for screen : %s geometry: %s' % (screen.name(), str(screen.geometry())))
+
+        # Create the embedded cursor cache for image injection.
         cursor_cache = {}
         all_screens = QGuiApplication.screens()
         for screen in reversed(all_screens):
@@ -272,44 +345,12 @@ class Recorder(QObject):
         self.encode_pool = QThreadPool()
         self.encode_pool.setMaxThreadCount(1)
 
-    def start(self, out_path, rect, screen):
-        self.rect = rect
-        self.screen = screen
-        self.out_path = out_path
-        self.capture_func = self.d3d.screenshot
-        if self.input_device.isNull():
-            self.log.warning('No audio input device found, audio will not be recorded.')
-            has_audio = False
-        else:
-            has_audio = True
-        
-        self.container = createContainer(out_path, rect, has_audio)
-        self.crop_graph = createCropGraph(self.screen.geometry(), rect)
+    def start(self):
         self.pts = 0 # presentation time stamp
         self.container.start_encoding()
-
-        # audio timer
-        if has_audio:
-            self.log.debug('Starting Video and Audio capture.')
-            self._io_device = self._audio_input.start()
-            self._io_device.readyRead.connect(self.onFrameReady)
-        else:
-            self.log.debug('Starting video-only capture.')
-            self.timer = QTimer()
-            self.timer.setInterval(1000/VIDEO_RATE)
-            self.timer.setTimerType(Qt.PreciseTimer)
-            self.timer.timeout.connect(self.onVideoFrame)
-            self.timer.start()
-
-    @Slot()
-    def stop(self):
-        if not self.input_device.isNull(): 
-            self.log.debug('Stopping Video and Audio capture.')
-            self._audio_input.stop()
-        else:
-            self.log.debug('Stopping Video-only capture.')
-            self.timer.stop()
-        self.deferred_cleanup = QTimer.singleShot(1*1000, self.cleanup)
+        QThread.start(self)
+        self.log.debug('Starting Video and Audio capture.')
+        self.log.debug(QThread.currentThread().objectName())
 
     def cleanup(self):
         container = self.container
@@ -326,29 +367,40 @@ class Recorder(QObject):
             pass
         container.close()
 
-    @Slot()
-    def onFrameReady(self):
+    def run(self):
+        while True: # QWaitCondition
+            circle = self.circle
+            # try to acquire the next item in the queue of availability
+            if not circle.availibility.tryAcquire(1, 100):
+                if self.isInterruptionRequested():
+                    self.cleanup()
+                    return
+                continue
+            #print('Acquired availibility from queue %s' % currentThreadName())
+            with QMutexLocker(circle.mutex):
+                if self.isInterruptionRequested():
+                    circle.mutex.unlock()
+                    self.cleanup()
+                    return
+                queue = circle.queue
+                if len(circle.queue) > 0:
+                    data = queue.popleft()
+                else:
+                    data = None
+
+            circle.input_needs.release()
+            self.onFrameReady(data)
+            self.msleep(10)
+
+    def onFrameReady(self, audio_data):
         """Encode audio and video to container using the audio input device timing.
         """
-        # audio
-        audio_data = self._io_device.read(CHUNK_SIZE).data()
-
         # video
         img_data = self.capture_func()
         #img_data = np.zeros((9216000,), dtype=np.uint8)
-        screen = self.screen.screen()
         self.pts += 1
         worker = EncodeImage(
-            self.container, img_data, audio_data, self.crop_graph, self.pts, screen, self.cursor_cache)
-        self.encode_pool.start(worker)
-
-    @Slot()
-    def onVideoFrame(self):
-        """Encode video only frames to the container"""
-        self.pts += 1
-        worker = EncodeImage(self.container, self.capture_func(), None,
-            self.crop_graph, self.pts, self.screen.screen(), self.cursor_cache
-        )
+            self.container, img_data, audio_data, self.crop_graph, self.pts, self.screen, self.cursor_cache)
         self.encode_pool.start(worker)
 
 
@@ -500,7 +552,6 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.pinned = False
         self.setupUi(self)
         self.log = attachLogger(self)
-        attachHandler(getLogger('libav'))
 
         # -- System Tray --
         self.tray_icon = QIcon(':icons/capture.svg')
@@ -511,7 +562,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.tray.show()
 
         tray_menu = QMenu(self)
-        registerLogConsoleMenu(tray_menu)
+        registerLogConsoleMenu(tray_menu, parent=self)
 
         self.tray.setContextMenu(tray_menu)
         self.separator = QAction()
@@ -567,10 +618,25 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         try: os.mkdir(OUTPUT_PATH + '/previews')
         except: pass
         self.intercom_client = Client('peak')
-        self.recorder = Recorder()
-        self.recording_thread = QThread(self)
-        self.recorder.moveToThread(self.recording_thread)
-        self.recording_thread.start()
+        QThread.currentThread().setObjectName('<Main> Thread')
+        self.recorder = None
+    
+        '''
+        #from PySide6.QtMultimedia import QMediaCaptureSession
+        #from PySide6.QtMultimediaWidgets import QVideoWidget
+        # Setup QScreenCapture with initial source:
+        self.screenCapture = QScreenCapture(self)
+        self.screenCapture.setScreen(QGuiApplication.primaryScreen())
+        self.screenCapture.start()
+        self.mediaCaptureSession = QMediaCaptureSession(self)
+        self.mediaCaptureSession.setScreenCapture(self.screenCapture)
+        #self.mediaCaptureSession.setVideoOutput(self.videoWidget)
+        self.sink = QVideoWidget(self)
+        self.mediaCaptureSession.setVideoOutput(self.sink)
+        history_layout.addWidget(self.sink)
+        print(self.mediaCaptureSession.videoOutput())
+        print(self.mediaCaptureSession.videoSink())
+        '''
 
     @Slot()
     def addDescription(self):
@@ -783,7 +849,9 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         event.ignore()
 
     def _close(self):
-        self.recording_thread.exit()
+        if hasattr(self, 'recorder') and self.recorder is not None:
+            if self.recorder.isRunning():
+                self.stopIt()
         sys.exit()
 
     @Slot()
@@ -960,30 +1028,45 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def startRecording(self, rect, pixmap, screen):
         self.finishCapture()
         self.show()
-        self.screen = screen
-        self.rect = rect
+        self.out_video = newCaptureFile(out_format='mp4')
         # because D3DShot doesn't allow for restarting the device.
         self.log.debug('Restarting D3DShot')
-        Singleton._instances = {}
-        del self.recorder
-        self.log.debug('Creating new Recorder')
-        self.recorder = Recorder()
-        self.recorder.moveToThread(self.recording_thread)
-        self.stopRecording.connect(self.recorder.stop)
-        # set the direct 3d display from our chosen screen
-        for i, screen in enumerate(reversed(self.screens)):
-            if self.screen == screen.screen():
-                self.recorder.d3d.display = self.recorder.d3d.displays[i]
 
-        self.out_video = newCaptureFile(out_format='mp4')
+        self.log.debug('Creating new Recorder')
+        self.interval = Interval()
+        has_audio = self.interval.audio_input is not None
+        del self.recorder
+        self.recorder = Recorder(str(self.out_video), rect, screen, has_audio)
+        self.stopRecording.connect(self.stopIt)
+        # set the direct 3d display from our chosen screen
+        found = False
+        dis = (len(self.recorder.d3d.displays), len(self.screens))
+        self.log.debug('Mapping D3DShot displays (%d) to Qt screens (%d)' % dis) 
+        for i, this_screen in enumerate(reversed(self.screens)):
+            if screen == this_screen.screen():
+                self.recorder.d3d.display = self.recorder.d3d.displays[i]
+                found = True
+                break
+
+        if not found:
+            self.log.error('Failed to find screen')
+            return
 
         out_preview = getPreviewPath(self.out_video)
         size = ItemDispalyModes.COMPACT.thumb_size
         out_img = makeThumbnail(pixmap)
         out_img.save(str(out_preview))
-
-        self.recorder.start(str(self.out_video), rect, screen)
+        self.recorder.start()
+        self.interval.start()
         self.log.debug('Threaded Recording started')
+
+    def stopIt(self):
+        self.log.debug('Stopping recording')
+        self.recorder.requestInterruption()
+        self.recorder.quit()
+        self.recorder.wait()
+        self.interval.deleteLater()
+
 
     @Slot()
     def saveScreenshot(self, rect, image, screen):

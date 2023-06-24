@@ -151,8 +151,9 @@ class RelicPanel(MayaQWidgetDockableMixin, views.RelicSceneForm):
                 asset.id = cmds.getAttr(nodename + '.RELIC_id')
                 asset.filehash = cmds.getAttr(nodename + '.RELIC_hash')
                 if not self.content.assetInModel(asset):
-                    asset.fetch(on_complete=partial(self.content.addAsset, asset))
-
+                    asset.callbacks = [self.content.addAsset, views.updateIcon]
+                    asset.fetch()
+    
             all_nodes_iter.next()
 
     def deleteAsset(self, asset):

@@ -933,8 +933,7 @@ def copyRelatedIcon(asset):
 
 def main(args):
     app = qApp or QApplication(sys.argv)
-    ctypes.windll.kernel32.SetConsoleTitleW('Relic')
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u'resarts.relic')
+    ctypes.windll.kernel32.SetConsoleTitleW('Relic (Console)')
 
     base_style = readAllContents(':/base_style.qss')
     app_style = readAllContents(':/resources/style/app_style.qss')

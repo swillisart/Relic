@@ -34,6 +34,13 @@ tr = Qt.AlignTop | Qt.AlignRight
 bl = Qt.AlignBottom | Qt.AlignLeft
 br = Qt.AlignBottom | Qt.AlignRight
 
+
+class DateFormat(datetime):
+
+    def __str__(self):
+        return self.strftime('%m/%d/%y\n%H:%M')
+
+
 class CaptureItem(ImageableMixin):
     __slots__ = ['path', 'status', 'type', 'progress', 'description', '_image', '_date', '_size', '_title']
 
@@ -65,11 +72,11 @@ class CaptureItem(ImageableMixin):
 
     @slot_property
     def date(self):
-        return datetime.fromtimestamp(self.path.datemodified).strftime('%m/%d/%y\n%H:%M')
+        return DateFormat.fromtimestamp(self.path.datemodified)
 
     @slot_property
     def size(self):
-        return str(self.path.size)
+        return self.path.size
 
 
 class HistoryTreeView(BaseDelegateMixin, BaseTreeView):

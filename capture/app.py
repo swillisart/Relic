@@ -10,7 +10,7 @@ from enum import IntEnum
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource
+from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
 
 from relic.qt.delegates import ItemDispalyModes, BaseItemModel
 from relic.qt.expandable_group import ExpandableGroup
@@ -25,7 +25,7 @@ import av
 import numpy as np
 from av.filter import Graph
 from av import AudioFrame, VideoFrame
-from PyGif.gifski import GifEncoder
+from PyGif.gifski import GifEncoder 
 from d3dshot.d3dshot import D3DShot
 
 # -- Module --
@@ -275,6 +275,7 @@ class Interval(QObject):
     def __init__(self):
         QObject.__init__(self)
         self.audio_input = getAudioDevice()
+        self.audio_input.stateChanged.connect(self.onStateChange)
         if self.audio_input is None:
             self.start = self._videoStart
             self.timerEvent = self._vTimerEvent
@@ -283,6 +284,12 @@ class Interval(QObject):
             self.timerEvent = self._avTimerEvent
         self.audio_data = None
 
+    @Slot()
+    def onStateChange(self, state):
+        if state == QAudio.SuspendedState:
+            self.killTimer(self.timer_id)
+            self.audio_input.stop()
+
     def _videoStart(self):
         """Start the capture timer at 24fps in precise milisecond intervals"""
         self.startTimer(1000/25, Qt.PreciseTimer)
@@ -290,7 +297,7 @@ class Interval(QObject):
     def _audioStart(self):
         """Start the capture timer at 24fps in precise milisecond intervals"""
         self.io_device = self.audio_input.start()
-        self.startTimer(1000/25, Qt.PreciseTimer)
+        self.timer_id = self.startTimer(1000/25, Qt.PreciseTimer)
 
     def _avTimerEvent(self, event):
         audio_data = self.io_device.read(CHUNK_SIZE).data()
@@ -1017,7 +1024,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             self.screens.append(screen_overlay)
 
     @Slot()
-    def performRecording(self, state):
+    def performRecording(self, state=True):
         if state:
             self.performScreenshot(record=True)
         else:
@@ -1065,8 +1072,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self.recorder.requestInterruption()
         self.recorder.quit()
         self.recorder.wait()
+        self.interval.audio_input.suspend()
         self.interval.deleteLater()
-
 
     @Slot()
     def saveScreenshot(self, rect, image, screen):

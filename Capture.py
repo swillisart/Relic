@@ -10,8 +10,8 @@ if client.errored:
 	import ctypes
 	import argparse
 	parser = argparse.ArgumentParser(description='Capture the screen')
-	parser.add_argument('--screenshot', nargs='?', metavar='')
-	parser.add_argument('--record', nargs='?', metavar='')
+	parser.add_argument('--screenshot', action='store_true')
+	parser.add_argument('--record', action='store_true')
 	parser.add_argument('--loglevel', nargs='?', metavar='')
 	args = parser.parse_args()
 
@@ -43,5 +43,9 @@ if client.errored:
 	server = Server('capture')
 	server.incomingFile.connect(window.performScreenshot)
 	window.taskbar_pin(True)
+	if args.screenshot:
+		window.performScreenshot()
+	elif args.record:
+		window.recordButton.click()
 	window.show()
 	sys.exit(app.exec())

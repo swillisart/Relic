@@ -3,18 +3,20 @@ from enum import IntEnum
 
 from extra_types.flag_enum import FlagEnumAuto, EnumAuto, Flag, Enumerant
 from extra_types.properties import slot_property
+from extra_types.composable import SlotsCompose, Composable
+from extra_types import Duration
 
-from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot
-from PySide6.QtGui import QColor, QIcon, QStandardItem, QImage
+from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot, QFile
+from PySide6.QtGui import QColor, QIcon, QStandardItem, QImage, QFont, QPainterPath
 import relic.config as config
 from relic.qt.delegates import (IMAGE_CACHE, CompactImageIndicator,PreviewImageIndicator, ColorIndicator, Title, BaseItemDelegate, IconIndicator, TextDecorationIndicator, ProgressIndicator,
-                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis)
+                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis, flipRect)
 from relic.gui import CategoryColor, TypeIndicator
 
 from relic.base import Fields
 from relic.local import (Alusers, Category, buildObjectMixinMap, Relationships,
                         Subcategory, Tags, TempAsset)
-from relic.scheme import Table, AssetType
+from relic.scheme import Table, AssetType, TagType, UserType
 from sequence_path.main import SequencePath as Path
 
 from library.io.networking import RelicClientSession
@@ -24,35 +26,83 @@ session = RelicClientSession(RelicClientSession.URI)
 PROJECT_STORAGE = Path(config.PROJECT_STORAGE.format(project='relic'))
 NETWORK_STORAGE = Path(config.NETWORK_STORAGE)
 
-#res_uri = ':{}/{}'
-#types = {x.name: QIcon(res_uri.format(AssetType.__name__, x.name)) for x in AssetType}
-'''
-CategoryColor = EnumAuto.fromDataConstructor('CategoryColor',
-    {
-        '__order__': Category.__order__,
-        'REFERENCES': (168, 58, 58),
-        'MODELING': (168, 58, 58),
-        'REFERENCES': (168, 58, 58),
-        'REFERENCES': (168, 58, 58),
-    },
-    ColorIndicator,
-)
-'''
-
 TL = Qt.AlignTop | Qt.AlignLeft
 TR = Qt.AlignTop | Qt.AlignRight
 BL = Qt.AlignBottom | Qt.AlignLeft
 BR = Qt.AlignBottom | Qt.AlignRight
-'''
-print('display', int(Qt.DisplayRole))
-print('decor', int(Qt.DecorationRole))
-print('edit', int(Qt.EditRole))
-print('tooltip', int(Qt.ToolTipRole))
-print('statusbartip', int(Qt.StatusTipRole))
-print('sizehint', int(Qt.SizeHintRole))
-print('checkable', int(Qt.CheckStateRole))
-print('user', int(Qt.UserRole))
-'''
+
+
+class DurationIndicator(object):
+
+    def __init__(self, duration):
+        self.value = str(Duration(duration)) if duration else ''
+
+    @staticmethod
+    def draw(painter, text, bounds, align):
+        new_font = QFont('Ebrima', 8, QFont.Normal)
+        new_font.setStyleHint(QFont.TypeWriter) 
+        painter.setFont(new_font)        
+        painter.setPen(QColor(175, 175, 175))
+        text_repr = str(text)
+        metrics = painter.fontMetrics()
+        text_width = metrics.horizontalAdvance(text_repr)
+        text_rect = QRect(2, 2, text_width, metrics.height())
+        rect = flipRect(text_rect, align, bounds)
+        bounding_rect = rect.adjusted(-2, -1, 2, 1)
+        painter.fillRect(bounding_rect, QColor(43,43,43))
+        painter.drawText(rect, text_repr)
+        return bounding_rect
+
+
+class CountIndicator(object):
+
+    def __init__(self, count):
+        self.value = count
+
+    @staticmethod
+    def draw(painter, text, bounds, align):
+        if text == '0':
+            return QRect()
+        text_repr = '({})'.format(text)
+        new_font = QFont('Ebrima', 9, QFont.Normal)
+        new_font.setStyleHint(QFont.TypeWriter) 
+        painter.setFont(new_font)
+        painter.setPen(QColor(175, 175, 175))
+        metrics = painter.fontMetrics()
+        text_width = metrics.horizontalAdvance(text_repr)
+        text_rect = QRect(2, 2, text_width, metrics.height())
+        rect = flipRect(text_rect, align, bounds)
+        bounding_rect = rect.adjusted(-2, 0, 2, 0)
+        painter.drawText(rect, text_repr)
+        return bounding_rect
+
+
+class ExtentIndicator(object):
+
+    def __init__(self, text):
+        self.value = text
+
+    @staticmethod
+    def draw(painter, text, bounds, align):
+        text_repr = str(text)
+        if text_repr == '0':
+            return QRect()
+        new_font = QFont('Ebrima', 9, QFont.Normal)
+        new_font.setStyleHint(QFont.TypeWriter)
+        painter.setFont(new_font)
+        painter.setPen(QColor(200, 200, 200))
+        metrics = painter.fontMetrics()
+        text_width = metrics.horizontalAdvance(text_repr)
+    
+        text_rect = QRect(1, 1, text_width, metrics.height())
+        rect = flipRect(text_rect, align, bounds)
+        path = QPainterPath()
+        bounding_rect = rect.adjusted(-2, 2, 2, -1)
+        path.addRoundedRect(bounding_rect, 4, 4)
+        painter.fillPath(path, QColor(92,92,92))
+        painter.drawText(rect, text_repr)
+        return bounding_rect
+
 
 class FieldMixin(object):
     # TODO: Add ImageableMixin for the image handling in delegates
@@ -65,34 +115,39 @@ class FieldMixin(object):
 
     @staticmethod
     def setIndications(value):
+        FieldMixin.INDICATIONS.clear()
         BaseItemDelegate.VIEW_MODE = ItemDispalyModes[value]
         if value == ItemDispalyModes.TREE:
-           FieldMixin.INDICATIONS = [
+           FieldMixin.INDICATIONS.extend([
                 Indication('category', CategoryColor, BL, AdvanceAxis.X),
                 Indication('title', TitleIndicator, TL, AdvanceAxis.X),
                 #Indication('type', TypeIndicator, BR, AdvanceAxis.X),
-                Indication('count', TextIndicator, BR, AdvanceAxis.X),
-                Indication('status', Statuses, BR, AdvanceAxis.X),
-            ]
+                Indication('count', CountIndicator, BR, AdvanceAxis.X),
+                #Indication('status', Statuses, BR, AdvanceAxis.X),
+            ])
         if value == ItemDispalyModes.COMPACT:
-            FieldMixin.INDICATIONS = [
+            FieldMixin.INDICATIONS.extend([
                 Indication('image', CompactImageIndicator, TL, AdvanceAxis.X),
                 Indication('category', CategoryColor, BL, AdvanceAxis.X),
                 Indication('title', TitleIndicator, TL, AdvanceAxis.NONE),
-                Indication('type', TypeIndicator, BL, AdvanceAxis.NONE),
-                Indication('status', Statuses, BL, AdvanceAxis.NONE),
-                Indication('count', TextIndicator, BR, AdvanceAxis.NONE),
-            ]
+                Indication('type', TypeIndicator, BL, AdvanceAxis.X),
+                Indication('resolution', ExtentIndicator, BL, AdvanceAxis.X),
+                #Indication('status', Statuses, BL, AdvanceAxis.NONE),
+                Indication('duration', DurationIndicator, TR, AdvanceAxis.NONE),
+                Indication('count', CountIndicator, BR, AdvanceAxis.NONE),
+            ])
         elif value == ItemDispalyModes.THUMBNAIL:
-            FieldMixin.INDICATIONS = [
+            FieldMixin.INDICATIONS.extend([
                 Indication('image', PreviewImageIndicator, TL, AdvanceAxis.Y),
                 Indication('progress', ProgressIndicator, TL, AdvanceAxis.Y),
                 Indication('category', CategoryColor, BL, AdvanceAxis.X),
                 Indication('title', TitleIndicator, TL, AdvanceAxis.NONE),
-                Indication('type', TypeIndicator, BL, AdvanceAxis.NONE),
-                Indication('status', Statuses, BL, AdvanceAxis.NONE),
-                Indication('count', TextIndicator, BR, AdvanceAxis.NONE),
-            ]
+                Indication('type', TypeIndicator, BL, AdvanceAxis.X),
+                Indication('resolution', ExtentIndicator, BL, AdvanceAxis.X),
+                #Indication('status', Statuses, BL, AdvanceAxis.NONE),
+                Indication('count', CountIndicator, BR, AdvanceAxis.NONE),
+                Indication('duration', DurationIndicator, TR, AdvanceAxis.NONE),
+            ])
 
     @property
     def icon(self):
@@ -104,7 +159,7 @@ class FieldMixin(object):
             key = image.cacheKey()
             IMAGE_CACHE[key] = image
         else:
-            key = image
+            key = image or ''
         self._icon = key
 
     def __del__(self):
@@ -148,7 +203,11 @@ class FieldMixin(object):
             session.deleteassets.execute([str(self.relativePath.parent)])
 
         session.removeassets.execute({self.categoryName: ids})
-        
+
+    def createNew(self):
+        data = {self.categoryName: [self.export]}
+        session.createassets.execute(data)
+
     @staticmethod
     def removeAll(relations):
         session.removerelationships.execute(relations)
@@ -260,6 +319,14 @@ class FieldMixin(object):
 
 TempAsset.INDICATIONS = FieldMixin.INDICATIONS
 
+# TODO: TEMPORARY solution for ingestion methods without inheritance.
+#      this should be refactored to better handle temporary assets.
+TempAsset.icon = FieldMixin.icon
+TempAsset.image = FieldMixin.image
+TempAsset.__del__ = FieldMixin.__del__
+TempAsset.title = FieldMixin.title
+# END TEMPORARY SOLUTION
+
 class Library(QObject):
 
     categories = []
@@ -291,6 +358,22 @@ class category(object):
         self.tree = None # QTreeView
         self.tab = None # TabWidget
 
+
+@SlotsCompose.add('value')
+class FolderIconIndicator(Composable):
+
+    @staticmethod
+    def draw(painter, icon, bounds, align):
+        rect = flipRect(QRect(0, 0, 16, 16), align, bounds)
+        icon.paint(painter, rect)
+        return rect
+
+    def value(self, value):
+        fp = ':resources/subcategories/{}.png'.format(value)
+        resource = fp if QFile.exists(fp) else ':app/folder.svg'
+        return QIcon(resource)
+
+
 class subcategory(Subcategory, FieldMixin):
     """
     >>> repr(subcategory(name='test', category=0))
@@ -298,6 +381,10 @@ class subcategory(Subcategory, FieldMixin):
     """
 
     LINK_CALLBACK = None 
+    INDICATIONS = [
+        Indication('name', FolderIconIndicator, TL, AdvanceAxis.X),
+        Indication('title', TitleIndicator, TL, AdvanceAxis.X),
+    ]
 
     def createNew(self):
         data = {self.categoryName: [self.export]}
@@ -354,8 +441,20 @@ class subcategory(Subcategory, FieldMixin):
                 cls.LINK_CALLBACK(link)
             cls.LINK_CALLBACK = None
 
+
+user_type_data = {x.name: ':UserType/{}'.format(x.name) for x in UserType}
+UserTypeIndicator = EnumAuto.fromDataConstructor('UserTypeIndicator', user_type_data, IconIndicator)
+
+tag_type_data = {x.name: ':TagType/{}'.format(x.name) for x in TagType}
+TagTypeIndicator = EnumAuto.fromDataConstructor('TagTypeIndicator', tag_type_data, IconIndicator)
+
+
 class tags(Tags, FieldMixin):
 
+    INDICATIONS = [
+        Indication('type', TagTypeIndicator, TL, AdvanceAxis.X),
+        Indication('title', TitleIndicator, TL, AdvanceAxis.X),
+    ]
     def createNew(self, id_mapping):
         data = {
             self.categoryName: [self.export],
@@ -365,6 +464,10 @@ class tags(Tags, FieldMixin):
 
 class alusers(Alusers, FieldMixin):
 
+    INDICATIONS = [
+        Indication('type', UserTypeIndicator, TL, AdvanceAxis.X),
+        Indication('title', TitleIndicator, TL, AdvanceAxis.X),
+    ]
     def createNew(self, id_mapping):
         data = {
             self.categoryName: [self.export],
@@ -406,20 +509,19 @@ def attachSubcategory(asset, category_obj):
         if str(asset.path).startswith(_subcategory.name):
             asset.subcategory = _subcategory
 
-def attachLinkToAsset(asset, link_item):
-    link_item_asset = link_item.data(Qt.UserRole)
-    category_name = link_item_asset.categoryName
-    if isinstance(link_item_asset, subcategory):
-        asset.subcategory = link_item
-    elif hasattr(asset, category_name):
-        appendCreate(asset, category_name, link_item)
+def attachLinkToAsset(primary_asset, link_asset):
+    category_name = link_asset.categoryName
+    if isinstance(link_asset, subcategory):
+        primary_asset.subcategory = link_asset
+    elif hasattr(primary_asset, category_name):
+        appendCreate(primary_asset, category_name, link_asset)
     else:
         try:
-            link_item_asset.path = Path(link_item_asset.path)
+            link_asset.path = Path(link_asset.path)
         except:pass
         category_id = int(Category[category_name.upper()])
-        link_item_asset.category = category_id
+        link_asset.category = category_id
         category_obj = Library.categories[category_id]
-        attachSubcategory(link_item_asset, category_obj)
-        appendCreate(asset, 'upstream', link_item)
-        appendCreate(link_item, 'downstream', asset)
+        attachSubcategory(link_asset, category_obj)
+        appendCreate(primary_asset, 'upstream', link_asset)
+        appendCreate(link_asset, 'downstream', primary_asset)

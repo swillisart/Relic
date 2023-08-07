@@ -474,7 +474,6 @@ class Ui_IngestForm(object):
 #endif // QT_CONFIG(shortcut)
 
         self.retranslateUi(IngestForm)
-        self.cancelButton.clicked.connect(IngestForm.close)
 
         self.ingestTabWidget.setCurrentIndex(1)
 

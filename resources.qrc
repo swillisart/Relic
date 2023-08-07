@@ -1,10 +1,12 @@
 <RCC>
   <qresource>
     <file>README.md</file>
+    <file>resources/app/MarkdownCheatsheet.md</file>
     <file>resources/app/relic.svg</file>
     <file>resources/app/peak.svg</file>
     <file>resources/app/markdown_logo.png</file>
     <file>resources/app/searchLight.svg</file>
+    <file>resources/app/new_asset.svg</file>
     <file>resources/style/app_style.qss</file>
     <file>resources/style/markdown.png</file>
     <file>resources/style/markdown_style.css</file>

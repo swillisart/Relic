@@ -1,14 +1,13 @@
-from extra_types.enums import DataAutoEnum, AutoEnum
-from enum import IntEnum
-
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from relic.qt.widgets import FilterBox
+from relic.qt.widgets import FilterBox, BaseTreeView, BaseItemHeader, GroupViewFilter
+from relic.qt.delegates import (AdvanceAxis, Indication, BaseItemDelegate, ItemDispalyModes,
+    Title, TitleIndicator, TextIndicator, LabelDelegate)
 
 from library.config import RELIC_PREFS
-from relic.qt.role_model.editors import (BaseEditor, ComboBoxEditor, SpinEditor, CheckBoxEditor,
-                                        VerticalTreeModel, EditorDelegate, LineEditor)
+from relic.qt.role_model.editors import (EditorRole, BaseEditor, ComboBoxEditor, SpinEditor, CheckBoxEditor,
+                                        EditorDelegate, LineEditor)
 
 from library.ui.preferences_form import Ui_PreferenceForm
 
@@ -23,50 +22,49 @@ class ViewScale(EnumAuto):
 
 class ViewScaleEditor(ComboBoxEditor):
     __order__ = ['Tree', 'Compact', 'Icon']
-    Tree = QStandardItem(QIcon(':status/local.png'), 'Tree')
-    Compact = QStandardItem( QIcon(':status/syncing.png'), 'Compact')
-    Icon = QStandardItem(QIcon(':status/cloud.png'), 'Icon')
+    Tree = QStandardItem('Tree')
+    Compact = QStandardItem('Compact')
+    Icon = QStandardItem('Icon')
+
+GENERAL = QStandardItem('General')
+INGEST = QStandardItem('Ingest')
+SITE = QStandardItem('Site')
+USER = QStandardItem('User')
+GENERAL.appendRow(USER)
+
+ingest_editor_map = {
+    'renderer': LineEditor,
+    'denoise': CheckBoxEditor,
+}
+general_editor_map = {
+    'assets_per_page': SpinEditor,
+    'edit_mode': CheckBoxEditor,
+    'recurse_subcategories': CheckBoxEditor,
+    'view_scale': ViewScaleEditor,
+}
+user_editor_map = {
+    'user_id': SpinEditor,
+}
+
+cl = Qt.AlignVCenter | Qt.AlignLeft
 
 
-class Group(DataAutoEnum):
-    GENERAL = QStandardItem('General')
-    INGEST = QStandardItem('Ingest')
-    SITE = QStandardItem('Site')
+class PreferenceItem:
+    __slots__ = ['name', 'title']#, 'count']
+    INDICATIONS = [
+        Indication('title', TitleIndicator, cl, AdvanceAxis.NONE),
+    ]
+
+    def __init__(self, name):
+        self.name = name
+        self.title = Title(self.name)
 
 
-class Subgroup(AutoEnum):
-    USER = {'data': QStandardItem('User'), 'parent': Group.GENERAL}
-
-
-class UserPrefs(object):
-
-    class Fields(AutoEnum):
-        assets_per_page = {'data': SpinEditor, 'parent': Group.GENERAL}
-        renderer = {'data': LineEditor, 'parent': Group.INGEST}
-        denoise = {'data': CheckBoxEditor, 'parent': Group.INGEST}
-        edit_mode = {'data': CheckBoxEditor, 'parent': Group.GENERAL}
-        recurse_subcategories = {'data': CheckBoxEditor, 'parent': Group.GENERAL}
-        user_id = {'data': SpinEditor, 'parent': Subgroup.USER}
-        view_scale = {'data': ViewScaleEditor, 'parent': Group.GENERAL}
-        #view_scale = {'data': SpinEditor, 'parent': Group.GENERAL}
-
-    def __init__(self):
-        user_settings = RELIC_PREFS.getUserSettings()
-        user_keys = set(user_settings.childKeys())
-        [user_keys.add(x.name) for x in self.Fields]
-        for key in user_keys:
-            value = user_settings.value(key)
-            if isinstance(value, str) and value.isnumeric():
-                value = int(value)
-            setattr(self, key, value)
-
-
-class PreferencesTree(QTreeView):
+class PreferencesTree(BaseTreeView):
 
     def __init__(self, *args, **kwargs):
         super(PreferencesTree, self).__init__(*args, **kwargs)
         self.setMouseTracking(True)
-        #self.view.entered.connect(self.interactive_edit)
         self.setHeaderHidden(True)
         self.setWordWrap(True)
         self.setIndentation(16)
@@ -75,31 +73,8 @@ class PreferencesTree(QTreeView):
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.setItemDelegate(EditorDelegate(self))
-
-    def mousePressEvent(self, event):
-        super(PreferencesTree, self).mousePressEvent(event)
-        index = self.indexAt(event.pos())
-        if not index.isValid() or index.column() == 0:
-            return
-        if self.state() != QAbstractItemView.EditingState:
-            self.edit(index)
-
-    @Slot(QItemSelection)
-    def onSelection(self, item):
-        selection_model = self.selectionModel()
-        for index in item.indexes():
-            model = index.model()
-            new_index = index.sibling(index.row(), 0)
-            item = model.itemFromIndex(new_index)
-            if item.hasChildren():
-                expand_state = self.isExpanded(new_index)
-                self.setExpanded(new_index, not expand_state)
-                selection_model.select(new_index, QItemSelectionModel.Clear)
-
-    def interactive_edit(self, index):
-        if not index.isValid():
-            return
-        self.edit(index)
+        title_delegate = LabelDelegate(self)
+        self.setItemDelegateForColumn(0, title_delegate)
 
 
 class PreferencesView(QWidget):
@@ -110,32 +85,42 @@ class PreferencesView(QWidget):
         layout = QFormLayout(self)
         self.setLayout(layout)
 
-        user_prefs = UserPrefs()
-
-        model = VerticalTreeModel()
+        model = QStandardItemModel()
+        model.setColumnCount(2)
         model.dataChanged.connect(self.onDataChanged)
+        [model.appendRow(x) for x in (GENERAL, INGEST, SITE)]
+        user_settings = RELIC_PREFS.getUserSettings()
 
-        for grp in Group:
-            model.appendRow(grp.data)
-    
-        for sub in Subgroup:
-            parent_item = sub.parent.data
-            parent_item.appendRow(sub.data)
+        header = BaseItemHeader()
+        header.setModel(model)
+        header.createAttributeLabels(['title', 'value'], visible=['title', 'value'])
+        self.view.setHeader(header)
 
-        for field in user_prefs.Fields:
-            widget = field.data
-            parent_item = field.parent.data
-            label_item = QStandardItem(field.name)
-            value_item = QStandardItem()
-            value_data = getattr(user_prefs, field.name)
-            value_item.setData(value_data, role=Qt.EditRole)
-            value_item.setData(widget, role=VerticalTreeModel.EditorRole)
-            parent_item.appendRow([label_item, value_item])
+        self._createItems(ingest_editor_map, INGEST, user_settings)
+        self._createItems(general_editor_map, GENERAL, user_settings)
+        self._createItems(user_editor_map, USER, user_settings)
+        proxy_model = GroupViewFilter()
+        proxy_model.setSourceModel(model)
 
-        self.view.setModel(model)
-        self.view.selectionModel().selectionChanged.connect(self.view.onSelection)
+        self.view.setModel(proxy_model)
         layout.addWidget(self.view)
         self.editor = None
+
+    @staticmethod
+    def _createItems(data, parent_item, user_settings):
+        model = parent_item.model()
+        for key, editor in data.items():
+            value = user_settings.value(key)
+            if isinstance(value, str) and value.isnumeric():
+                value = int(value)
+            obj = PreferenceItem(key)
+
+            label_item = QStandardItem(obj.name)
+            label_item.setData(obj, role=Qt.UserRole)
+            value_item = QStandardItem()
+            value_item.setData(value, role=Qt.EditRole)
+            value_item.setData(editor, role=EditorRole)
+            parent_item.appendRow([label_item, value_item])
 
     @Slot()
     def onDataChanged(self, top_left, bot_right, roles):
@@ -152,14 +137,6 @@ class PreferencesView(QWidget):
         header.resizeSection(0, column_width)
         return super(PreferencesView, self).resizeEvent(event)
 
-    @Slot(QEvent)
-    def leaveEvent(self, event):
-        selection_model = self.view.selectionModel()
-        with QSignalBlocker(selection_model):
-            selection_model.clear()
-    
-        super(PreferencesView, self).leaveEvent(event)
-
 
 class PreferencesDialog(Ui_PreferenceForm, QWidget):
     def __init__(self, *args, **kwargs):
@@ -169,6 +146,7 @@ class PreferencesDialog(Ui_PreferenceForm, QWidget):
         self.content_frame.layout().addWidget(self.preference_view)
         self.filter_box = FilterBox(self)
         self.filter_box.button.setChecked(True)
+        self.filter_box.editor.textChanged.connect(self.preference_view.view.filter)
         self.filter_layout.addWidget(self.filter_box)
 
     def close(self):

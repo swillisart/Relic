@@ -27,10 +27,11 @@ class Ui_DescriptionDialog(object):
     def setupUi(self, DescriptionDialog):
         if not DescriptionDialog.objectName():
             DescriptionDialog.setObjectName(u"DescriptionDialog")
-        DescriptionDialog.resize(800, 900)
+        DescriptionDialog.resize(796, 900)
         icon = QIcon()
         icon.addFile(u":/resources/style/markdown.png", QSize(), QIcon.Normal, QIcon.Off)
         DescriptionDialog.setWindowIcon(icon)
+        DescriptionDialog.setSizeGripEnabled(True)
         self.verticalLayout = QVBoxLayout(DescriptionDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(-1, 3, -1, -1)
@@ -47,19 +48,9 @@ class Ui_DescriptionDialog(object):
         self.horizontalLayout_17.setSpacing(9)
         self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
         self.horizontalLayout_17.setContentsMargins(3, 0, 3, 0)
-        self.descriptionTitle = QLabel(self.descriptionDockTitle)
-        self.descriptionTitle.setObjectName(u"descriptionTitle")
-        font = QFont()
-        font.setPointSize(12)
-        self.descriptionTitle.setFont(font)
-        self.descriptionTitle.setFrameShape(QFrame.NoFrame)
-        self.descriptionTitle.setFrameShadow(QFrame.Sunken)
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.horizontalLayout_17.addWidget(self.descriptionTitle)
-
-        self.horizontalSpacer_9 = QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_17.addItem(self.horizontalSpacer_9)
+        self.horizontalLayout_17.addItem(self.horizontalSpacer_6)
 
         self.filter_layout = QHBoxLayout()
         self.filter_layout.setObjectName(u"filter_layout")
@@ -71,10 +62,6 @@ class Ui_DescriptionDialog(object):
 
 
         self.horizontalLayout_17.addLayout(self.filter_layout)
-
-        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_17.addItem(self.horizontalSpacer_6)
 
 
         self.verticalLayout.addWidget(self.descriptionDockTitle)
@@ -90,12 +77,25 @@ class Ui_DescriptionDialog(object):
         self.verticalLayout_7.setSpacing(0)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(3)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(3, 0, 3, 3)
+        self.button_box = QDialogButtonBox(self.editor_frame)
+        self.button_box.setObjectName(u"button_box")
+        self.button_box.setStandardButtons(QDialogButtonBox.Help|QDialogButtonBox.Reset|QDialogButtonBox.Save)
+
+        self.horizontalLayout.addWidget(self.button_box)
+
+
+        self.verticalLayout_7.addLayout(self.horizontalLayout)
+
         self.text_edit = TextEdit(self.editor_frame)
         self.text_edit.setObjectName(u"text_edit")
         self.text_edit.setMinimumSize(QSize(260, 0))
-        font1 = QFont()
-        font1.setPointSize(10)
-        self.text_edit.setFont(font1)
+        font = QFont()
+        font.setPointSize(10)
+        self.text_edit.setFont(font)
         self.text_edit.setLineWrapMode(QTextEdit.FixedPixelWidth)
         self.text_edit.setLineWrapColumnOrWidth(720)
         self.text_edit.setCursorWidth(4)
@@ -106,7 +106,7 @@ class Ui_DescriptionDialog(object):
         self.text_browser = TextBrowser(self.splitter)
         self.text_browser.setObjectName(u"text_browser")
         self.text_browser.setMinimumSize(QSize(260, 0))
-        self.text_browser.setFont(font1)
+        self.text_browser.setFont(font)
         self.text_browser.setLineWrapMode(QTextEdit.FixedPixelWidth)
         self.text_browser.setLineWrapColumnOrWidth(720)
         self.text_browser.setCursorWidth(4)
@@ -114,13 +114,6 @@ class Ui_DescriptionDialog(object):
         self.splitter.addWidget(self.text_browser)
 
         self.verticalLayout.addWidget(self.splitter)
-
-        self.button_box = QDialogButtonBox(DescriptionDialog)
-        self.button_box.setObjectName(u"button_box")
-        self.button_box.setStandardButtons(QDialogButtonBox.Help|QDialogButtonBox.Reset|QDialogButtonBox.Save)
-        self.button_box.setCenterButtons(False)
-
-        self.verticalLayout.addWidget(self.button_box)
 
 
         self.retranslateUi(DescriptionDialog)
@@ -130,8 +123,7 @@ class Ui_DescriptionDialog(object):
 
     def retranslateUi(self, DescriptionDialog):
         DescriptionDialog.setWindowTitle(QCoreApplication.translate("DescriptionDialog", u"Description ", None))
-        self.descriptionTitle.setText(QCoreApplication.translate("DescriptionDialog", u"Description", None))
         self.found_results_label.setText(QCoreApplication.translate("DescriptionDialog", u"1 / 2", None))
-        self.text_edit.setPlaceholderText(QCoreApplication.translate("DescriptionDialog", u"Add description text (Markdown) here...", None))
+        self.text_edit.setPlaceholderText(QCoreApplication.translate("DescriptionDialog", u"Add description text (In Markdown Format) here...", None))
     # retranslateUi
 

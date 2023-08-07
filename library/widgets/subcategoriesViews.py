@@ -156,8 +156,9 @@ class subcategoryTreeView(QTreeView):
         count = 0
 
         # Assign an subcategory icon from resource file.
-        for x in data:
-            tree_item = data[x]
+        parent_by_id = {k: polymorphicItem(fields=v) for k, v in data.items()}
+        # TODO: look into qt persistent model indices for this. 
+        for tree_item in parent_by_id.values():
             fp = ':resources/subcategories/{}.png'.format(tree_item.name)
             tree_icon = QIcon(fp) if QFile.exists(fp) else self.folder_icon
             tree_item.setIcon(tree_icon)
@@ -168,7 +169,7 @@ class subcategoryTreeView(QTreeView):
             if not tree_upstream or tree_upstream <= 0:
                 model_root_item.appendRow(tree_item)
             else:
-                parent = data.get(tree_upstream)
+                parent = parent_by_id.get(tree_upstream)
                 parent.appendRow(tree_item)
             
             if not tree_upstream:

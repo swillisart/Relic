@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
                                QSystemTrayIcon, QToolButton, QWidget, QLabel)
 
 # -- First-party --
-from relic.local import Relational
+from relic.local import INGEST_PATH
 from relic.scheme import Table, AssetType, Classification
 from relic.gui import Grouping
 from relic.qt.widgets import DockTitle, GroupView, GroupBox
@@ -29,17 +29,18 @@ from intercom import Server
 # -- Module --
 import library
 from library.config import RELIC_PREFS, LOG, peakPreview
-from library.io.util import loadIcon, LocalVideo
+from library.io.util import loadIcon, LocalVideo, loadPreviewImage
 from library.objectmodels import (Library, alusers, FieldMixin,
                                   attachLinkToAsset, getCategoryConstructor,
                                   relationships, session, subcategory)
 from library.ui.dialog import Ui_RelicMainWindow
-from library.widgets import metadata_view, subcategoriesViews, description
-from library.widgets.fields import ItemState
+from library.widgets import subcategoriesViews, description
 from library.widgets.assets_view import AssetItemModel, AssetListView
 from library.widgets.preference_view import PreferencesDialog, ViewScale
 from library.widgets.util import DialogOverlay
+from library.widgets.relations import RelationEdit
 from library.io.ingest import DEFAULT_ICONS
+from library.widgets.attribute_view import AttributesView, edit_document, open_document
 
 ExpandableGroup.ICON_SIZE = QSize(20, 20)
 
@@ -100,24 +101,28 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         link_model = AssetItemModel(self)
         self.links_view = GroupView(link_model, AssetListView, LinkTab, self)
         self.links_view.onGroupsCreated.connect(self.installLinkViewSlots)
-        self.metadata_view = metadata_view.MetadataView(self)
-        self.metadata_view.openDescription.connect(self.loadCurrentAssetsDescription)
-        self.metadata_view.fieldChanged.connect(self.updateAssetFromField)
-        self.attributesLayout.addWidget(self.metadata_view)
+        self.attribute_view = AttributesView(self)
+        self.attribute_view.attributeChanged.connect(self.updateAssetAttributes)
+        self.attributesLayout.addWidget(self.attribute_view)
         self.linksDock.setWidget(self.links_view)
 
         self.setupDockTitles()
 
         # Signals / Slots
+        self.actionNew.triggered.connect(self.newAsset)
         self.actionPortal.toggled.connect(self.hideDocks)
         self.actionRecurseSubcategory.setChecked(RELIC_PREFS.recurse_subcategories)
         self.actionRecurseSubcategory.toggled.connect(self.recursiveSubcategories)
-        self.actionIngest.triggered.connect(self.beginIngest)
+        self.actionIngest.triggered.connect(lambda x : self.beginIngest(animated=True))
         self.actionPreferences.triggered.connect(self.showPreferences)
         self.actionDocumentation.triggered.connect(self.browseDocumentation)
-        readme = lambda x : self.description_window.showMarkdown(':README.md')
+        readme = lambda x : self.description_window.fromResource(':README.md')
         self.actionAbout.triggered.connect(readme)
         self.actionReconnect.triggered.connect(session.rebind)
+        edit_doc = partial(self.loadCurrentAssetsDescription, edit=True)
+        open_doc = partial(self.loadCurrentAssetsDescription, edit=False)
+        open_document.triggered.connect(open_doc)
+        edit_document.triggered.connect(edit_doc)
 
         self.attrExpandButton.toggled.connect(self.attributeDock.widget().setVisible)
         self.categoryExpandButton.toggled.connect(self.categoryDock.widget().setVisible)
@@ -156,7 +161,20 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.asset_startup_path = None
         self._ingester = None
         self.preferences_dialog = None
+        
         QShortcut(QKeySequence('ctrl+f'), self, self.toFilterBox)
+
+    @Slot()
+    def newAsset(self):
+        self.beginIngest()
+        ingest_form = self.ingest_form
+        path = INGEST_PATH / 'staging' / 'NewDocument.md'
+        path.createParentFolders()
+        path.touch()
+        ingest_form.collectPathTextEdit.setPlainText(str(path.parent))
+        ingest_form.texturesReferencesCheckBox.setChecked(False)
+        ingest_form.documentsCheckBox.setChecked(True)
+        ingest_form.nextStage() # Go to next stage (collect staged paths)
 
     @Slot()
     def toFilterBox(self):
@@ -189,6 +207,10 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             view.assetsDeleted.connect(session.updatesubcategorycounts.execute)
             view.onExecuted.connect(self.open_file)
 
+    @Slot(Path)
+    def onDescriptionSaved(self, path):
+        pass
+
     @Slot(QModelIndex)
     def open_file(self, index):
         asset = index.data(Qt.UserRole)
@@ -200,7 +222,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             with open(str(filepath), 'r') as fp:
                 subprocess.Popen('"{}"'.format(fp.read()))
         elif filepath.ext.lower() == '.md':
-            self.description_window.showMarkdown(filepath)
+            self.description_window.fromAsset(asset, RELIC_PREFS.edit_mode)
         else:
             peakPreview(filepath)
 
@@ -233,6 +255,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.linksDock.hide()
 
         category_title.filter_line.textChanged.connect(self.category_manager.filterAll)
+        attribute_title.filter_line.textChanged.connect(self.attribute_view.filterAll)
         links_title.filter_line.textChanged.connect(self.links_view.filterAll)
         links_title.addSeparator()
         link_grouping = GroupBox(Grouping, self.links_view)
@@ -251,41 +274,42 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                     attr.pop(i)
                     break
 
-    @Slot(str, object)
-    def updateAssetFromField(self, name, value):
-        selected_assets = self.selected_assets
-        if not selected_assets:
-            return
-        if name in Relational.__members__.keys():
-            # Update asset relationship mappings
-            for item in value:
-                relation_asset = item.data(Qt.UserRole)
-                if relation_asset.status == ItemState.NEW:
-                    # CREATE relation asset
-                    id_mapping = []
-                    for asset in selected_assets:
-                        id_mapping.append([relation_asset.relationMap, asset.links])
-                    relation_asset.createNew(id_mapping)
-                elif relation_asset.status == ItemState.LINK:
-                    # LINK existing relation asset
-                    relations = []
-                    for asset in selected_assets: 
-                        relation = [relation_asset.relationMap, relation_asset.id, asset.links]
-                        relations.append(relation)
-                        attachLinkToAsset(asset, item) # UI atttachment
-                    session.createrelationships.execute(relations)
-                elif relation_asset.status == ItemState.REMOVE:
-                    for asset in selected_assets:
-                        relation_asset.unlinkTo(asset)
-                        self.detachLinkedAsset(asset, item)
-            self.metadata_view.setAssets(selected_assets)
-    
+    def updateRelation(self, primary_assets, relation):
+        # Update asset relationship mappings
+        edit_status = relation.status
+        if edit_status == RelationEdit.NEW:
+            if relation.id is None:
+                # CREATE relation asset when id is None
+                id_mapping = []
+                for asset in primary_assets:
+                    id_mapping.append([relation.relationMap, asset.links])
+                relation.createNew(id_mapping)
+            else: 
+                # LINK existing relation asset
+                relation_batch = []
+                for asset in primary_assets: 
+                    batch_link = [relation.relationMap, relation.id, asset.links]
+                    relation_batch.append(batch_link)
+                    attachLinkToAsset(asset, relation) # UI atttachment
+                session.createrelationships.execute(relation_batch)
+
+        elif edit_status == RelationEdit.UNLINK:
+            for asset in primary_assets:
+                relation.unlinkTo(asset)
+                self.detachLinkedAsset(asset, relation)
+
+    @Slot()
+    def updateAssetAttributes(self, attribute, value, assets):
+        if attribute in ('tags', 'alusers', 'subcategory'):
+            for relation in value:
+                self.updateRelation(assets, relation)
+            self.attribute_view.setAssets(assets)
+
         else: # Update the asset field
-            for asset in selected_assets:
-                attr_name = name.lower()
-                if hasattr(asset, attr_name):
-                    setattr(asset, attr_name, value)
-                    asset.update(fields=[attr_name])
+            for asset in assets:
+                if hasattr(asset, attribute):
+                    setattr(asset, attribute, value)
+                    asset.update(fields=[attribute])
 
     @Slot(str, bytes)
     def setVideo(self, path, data):
@@ -365,7 +389,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             i = 0 if not subcat.category else subcat.category
             subcat.count = 0 if subcat.count is None else subcat.count
             assigned = category_list[i]
-            assigned.subcategory_by_id[subcat.id] = polymorphicItem(fields=subcat)
+            assigned.subcategory_by_id[subcat.id] = subcat#polymorphicItem(fields=)
             category_list[i] = assigned
 
         category_widgets = self.category_manager.assembleCategories(self.library.categories)
@@ -404,14 +428,12 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             for fields in assets:
                 constructor = getCategoryConstructor(category_name)
                 asset = constructor(**fields)
-                item = polymorphicItem(fields=asset)
                 for downstream in self.selected_assets:
                     attr = getattr(downstream, category_name)
                     if not attr:
-                        setattr(downstream, category_name, [item])
+                        setattr(downstream, category_name, [asset])
                     else:
-                        attr.append(item)
-
+                        attr.append(asset)
 
     def clearSearch(self):
         self.searchBox.clear()
@@ -476,18 +498,18 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.category_manager.externalFilesDrop.disconnect(self.externalSubcategoryDrop)
     
     @Slot()
-    def beginIngest(self):
-        if not self.category_manager.all_categories:
+    def beginIngest(self, animated=False):
+        if not self.category_manager.all_categories or self.ingest_form.isVisible():
             return
         # make compact temporarily
-        BaseItemDelegate.VIEW_MODE = ItemDispalyModes.COMPACT
+        self.viewScaleSlider.setValue(ViewScale.Compact.index)
         self.asset_item_model.endResetModel()
         self.links_view.model.endResetModel()
         self.assets_view.hide()
         self.attributeDock.hide()
         self.ingest_form.setCategoryView(self.categoryDock, self.categoryLayout)
         self.category_manager.blockSignals(True)
-        DialogOverlay(self, self.ingest_form, modal=False)
+        DialogOverlay(self, self.ingest_form, modal=False, animated=animated)
 
     @Slot()
     def externalPluginCommand(self, asset_data):
@@ -542,18 +564,16 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
 
     @Slot()
-    def loadCurrentAssetsDescription(self):
-        if self.selected_assets:
+    def loadCurrentAssetsDescription(self, edit=False):
+        if self.selected_assets: # Pull asset using selection from the view.
             asset = self.selected_assets[-1]
-        else:
-            index = self.assets_view.model.index(0, 0, QModelIndex())
+        elif self.attribute_view.assets: # Resort to the attribute view.
+            asset = self.attribute_view.assets[-1]
+        else: # Use the first asset in the view.
+            index = self.assets_view.model().index(0, 0, QModelIndex())
             asset = index.data(Qt.UserRole)
-        description_path = asset.network_path.suffixed('_description', '.md')
-        if not description_path.exists():
-            description_path.touch()
+        self.description_window.fromAsset(asset, edit)
 
-        self.description_window.showMarkdown(description_path)
-        
     @Slot()
     def onIngestClosed(self, dock):
         self.assets_view.show()
@@ -741,7 +761,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         if not assets:
             return
 
-        self.metadata_view.setAssets(assets)
+        self.attribute_view.setAssets(assets)
 
         if self.previewCheckBox.isChecked():
             path = assets[-1].network_path
@@ -749,6 +769,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         assets_by_link = {}
         for asset in assets:
+            # TODO: this traversal logic is weird. maybe use a list for unprocessed? 
             if not asset.traversed:
                 asset.traversed = True
             else:
@@ -773,8 +794,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             asset_constructor = getCategoryConstructor(category_name)
             for index, fields in enumerate(assets):
                 asset_obj = asset_constructor(*fields)
-                linked_asset = polymorphicItem(fields=asset_obj)
-                dependencies[category_name][index] = linked_asset
+                dependencies[category_name][index] = asset_obj
     
         # Map the views by link and attach to the selected primary assets
         selection = self.selected_assets_by_link
@@ -807,17 +827,15 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             asset_constructor = getCategoryConstructor(category_name)
             for index, fields in enumerate(fields_list):
                 asset_obj = asset_constructor(*fields)
-                linked_asset = polymorphicItem(fields=asset_obj)
-                linked_assets.append(linked_asset)
+                linked_assets.append(asset_obj)
         assets = []
         link_map = []
         for i in range(len(links)):
             _map = maps[i]
             _id = ids[i]
-            for link_item in linked_assets:
-                link_item_asset = link_item.data(Qt.UserRole)
-                if link_item_asset.id == _id and link_item_asset.relationMap == _map:
-                    link_map.append(link_item)
+            for link_asset in linked_assets:
+                if link_asset.id == _id and link_asset.relationMap == _map:
+                    link_map.append(link_asset)
         main_view = self.assets_view
         model = main_view.model() if main_view.isVisible() else self.links_view.model
         for i in range(model.rowCount()):
@@ -825,8 +843,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
             for index, link in enumerate(links):
                 if asset.links == link:
                     try:
-                        link_item = link_map[index]
-                        attachLinkToAsset(asset, link_item)
+                        link_asset = link_map[index]
+                        attachLinkToAsset(asset, link_asset)
                     except IndexError as exerr:
                         print('failed to attach link to asset', 'Link:', len(links), len(link_map))
             assets.append(asset)
@@ -839,7 +857,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
                 icon_path = asset.network_path.suffixed('_icon', '.jpg')
                 if not icon_path.exists():
                     copyRelatedIcon(asset)
-        self.metadata_view.setAssets(assets)
+        #self.attribute_view.setAssets(assets) # This is likely not needed anymore.
 
     @Slot(QModelIndex)
     def unlinkAsset(self, index):
@@ -892,7 +910,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.assets_view.selectionModel().select(index, QItemSelectionModel.Deselect)
         self.links_view.clear()
         self.links_view.updateGroups(linked_assets)
-        list(map(loadIcon, linked_assets))
+        list(map(loadPreviewImage, linked_assets))
         if not self.linksDock.isVisible():
             self.linksDock.show()
 
@@ -934,14 +952,12 @@ def copyRelatedIcon(asset):
 def main(args):
     app = qApp or QApplication(sys.argv)
     ctypes.windll.kernel32.SetConsoleTitleW('Relic (Console)')
-
     base_style = readAllContents(':/base_style.qss')
     app_style = readAllContents(':/resources/style/app_style.qss')
     app.setStyleSheet(base_style + app_style)
 
     window = RelicMainWindow()
     window.setWindowTitle(f'Relic {library.__version__}')
-
     # Startup the plugin server
     ingest_server = Server('relic')
     ingest_server.incomingData.connect(window.externalPluginCommand)

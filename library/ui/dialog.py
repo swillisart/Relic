@@ -69,6 +69,11 @@ class Ui_RelicMainWindow(object):
         self.actionReconnect.setObjectName(u"actionReconnect")
         self.actionAbout = QAction(RelicMainWindow)
         self.actionAbout.setObjectName(u"actionAbout")
+        self.actionNew = QAction(RelicMainWindow)
+        self.actionNew.setObjectName(u"actionNew")
+        icon3 = QIcon()
+        icon3.addFile(u":/resources/app/new_asset.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionNew.setIcon(icon3)
         self.centralwidget = QWidget(RelicMainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setMinimumSize(QSize(324, 0))
@@ -113,9 +118,9 @@ class Ui_RelicMainWindow(object):
 "    padding: 2px;\n"
 "	border: none;\n"
 "}")
-        icon3 = QIcon()
-        icon3.addFile(u":/app/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.searchButton_2.setIcon(icon3)
+        icon4 = QIcon()
+        icon4.addFile(u":/app/searchLight.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.searchButton_2.setIcon(icon4)
         self.searchButton_2.setIconSize(QSize(20, 20))
         self.searchButton_2.setFlat(False)
 
@@ -254,9 +259,9 @@ class Ui_RelicMainWindow(object):
 
         self.previewCheckBox = QCheckBox(self.centralwidget)
         self.previewCheckBox.setObjectName(u"previewCheckBox")
-        icon4 = QIcon()
-        icon4.addFile(u":/app/peak.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.previewCheckBox.setIcon(icon4)
+        icon5 = QIcon()
+        icon5.addFile(u":/app/peak.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.previewCheckBox.setIcon(icon5)
 
         self.horizontalLayout_3.addWidget(self.previewCheckBox)
 
@@ -273,9 +278,9 @@ class Ui_RelicMainWindow(object):
         self.horizontalLayout_4.setContentsMargins(-1, -1, 3, -1)
         self.pageDownButton = QToolButton(self.centralwidget)
         self.pageDownButton.setObjectName(u"pageDownButton")
-        icon5 = QIcon()
-        icon5.addFile(u":/app/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pageDownButton.setIcon(icon5)
+        icon6 = QIcon()
+        icon6.addFile(u":/app/pageArrowLeft.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.pageDownButton.setIcon(icon6)
         self.pageDownButton.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_4.addWidget(self.pageDownButton)
@@ -291,9 +296,9 @@ class Ui_RelicMainWindow(object):
 
         self.pageUpButton = QToolButton(self.centralwidget)
         self.pageUpButton.setObjectName(u"pageUpButton")
-        icon6 = QIcon()
-        icon6.addFile(u":/app/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pageUpButton.setIcon(icon6)
+        icon7 = QIcon()
+        icon7.addFile(u":/app/pageArrow.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.pageUpButton.setIcon(icon7)
         self.pageUpButton.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_4.addWidget(self.pageUpButton)
@@ -441,9 +446,9 @@ class Ui_RelicMainWindow(object):
         self.buttonGroup.addButton(self.collectionRadioButton)
         self.collectionRadioButton.setObjectName(u"collectionRadioButton")
         self.collectionRadioButton.setMaximumSize(QSize(16777215, 16))
-        icon7 = QIcon()
-        icon7.addFile(u":/AssetType/COLLECTION", QSize(), QIcon.Normal, QIcon.Off)
-        self.collectionRadioButton.setIcon(icon7)
+        icon8 = QIcon()
+        icon8.addFile(u":/AssetType/COLLECTION", QSize(), QIcon.Normal, QIcon.Off)
+        self.collectionRadioButton.setIcon(icon8)
         self.collectionRadioButton.setChecked(True)
 
         self.verticalLayout_4.addWidget(self.collectionRadioButton)
@@ -458,9 +463,9 @@ class Ui_RelicMainWindow(object):
         self.variationRadioButton.setSizePolicy(sizePolicy4)
         self.variationRadioButton.setMaximumSize(QSize(16777215, 16))
         self.variationRadioButton.setBaseSize(QSize(0, 0))
-        icon8 = QIcon()
-        icon8.addFile(u":/AssetType/VARIANT", QSize(), QIcon.Normal, QIcon.Off)
-        self.variationRadioButton.setIcon(icon8)
+        icon9 = QIcon()
+        icon9.addFile(u":/AssetType/VARIANT", QSize(), QIcon.Normal, QIcon.Off)
+        self.variationRadioButton.setIcon(icon9)
 
         self.verticalLayout_4.addWidget(self.variationRadioButton)
 
@@ -518,7 +523,7 @@ class Ui_RelicMainWindow(object):
 "    padding: 2px;\n"
 "	border: none;\n"
 "}")
-        self.searchButton.setIcon(icon3)
+        self.searchButton.setIcon(icon4)
         self.searchButton.setIconSize(QSize(20, 20))
         self.searchButton.setFlat(False)
 
@@ -550,6 +555,7 @@ class Ui_RelicMainWindow(object):
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
+        self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionIngest)
         self.menuFile.addAction(self.actionExit)
         self.menuEdit.addAction(self.actionAdministration_Mode)
@@ -576,6 +582,9 @@ class Ui_RelicMainWindow(object):
         self.actionAdministration_Mode.setText(QCoreApplication.translate("RelicMainWindow", u"Administration Mode", None))
         self.actionDocumentation.setText(QCoreApplication.translate("RelicMainWindow", u"Documentation", None))
         self.actionIngest.setText(QCoreApplication.translate("RelicMainWindow", u"Ingest", None))
+#if QT_CONFIG(shortcut)
+        self.actionIngest.setShortcut(QCoreApplication.translate("RelicMainWindow", u"Ctrl+I", None))
+#endif // QT_CONFIG(shortcut)
         self.actionPortal.setText(QCoreApplication.translate("RelicMainWindow", u"Portal", None))
 #if QT_CONFIG(statustip)
         self.actionPortal.setStatusTip(QCoreApplication.translate("RelicMainWindow", u"Collapse / Expand the Categories and Attributes panels.", None))
@@ -592,6 +601,10 @@ class Ui_RelicMainWindow(object):
 #endif // QT_CONFIG(statustip)
         self.actionReconnect.setText(QCoreApplication.translate("RelicMainWindow", u"Reconnect", None))
         self.actionAbout.setText(QCoreApplication.translate("RelicMainWindow", u"About", None))
+        self.actionNew.setText(QCoreApplication.translate("RelicMainWindow", u"New", None))
+#if QT_CONFIG(shortcut)
+        self.actionNew.setShortcut(QCoreApplication.translate("RelicMainWindow", u"Ctrl+N", None))
+#endif // QT_CONFIG(shortcut)
         self.searchButton_2.setText("")
         self.label.setText(QCoreApplication.translate("RelicMainWindow", u"Search Yielded No Results...", None))
         self.clearSubcategoryButton.setText(QCoreApplication.translate("RelicMainWindow", u"Clear Subcategory Selection", None))

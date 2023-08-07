@@ -27,6 +27,16 @@ def readMovieFrames(file_obj):
             frames.append(img)
     return frames
 
+def loadPreviewImage(asset, slot=None, index=None):
+    if index:
+        on_complete = partial(slot or onIconLoad, index)
+    else:
+        on_complete = partial(setattr, asset, 'icon')
+    icon_path = asset.network_path.suffixed('_icon', '.jpg')
+    worker = LocalThumbnail(icon_path)
+    worker.signals.finished.connect(on_complete)
+    QThreadPool.globalInstance().start(worker)
+
 def loadIcon(index, slot=None):
     on_complete = partial(slot or onIconLoad, index)
     asset = index.data(Qt.UserRole)

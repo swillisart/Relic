@@ -85,6 +85,7 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.ingest_thread = ingest.IngestionThread(self)
         self.ingest_thread.itemDone.connect(self.assetIngested)
         self.loadingLabel.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.cancelButton.clicked.connect(self.completeIngest)
         self.loading_movie = QMovie(':app/load_wheel_24.webp')
         self.loading_movie.setCacheMode(QMovie.CacheAll)
         self.loading_movie.start()
@@ -105,6 +106,8 @@ class IngestForm(Ui_IngestForm, QDialog):
         self.working = False
         self.current_category_id = None
         self.fetching_names = False
+        self.todo = 0
+        self.done = 0
 
     @Slot()
     def filterCategories(self, index):
@@ -420,7 +423,7 @@ class IngestForm(Ui_IngestForm, QDialog):
             self.collect()
             self.ingestTabWidget.setCurrentIndex(stage+1)
         else:
-            self.close()
+            self.completeIngest()
 
     def collect(self):
         self.kept_original_name = False 
@@ -530,15 +533,16 @@ class IngestForm(Ui_IngestForm, QDialog):
         #Extension.SHADER = ['.mtlx', '.osl', '.sbsar']
         #Extension.DCC = ['.ma', '.mb', '.max', '.hip']
 
-    def close(self):
+    def completeIngest(self):
         if self.done != self.todo:
             message = QMessageBox(QMessageBox.Warning, 'Are you sure?', CLOSE_MSG,
-                    QMessageBox.NoButton, self)
-            message.addButton('Yes', QMessageBox.AcceptRole)
-            message.addButton('No', QMessageBox.RejectRole)
-            if message.exec_() == QMessageBox.RejectRole:
-                return
-
+                                QMessageBox.Yes|QMessageBox.No, self)
+            if message.exec_() == QMessageBox.Yes:
+                self.close()
+        else:
+            self.close()
+    
+    def close(self):
         # make all category widgets visible again and disconnect events
         for category in self.category_widgets:
             category.collapseExpand.disconnect(self.onCategoryChanged)

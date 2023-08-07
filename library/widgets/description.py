@@ -26,6 +26,7 @@ def readTextFromResource(path):
         return ''
     this_file.open(QFile.ReadOnly | QFile.Text)
     result = QTextStream(this_file).readAll()
+    this_file.close()
     return result
 
 MARKDOWN_STYLE = readTextFromResource(':/resources/style/markdown_style.css')
@@ -212,7 +213,7 @@ class Window(Ui_DescriptionDialog, QDialog):
     def __init__(self, *args, **kwargs):
         super(Window, self).__init__(*args, **kwargs)
         self.setupUi(self)
-
+        self.setWindowFlags(Qt.Window)
         self.text_browser.matchCountChanged.connect(self.found_results_label.setText)
         self.filter_box = FilterBox(self)
         self.filter_box.button.setChecked(True)
@@ -230,6 +231,7 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.view_scroller = self.text_browser.verticalScrollBar()
         self.edit_scroller.valueChanged.connect(self.moveOtherSlider)
         self.view_scroller.valueChanged.connect(self.moveOtherSlider)
+        self.source_asset = None
     
     @Slot()
     def moveOtherSlider(self, value: int):
@@ -309,24 +311,34 @@ class Window(Ui_DescriptionDialog, QDialog):
         self.text_browser.movies = {}
         event.ignore()
 
+    def fromResource(self, path):
+        # The source markdown is from an embedded uneditable resource.
+        self.editor_frame.setVisible(False)
+        markdown_text = readTextFromResource(path)
+        self.text_browser.markdown_path = Path('')
+        self.text_edit.markdown_path = Path('')
+        self.showMarkdown(markdown_text, edit_mode=False)
+
+    def fromAsset(self, asset, edit_mode=False):
+        # The source is an asset path.
+        self.source_asset = asset
+        path = asset.network_path
+        if not path.ext.endswith('.md'):
+            path = path.suffixed('_description', '.md')
+        if not path.exists():
+            path.touch()
+
+        with open(str(path), 'r', encoding='utf-8') as fp:
+            markdown_text = fp.read()
+        self.text_browser.markdown_path = path
+        self.text_edit.markdown_path = path
+        self.showMarkdown(markdown_text, edit_mode)
+
     @Slot(Path)
-    def showMarkdown(self, path):
-        edit_mode = int(RELIC_PREFS.edit_mode)
-
-        if isinstance(path, Path):
-            self.editor_frame.setVisible(edit_mode)
-            with open(str(path), 'r', encoding='utf-8') as fp:
-                markdown_text = fp.read()
-            self.text_browser.markdown_path = path
-            self.text_edit.markdown_path = path
-        else:
-            self.editor_frame.setVisible(False)
-            markdown_text = readTextFromResource(path)
-            self.text_browser.markdown_path = Path('')
-            self.text_edit.markdown_path = Path('')
-
-        self.text_browser.setMarkdown(markdown_text)
-        self.text_edit.setPlainText(markdown_text)
+    def showMarkdown(self, text_contents, edit_mode):
+        self.editor_frame.setVisible(edit_mode)
+        self.text_browser.setMarkdown(text_contents)
+        self.text_edit.setPlainText(text_contents)
         width = self.base_width * (edit_mode + 1) # double width in edit mode
         self.resize(width, self.height())
         self.show()
@@ -337,11 +349,36 @@ class Window(Ui_DescriptionDialog, QDialog):
     def onDescriptionButtonClicked(self, button):
         role = self.button_box.buttonRole(button)
         if role == QDialogButtonBox.ResetRole:
-            self.showMarkdown(self.text_browser.markdown_path)
+            self.fromAsset(self.source_asset)
         elif role == QDialogButtonBox.AcceptRole:
             text = self.text_edit.toPlainText()
             with open(str(self.text_browser.markdown_path), 'w', encoding='utf-8') as fp:
                 fp.write(text)
+            self.updateAsset(text)
             self.close()
         elif role == QDialogButtonBox.HelpRole:
-            pass
+            mdc = ':resources/app/MarkdownCheatsheet.md'
+            new_window = PopupDescription(self).fromResource(mdc)
+
+    def updateAsset(self, text):
+        asset = self.source_asset
+        if asset:
+            # Construct description text using the document title.
+            value = 'Documentation' # default
+            for line in text.split('\n'):
+                if line.startswith('#'):
+                    # Sanitize title string removing special characters.
+                    value = re.sub(r'[^a-zA-Z0-9\s]', '', line)
+                    # Trim leading and trailing whitespace.
+                    value = re.sub(r'^\s+|\s+$', '', value) 
+                    break
+            asset.description = value
+            asset.filesize = asset.network_path.parent.size.kilobytes
+            asset.update(fields=['description', 'filesize'])
+
+
+class PopupDescription(Window):
+    @Slot(QEvent)
+    def closeEvent(self, event):
+        QDialog.closeEvent(self, event)
+        self.deleteLater()

@@ -11,7 +11,7 @@ from relic.qt.util import _indexToItem
 from relic.local import Category, TempAsset, FileType, AssetType, EXTENSION_MAP
 from relic.scheme import Classification as Class
 from library.io import ingest
-from library.io.util import loadIcon
+from library.io.util import loadPreviewImage
 
 from library.objectmodels import subcategory, getCategoryConstructor
 
@@ -56,7 +56,7 @@ def loadHoverImage(asset):
             asset.stream_video_to()
     elif asset.type == int(AssetType.COLLECTION):
         for x in iterateUpstreamForPreview(asset):
-            loadIcon(x)
+            loadPreviewImage(x)
 
 
 class AssetItemModel(BaseItemModel):
@@ -297,7 +297,7 @@ class AssetListView(DraggableView, QListView):
         if isinstance(delegate.active_indicator, PreviewImageIndicator):
             asset = index.data(Qt.UserRole)
             if asset.type == AssetType.COLLECTION and asset.video is None:
-                previews = [x.data(Qt.UserRole).icon for x in iterateUpstreamForPreview(asset)]
+                previews = [x.icon for x in iterateUpstreamForPreview(asset)]
                 if all(previews):
                     asset.video = previews
             self.updateHoverImage(index, mouse_pos, delegate)

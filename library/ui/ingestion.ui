@@ -855,22 +855,5 @@ QFrame#processed_frame {background-color: rgb(72, 72, 72);}
  <resources>
   <include location="../../plugins/LibShared/relic/qt/resources/resources.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>cancelButton</sender>
-   <signal>clicked()</signal>
-   <receiver>IngestForm</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>706</x>
-     <y>443</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>383</x>
-     <y>233</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

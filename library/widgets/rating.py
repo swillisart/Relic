@@ -15,48 +15,50 @@ class Rating(QFrame):
         self.setMouseTracking(True)
 
     def setValue(self, value):
-        self.rating = value
+        self.rating = value or 0
 
     def getValue(self):
         return self.rating
+    
+    def value(self):
+        return self.rating
 
     def mousePressEvent(self, event):
-        super(Rating, self).mousePressEvent(event)
+        #super(Rating, self).mousePressEvent(event)
         if event.buttons() == Qt.LeftButton:
             # Get the closest rating index by relative click position
             axis = event.x()
             previous = self.rating
             for i, x in enumerate(Rating.SPACES):
                 if axis >= x:
-                    self.rating = self.rating.__class__(i + 1)
+                    self.rating = i + 1
         self.update()
 
     def mouseDoubleClickEvent(self, event):
         super(Rating, self).mouseDoubleClickEvent(event)
-        self.rating = self.rating.__class__(0)
+        self.rating = 0
 
-    @staticmethod
-    def paint(painter, rect, value):
+    @classmethod
+    def paint(cls, painter, rect, value):
         # Value must be a RatingField<int>
-        if type(value) is int:
-            return
         painter.save()
         painter.translate(rect.topLeft())
         painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        
+        value = value or 0
         # Draw all disabled images
-        for i, x in enumerate(Rating.SPACES):
+        for i, x in enumerate(cls.SPACES):
             pix_rect = QRect(x, 0, ICO_SIZE, ICO_SIZE)
             # Draw Enabled images in range up the current value
-            if i < value:
-                painter.drawPixmap(pix_rect, value.icon)
+            if i < value or 0:
+                painter.drawPixmap(pix_rect, cls.icon)
             else:
-                painter.drawPixmap(pix_rect, value.disabled)
-
+                painter.drawPixmap(pix_rect, cls.disabled)
 
         painter.restore()
 
     def paintEvent(self, event):
         super(Rating, self).paintEvent(event)
         painter = QPainter(self)
-        Rating.paint(painter, self.rect(), self.rating)
+        rect = self.rect() - QMargins(3,3,3,3)
+        self.paint(painter, rect, self.rating)
+        painter.end()

@@ -36,7 +36,7 @@ class FocusedSearchBox(FilterBoxLine):
         key = event.key()
         if key == Qt.Key_Down or key == Qt.Key_Up:
             self.focusOut.emit(True)
-        elif event.key() == Qt.Key_Return:
+        elif key == Qt.Key_Return:
             self.onReturn.emit(True)
         else:
             super(FocusedSearchBox, self).keyPressEvent(event)
@@ -68,7 +68,6 @@ class ListViewFocus(QFrame):
     def __init__(self, *args, **kwargs):
         super(ListViewFocus, self).__init__(*args, **kwargs)
         self.rename_mode = False
-        self.filter_regex = r"[A-Za-z0-9]+"
 
         self.focus_filter = FocusFilter()
         self.focus_filter.onFocusedOut.connect(self.hide_filter)
@@ -94,14 +93,14 @@ class ListViewFocus(QFrame):
         self.filter_box.editor = self.searchBox
         self.filter_box.layout().addWidget(self.searchBox)
         self.searchBox.installEventFilter(self.focus_filter)
-        self.searchBox.textChanged.connect(self.filterRegExpChanged)
+        self.searchBox.textChanged.connect(self.onFilterChanged)
         self.searchBox.focusOut.connect(self.list_view.setFocus)
         focus_first = lambda x: self.list_view.setCurrentIndex(self.proxyModel.index(0, 0))
         self.searchBox.focusOut.connect(focus_first)
         self.searchBox.onReturn.connect(self.onViewReturn)
         self.list_view.onBackspace.connect(self.searchBox.keyPressEvent)
 
-        qregex = QRegularExpression(self.filter_regex)
+        qregex = QRegularExpression(r"[A-Za-z0-9]+")
         validator = QRegularExpressionValidator(qregex)
         self.searchBox.setValidator(validator)
 
@@ -124,9 +123,6 @@ class ListViewFocus(QFrame):
                 if item:
                     recurse(item_model, recurse, item)
 
-        print(self.proxyModel.rowCount())
-        print(self.itemModel.rowCount())
-
     @staticmethod
     def recursivelyAppendItemToModel(item_model, recurse, item):
         obj = item.data(Qt.UserRole)
@@ -145,7 +141,6 @@ class ListViewFocus(QFrame):
         if indices:
             asset = indices[0].data(Qt.UserRole)
             #print(asset)
-            
             #self.searchBox.setText(asset.name)
             #self.searchBox.setFocus()
             # model_item_index = [self.itemModel.itemFromIndex(i).data()
@@ -171,7 +166,7 @@ class ListViewFocus(QFrame):
             self.hide()
 
     @Slot()
-    def filterRegExpChanged(self):
+    def onFilterChanged(self):
         text = self.searchBox.text()
         regex = QRegularExpression(
             text, QRegularExpression.CaseInsensitiveOption)
@@ -191,9 +186,6 @@ class ListViewFocus(QFrame):
             index = self.proxyModel.index(0, 0)
         if index.data():
             asset = index.data(Qt.UserRole)
-            if not asset.id:
-                print('HEY HEY HAY REMOVE ME!!!!!')
-                asset = asset.name
             self.linkItem.emit(asset)
         else:
             if self.rename_mode:
@@ -219,8 +211,8 @@ class ListViewFocus(QFrame):
         self.searchBox.setFocus()
         self.searchBox.setCursorPosition(0)
 
-class AssetNameListView(ListViewFocus):
 
+class AssetNameListView(ListViewFocus):
 
     def __init__(self, *args, **kwargs):
         super(AssetNameListView, self).__init__(*args, **kwargs)
@@ -281,7 +273,7 @@ class DialogOverlay(QDialog):
 
     p_opaque = Property(int, read_opaque, set_opaque)
 
-    def __init__(self, parent, widget, modal=True):
+    def __init__(self, parent, widget, modal=True, animated=False):
         super(DialogOverlay, self).__init__(parent)
         # Experimental
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -296,10 +288,18 @@ class DialogOverlay(QDialog):
         self.widget = widget
         #self.layout.addWidget(widget)
         self._opaque = 0
+        self.color = QColor(10, 10, 10)
         self.setModal(modal)
         parent.installEventFilter(self)
 
         # Optional Animation
+        if not animated:
+            self._opaque = 150
+            self.layout.addWidget(widget)
+            self.show()
+            widget.show()
+            return
+
         self.anim = QPropertyAnimation(self, b"p_opaque")
         self.anim.setDuration(175)
         self.anim.setStartValue(0)
@@ -333,8 +333,8 @@ class DialogOverlay(QDialog):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        #painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        painter.setBrush(QColor(10, 10, 10, self._opaque))
+        self.color.setAlpha(self._opaque)
+        painter.setBrush(self.color)
         painter.setPen(Qt.NoPen)
         painter.drawRect(self.geometry())
 

@@ -2,7 +2,9 @@ import os
 import subprocess
 from fractions import Fraction
 from collections import deque
-from functools import partial, cached_property
+from functools import partial
+from extra_types.properties import lazy_property
+
 import traceback
 
 import numpy as np
@@ -16,14 +18,18 @@ from av import VideoFrame
 from imagine.exif import EXIFTOOL
 from library.config import RELIC_PREFS, LOG
 from library.io.util import ImageDimensions
+from library.objectmodels import TempAsset # TODO: remove this dependency
+
 from PySide6.QtCore import (Property, QDir, QDirIterator, QMutex, QMutexLocker,
                             QObject, QRunnable, Qt, QThread, QWaitCondition,
                             Signal, Slot)
 from PySide6.QtGui import QColor, QImage, QPainter, Qt, QImageWriter, QImageReader
-from relic.local import (INGEST_PATH, Extension, TempAsset, Category,
+from relic.local import (INGEST_PATH, Extension, Category,
                         FileType, getAssetSourceLocation)
+
 from relic.scheme import Class, AssetType
-from relic.qt.delegates import ItemDispalyModes
+from relic.qt.delegates import ItemDispalyModes, IMAGE_CACHE
+
 from sequence_path.main import SequencePath as Path
 
 QImageReader.setAllocationLimit(0)
@@ -219,13 +225,18 @@ def writeImagePreviews(proxy_img, icon_img, out_path):
 
 class DefaultIcons(object):
 
-    @cached_property
-    def raw(self):
-        return makeImagePreview(QImage(':app/RedLogo.png'))
+    def create(self, resource_path):
+        r = makeImagePreview(QImage(resource_path))
+        IMAGE_CACHE.keep.append(r.cacheKey())
+        return r 
 
-    @cached_property
+    @lazy_property
+    def raw(self):
+        return self.create(':app/RedLogo.png')
+
+    @lazy_property
     def document(self):
-        return makeImagePreview(QImage(':resources/app/markdown_logo.png'))
+        return self.create(':resources/app/markdown_logo.png')
 
 
 DEFAULT_ICONS = DefaultIcons()

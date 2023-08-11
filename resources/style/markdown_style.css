@@ -11,11 +11,13 @@ h1, h2, h3, h4, h5, h6 {
 	margin-right: 0.5em;
 	margin-bottom: 0em;
 }
-h4, h5, h6 {
-	margin-left: 1.5em;
+h3, h4, h5, h6 {
+	margin-left: 0em; /* 1.5em with padding */
+	margin-bottom: 1em;
+	background-color: rgb(92, 92, 92);
+	font-weight: 600;
 }
 h1 {
-	margin-top: 1.75em;
 	margin-bottom: 0em;
 }
 p {
@@ -43,6 +45,12 @@ td {
 	padding: 5px 8px;
     empty-cells: hide;
 }
+/* Border around table */
+td.quote{
+	padding: 0px 0px;
+	empty-cells: hide;
+}
+
 th {
 	text-align: left;
 	background-color: rgb(68, 68, 68);
@@ -54,13 +62,22 @@ table > tbody > tr > td,  th {
 code {
 	color: rgb(235, 184, 145);
     background-color: rgb(43, 43, 43);
-	margin: 8px;
 }
 pre {
-    background-color: rgb(43, 43, 43);
-	margin-right: 12px;
+    background-color: #1d1f20;
 	margin-left: 1.5em;
+	margin-bottom: 1em;
+	padding: 45px;
 }
+code {
+	margin: 0;
+	padding: 0 30px;
+	display: block;
+	background: #1d1f20;
+	color: #839496;
+	font-size: .85em;
+	line-height: 1.6em;
+  }
 /* Horizontal line*/
 hr {
 	margin-left: 12px;
@@ -76,9 +93,8 @@ a:link {
 a:hover {
   color: rgb(125, 153, 245);
 }
-
 blockquote {
-    background-color: rgb(68,68,68);
+    background-color: rgb(25, 153, 245);
 	margin-left: 0em;
 }
 ul.checklist {

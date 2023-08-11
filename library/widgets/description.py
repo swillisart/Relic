@@ -8,7 +8,7 @@ from library.config import RELIC_PREFS, peakLoad
 from library.io.util import readMovieFrames
 from PySide6.QtCore import (QEvent, QFile, QObject, QTextStream, QTimer, QUrl,
                             Signal, Slot, QSignalBlocker)
-from PySide6.QtGui import (QColor, QFontMetrics, QImage, QKeySequence, QMovie,
+from PySide6.QtGui import (QFont, QColor, QFontMetrics, QImage, QKeySequence, QMovie,
                            QShortcut, Qt, QTextCursor, QTextDocument, QTextOption)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog,
                                QDialogButtonBox, QInputDialog, QLineEdit,
@@ -17,8 +17,24 @@ from relic.qt.widgets import FilterBox
 from sequence_path.main import SequencePath as Path
 
 URL_REGEX = re.compile(r'\(\.(\/.+)\)')
-HEADER_REGEX = re.compile(r'(#{1,2}.+\n)')
+HEADER_REGEX = re.compile(r'^(#{1,2}[^#].+\n)') # h1-h2
+SECTION_REGEX = re.compile(r'^(#{3,6}[^#].+\n)') # h3-h6
 TEXT_REGEX = re.compile(r'[^a-zA-Z0-9]')
+PRE_BLOCK = re.compile(r'<blockquote>')
+END_BLOCK = re.compile(r'<\/blockquote>')
+
+pre_blockquote_elems = """
+<table cellspacing=0 width='100%'>
+<tr>
+<td width=6 bgcolor='#2399DC' class='quote'/>
+<td bgcolor='#37414B' style='padding: 4 4px;'>
+"""
+
+post_quote_elems = """
+</td>
+</tr>
+</table>
+"""
 
 def readTextFromResource(path):
     this_file = QFile(path)
@@ -29,7 +45,8 @@ def readTextFromResource(path):
     this_file.close()
     return result
 
-MARKDOWN_STYLE = readTextFromResource(':/resources/style/markdown_style.css')
+
+#MARKDOWN_STYLE = readTextFromResource(':/resources/style/markdown_style.css')
 
 MARKDOWN = markdown.Markdown(
     extensions = [
@@ -133,15 +150,26 @@ class TextBrowser(QTextBrowser):
         # Update the markdown document source paths.
         image_root = str(self.markdown_path.parent / 'source_images')
         updated_paths = text.replace('(./', f'({image_root}/')
-        updated_paths = re.sub(HEADER_REGEX, '\\1---\n', updated_paths)
-        gen_html = MARKDOWN.convert(updated_paths)
+        reformatted = re.sub(HEADER_REGEX, '\\1---\n', updated_paths)
+        # Add non-breaking spaces after markdown headers.
+        reformatted = reformatted.replace('### ', '###&nbsp;')
+        reformatted = reformatted.replace('#### ', '####&nbsp;')
+        reformatted = reformatted.replace('##### ', '#####&nbsp;')
+        reformatted = reformatted.replace('###### ', '######&nbsp;')
+        gen_html = MARKDOWN.convert(reformatted)
 
+        gen_html = re.sub(PRE_BLOCK, pre_blockquote_elems, gen_html)
+        gen_html = re.sub(END_BLOCK, post_quote_elems, gen_html)
         # Set Description Media
         root_append = partial(operator.add, image_root)
         paths = map(root_append, matcher)
         list(map(self.addAnimation, paths))
         # Set the modified markdown using HTML.
-        self.setHtml(MARKDOWN_STYLE + gen_html + '<br>'*2)
+        with open('P:/Code/Relic/resources/style/markdown_style.css', 'r') as r:
+            MARKDOWN_STYLE = r.read()
+        #print(gen_html)
+        rep = gen_html.replace('\n</code></pre>', '</code></pre>')
+        self.setHtml(MARKDOWN_STYLE + rep + '<br>'*2)
 
     @Slot(QUrl)
     def handleLink(self, url):

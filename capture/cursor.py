@@ -1,30 +1,27 @@
-import ctypes
 from ctypes import windll, pointer, POINTER, sizeof, byref, Structure
 from ctypes import c_ulong, c_int, c_void_p
 import ctypes.wintypes as wintypes
-from enum import Enum
 
 from PySide6.QtGui import QPixmap, QImage, QIcon
 import numpy as np
-from extra_types.enums import IndexedEnum
 
-
-class Cursors(IndexedEnum):
-    # CursorInfo.hCursor (windows handle)
-    ARROW = 65541
-    UP = 65549
-    CROSS = 65547
-    WAIT = 65545
-    IBEAM = 65543
-    NS = 65557
-    EW = 65555
-    NESW = 65553
-    NWSE = 65551
-    MOVE = 65559
-    LINK = 65569
-    UNAVAIL = 65561
-    HELPSEL = 65565
-    BUSY = 65563
+# CursorInfo.hCursor (windows handle)
+CURSOR_MAP = {
+    'arrow': 65541,
+    'up': 65549,
+    'cross': 65547,
+    'wait': 65545,
+    'ibeam': 65543,
+    'nwse': 65551,
+    'nesw': 65553,
+    'ew': 65555,
+    'ns': 65557,
+    'move': 65559,
+    'link': 65569,
+    'unavail': 65561,
+    'busy': 65563,
+    'helpsel': 65565,
+}
 
 
 class POINT(Structure):
@@ -46,13 +43,12 @@ class CursorInfo(Structure):
 GetCursorInfo = windll.user32.GetCursorInfo
 GetCursorInfo.argtypes = [POINTER(CursorInfo)]
 
-
-def build_cursor_data(cursor_size):
+def build_cursor_data(cursor_size, extension=''):
     CURSOR_LOCATION = ':cursors/{}.svg'
-    results = []
+    bitmaps_by_hcursor = {}
 
-    for cursor in Cursors:
-        path = CURSOR_LOCATION.format(cursor.name.lower())
+    for name, hcursor in CURSOR_MAP.items():
+        path = CURSOR_LOCATION.format(name)
         cursor = QIcon(path)
         w = cursor_size; h = cursor_size
         svg_pix = cursor.pixmap(w, h)
@@ -69,22 +65,24 @@ def build_cursor_data(cursor_size):
         color_array = np.frombuffer(img.bits(), np.uint8)
         color_array = np.clip(color_array.reshape((h, w, 3)), 1, 255)
         
-        results.append([color_array, mask_array])
-    return results
+        bitmaps_by_hcursor[hcursor] = (color_array, mask_array)
+
+    return bitmaps_by_hcursor
 
 
-def get_cursor_info():
+def create_cursor_info():
     cursor_info = CursorInfo()
     cursor_info.cbSize = sizeof(cursor_info)
     GetCursorInfo(byref(cursor_info))
     return cursor_info
 
 
-def get_cursor_arrays(cursor_list):
-    cursor_info = get_cursor_info() 
+def get_cursor_arrays(bitmaps_by_hcursor, default=CURSOR_MAP['arrow']):
+    cursor_info = create_cursor_info()
     try:
-        index = Cursors(cursor_info.hCursor).index
-    except ValueError: # Unknown cursor using default index
-        index = Cursors.ARROW.index
+        bitmaps = bitmaps_by_hcursor[cursor_info.hCursor]
+    except KeyError:
+        #print('Unknown cursor: %d', cursor_info.hCursor)
+        bitmaps = bitmaps_by_hcursor[default]
 
-    return cursor_info, cursor_list[index]
+    return cursor_info, bitmaps

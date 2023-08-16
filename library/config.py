@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 
 # -- Third-party --
 from sequence_path.main import SequencePath as Path
@@ -13,7 +14,7 @@ PEAK = Client('peak')
 USERPROFILE = os.getenv('USERPROFILE')
 
 def peakLoad(path):
-    PEAK.sendPayload(str(path))
+    PEAK.sendPayload(json.dumps({'path': str(path)}))
     if PEAK.errored:
         cmd = f'start peak://{path}'
         os.system(cmd)

@@ -1,14 +1,14 @@
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
-from relic.qt.widgets import FilterBox, BaseTreeView, BaseItemHeader, GroupViewFilter
-from relic.qt.delegates import (AdvanceAxis, Indication, BaseItemDelegate, ItemDispalyModes,
-    Title, TitleIndicator, TextIndicator, LabelDelegate)
+from relic.qt import *
+from relic.qt.widgets import FilterBox
 
-from library.config import RELIC_PREFS
+from relic.qt.role_model.views import RoleTreeView, RoleHeaderView
+from relic.qt.role_model.models import GroupFilterProxyModel
+from relic.qt.role_model.delegates import (AdvanceAxis, Indication, RoleItemDelegate, ItemDispalyModes,
+    Title, TitleIndicator, TextIndicator, LabelDelegate)
 from relic.qt.role_model.editors import (EditorRole, BaseEditor, ComboBoxEditor, SpinEditor, CheckBoxEditor,
                                         EditorDelegate, LineEditor)
 
+from library.config import RELIC_PREFS
 from library.ui.preferences_form import Ui_PreferenceForm
 
 from extra_types.composable import Attributable, Composable, SlotsCompose, Slots
@@ -60,7 +60,7 @@ class PreferenceItem:
         self.title = Title(self.name)
 
 
-class PreferencesTree(BaseTreeView):
+class PreferencesTree(RoleTreeView):
 
     def __init__(self, *args, **kwargs):
         super(PreferencesTree, self).__init__(*args, **kwargs)
@@ -91,7 +91,7 @@ class PreferencesView(QWidget):
         [model.appendRow(x) for x in (GENERAL, INGEST, SITE)]
         user_settings = RELIC_PREFS.getUserSettings()
 
-        header = BaseItemHeader()
+        header = RoleHeaderView()
         header.setModel(model)
         header.createAttributeLabels(['title', 'value'], visible=['title', 'value'])
         self.view.setHeader(header)
@@ -99,7 +99,7 @@ class PreferencesView(QWidget):
         self._createItems(ingest_editor_map, INGEST, user_settings)
         self._createItems(general_editor_map, GENERAL, user_settings)
         self._createItems(user_editor_map, USER, user_settings)
-        proxy_model = GroupViewFilter()
+        proxy_model = GroupFilterProxyModel()
         proxy_model.setSourceModel(model)
 
         self.view.setModel(proxy_model)

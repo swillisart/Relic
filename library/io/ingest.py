@@ -28,7 +28,7 @@ from relic.local import (INGEST_PATH, Extension, Category,
                         FileType, getAssetSourceLocation)
 
 from relic.scheme import Class, AssetType
-from relic.qt.delegates import ItemDispalyModes, IMAGE_CACHE
+from relic.qt.role_model.delegates import ItemDispalyModes, IMAGE_CACHE
 
 from sequence_path.main import SequencePath as Path
 

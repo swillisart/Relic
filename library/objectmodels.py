@@ -4,13 +4,12 @@ from enum import IntEnum
 from extra_types.flag_enum import FlagEnumAuto, EnumAuto, Flag, Enumerant
 from extra_types.properties import slot_property
 from extra_types.composable import SlotsCompose, Composable
-from extra_types import Duration
 
 from PySide6.QtCore import QObject, QRect, QSettings, Qt, Slot, QFile
 from PySide6.QtGui import QColor, QIcon, QStandardItem, QImage, QFont, QPainterPath
 import relic.config as config
-from relic.qt.delegates import (IMAGE_CACHE, CompactImageIndicator,PreviewImageIndicator, ColorIndicator, Title, BaseItemDelegate, IconIndicator, TextDecorationIndicator, ProgressIndicator,
-                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis, flipRect)
+from relic.qt.role_model.delegates import (IMAGE_CACHE, CompactImageIndicator, PreviewImageIndicator, ColorIndicator, Title, BaseItemDelegate, IconIndicator, TextDecorationIndicator, ProgressIndicator,
+                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis, flipRect, DurationIndicator, ExtentIndicator)
 from relic.gui import CategoryColor, TypeIndicator
 
 from relic.base import Fields
@@ -32,28 +31,6 @@ BL = Qt.AlignBottom | Qt.AlignLeft
 BR = Qt.AlignBottom | Qt.AlignRight
 
 
-class DurationIndicator(object):
-
-    def __init__(self, duration):
-        self.value = str(Duration(duration)) if duration else ''
-
-    @staticmethod
-    def draw(painter, text, bounds, align):
-        new_font = QFont('Ebrima', 8, QFont.Normal)
-        new_font.setStyleHint(QFont.TypeWriter) 
-        painter.setFont(new_font)        
-        painter.setPen(QColor(175, 175, 175))
-        text_repr = str(text)
-        metrics = painter.fontMetrics()
-        text_width = metrics.horizontalAdvance(text_repr)
-        text_rect = QRect(2, 2, text_width, metrics.height())
-        rect = flipRect(text_rect, align, bounds)
-        bounding_rect = rect.adjusted(-2, -1, 2, 1)
-        painter.fillRect(bounding_rect, QColor(43,43,43))
-        painter.drawText(rect, text_repr)
-        return bounding_rect
-
-
 class CountIndicator(object):
 
     def __init__(self, count):
@@ -73,33 +50,6 @@ class CountIndicator(object):
         text_rect = QRect(2, 2, text_width, metrics.height())
         rect = flipRect(text_rect, align, bounds)
         bounding_rect = rect.adjusted(-2, 0, 2, 0)
-        painter.drawText(rect, text_repr)
-        return bounding_rect
-
-
-class ExtentIndicator(object):
-
-    def __init__(self, text):
-        self.value = text
-
-    @staticmethod
-    def draw(painter, text, bounds, align):
-        text_repr = str(text)
-        if text_repr == '0':
-            return QRect()
-        new_font = QFont('Ebrima', 9, QFont.Normal)
-        new_font.setStyleHint(QFont.TypeWriter)
-        painter.setFont(new_font)
-        painter.setPen(QColor(200, 200, 200))
-        metrics = painter.fontMetrics()
-        text_width = metrics.horizontalAdvance(text_repr)
-    
-        text_rect = QRect(1, 1, text_width, metrics.height())
-        rect = flipRect(text_rect, align, bounds)
-        path = QPainterPath()
-        bounding_rect = rect.adjusted(-2, 2, 2, -1)
-        path.addRoundedRect(bounding_rect, 4, 4)
-        painter.fillPath(path, QColor(92,92,92))
         painter.drawText(rect, text_repr)
         return bounding_rect
 

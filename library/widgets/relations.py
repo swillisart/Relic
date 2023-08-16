@@ -2,9 +2,9 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-from relic.qt.delegates import SimpleDelegate
+from relic.qt.role_model.delegates import SimpleDelegate
+from relic.qt.role_model.models import GroupFilterProxyModel
 from relic.qt.util import _indexToItem
-from relic.qt.widgets import GroupViewFilter
 
 from extra_types.flag_enum import FlagEnumAuto, Flag
 
@@ -94,7 +94,7 @@ class RelationEditList(QListView):
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
 
         self.item_model = QStandardItemModel()
-        self.proxy_model = GroupViewFilter()
+        self.proxy_model = GroupFilterProxyModel()
         self.proxy_model.setSourceModel(self.item_model)
         self.setModel(self.proxy_model)
         self.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)

@@ -1,10 +1,10 @@
 import os
 import sys
+import json
 from collections import deque
 from fractions import Fraction
 from datetime import datetime
 from functools import partial, cached_property
-from enum import IntEnum
 
 # -- Third-party --
 from PySide6.QtCore import *
@@ -12,10 +12,11 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtMultimedia import QAudioFormat, QMediaDevices, QAudioSource, QAudio
 
-from relic.qt.delegates import ItemDispalyModes, BaseItemModel
+from relic.qt.role_model.delegates import ItemDispalyModes
+from relic.qt.role_model.models import RoleModel, indexToItem
+from relic.qt.role_model.views import RoleHeaderView
 from relic.qt.expandable_group import ExpandableGroup
-from relic.qt.widgets import SearchBox, AnnotationOverlay, GroupView, GroupViewFilter, BaseItemHeader
-from relic.qt.util import _indexToItem
+from relic.qt.widgets import SearchBox, AnnotationOverlay, GroupView, OptionBoxAction, LoadingOverlay
 
 from intercom import Client
 from sequence_path.main import SequencePath as Path
@@ -49,11 +50,18 @@ DELAYS = (0, 1, 3, 5)
 AUDIO_RATE = 48000
 VIDEO_RATE = 25
 CHUNK_SIZE = 3840
+GIF_RATE = 15
 # 24fps and 48000Hz (48000hz/24fps) = 2000 sample
 # 25fps and 48000Hz: (48000hz/25fps) = 1920 sample
 
 ExpandableGroup.ICON_SIZE = QSize(16, 16)
 ExpandableGroup.HIDE_EMPTY = False
+
+class HistoryItemModel(RoleModel):
+
+    def supportedDropActions(self):
+        return Qt.IgnoreAction | Qt.LinkAction | Qt.CopyAction
+
 
 # -- Functions --
 def newCaptureFile(out_format='png'):
@@ -72,33 +80,40 @@ def getPreviewPath(path):
     return preview
 
 
-def videoToGif(path, progress_callback=None):
+def videoToGif(obj, progress_callback=None):
+    """Convert a video / movie to an animated GIF.
+    """
+    path = obj.path
     out_path = path.suffixed('', ext='.gif')
     in_container = av.open(str(path))
     in_stream = in_container.streams.video[0]
     in_stream.thread_type = "AUTO"
     width = in_stream.width
     height = in_stream.height
+    length = in_stream.frames
     encoder = GifEncoder(str(out_path), width, height)
     solid_alpha = np.empty(shape=(height, width, 4), dtype=np.uint8)
     solid_alpha.fill(255)
+    if not progress_callback:
+        progress_callback = lambda x: None
+    time_scale = 1/GIF_RATE
+    pscale = 1/length * 100
     try:
         frame_count = 0
-        for frame_number, frame in enumerate(in_container.decode(video=0)):
+        frames = in_container.decode(video=0)
+        for frame_number, frame in enumerate(frames):
             if frame_number % 2 == 0:
                 array = frame.to_rgb().to_ndarray()
                 solid_alpha[:, :, :3] = array
-                timestamp = (frame_count+1)/15
+                timestamp = frame_count * time_scale
                 encoder.add_frame(solid_alpha.tobytes(), frame_count, timestamp)
                 frame_count += 1
-                if progress_callback:
-                    progress_callback(frame_count)
+                percent = (frame_number + 1) * pscale
+                progress_callback(percent)
     except Exception as exerr:
-        print(exerr)
-        return None
-    finally:
         in_container.close()
-
+        raise exerr
+    in_container.close()
     return out_path
 
 
@@ -186,7 +201,7 @@ class EncodeImage(QRunnable):
         image = np.reshape(self.array, (height, width, 4))
 
         # get the proper cursor and copy / paint into image.
-        cursor, cursor_data = get_cursor_arrays(self.cursor_cache[self.screen.name()])
+        cursor_info, cursor_data = get_cursor_arrays(self.cursor_cache[self.screen.name()])
         try:
             if cursor_data is not None:
                 color, mask = cursor_data
@@ -253,7 +268,50 @@ class CircleQueue:
         self.availibility.release(1)
 
 
+class CircularQueue(deque):
+    # Circular Queues using a mutex and 2 semaphores for locking resources.
+    __slots__ = ('mutex', 'availibility', 'input_needs')
+
+    def __init__(self):
+        self.mutex = QMutex()
+        self.availibility = QSemaphore(0)
+        self.input_needs = QSemaphore(1)
+
+    def __enter__(self, *args):
+        self.input_needs.acquire()
+        self.mutex.lock()
+        return self
+    
+    def __exit__(self, *args):
+        self.mutex.unlock()
+        self.availibility.release(1)
+        return True
+
+    def addToQueue(self, x):
+        with self:
+            super(CircularQueue, self).append(x)
+
+    def next(self, thread):
+        # try to acquire the next item in the queue of availability
+        if not self.availibility.tryAcquire(1, 100):
+            if thread.isInterruptionRequested():
+                return False
+            return None
+        # Acquired availibility from queue in thread.objectName()
+        self.mutex.lock()
+        if thread.isInterruptionRequested():
+            self.mutex.unlock()
+            return False
+
+        result = self.popleft()
+    
+        self.mutex.unlock()
+        self.input_needs.release()
+        return result
+
+
 FRAME_QUEUE = CircleQueue()
+JOB_QUEUE = CircularQueue()
 
 def getAudioDevice():
     input_device = QMediaDevices.defaultAudioInput()
@@ -292,12 +350,12 @@ class Interval(QObject):
 
     def _videoStart(self):
         """Start the capture timer at 24fps in precise milisecond intervals"""
-        self.startTimer(1000/25, Qt.PreciseTimer)
+        self.startTimer(1000/VIDEO_RATE, Qt.PreciseTimer)
 
     def _audioStart(self):
         """Start the capture timer at 24fps in precise milisecond intervals"""
         self.io_device = self.audio_input.start()
-        self.timer_id = self.startTimer(1000/25, Qt.PreciseTimer)
+        self.timer_id = self.startTimer(1000/VIDEO_RATE, Qt.PreciseTimer)
 
     def _avTimerEvent(self, event):
         audio_data = self.io_device.read(CHUNK_SIZE).data()
@@ -411,6 +469,31 @@ class Recorder(QThread):
         self.encode_pool.start(worker)
 
 
+class Converter(QThread):
+    
+    progress = Signal(int)
+    complete = Signal(object)
+
+    def __init__(self):
+        QThread.__init__(self)
+        self.queue = JOB_QUEUE
+        self.start()
+
+    def run(self):
+        while True: # QWaitCondition
+            data = self.queue.next(self)
+            if data is False:
+                return # interruption was requested end the thread.
+            elif data is not None:
+                self.process(data)
+            self.msleep(10)
+
+    def process(self, index):
+        obj = index.data(Qt.UserRole)
+        new_path = videoToGif(obj, self.progress.emit)
+        self.complete.emit(new_path)
+
+
 class ScreenOverlay(QDialog):
 
     clipped = Signal(QRect, QImage, QScreen)
@@ -461,22 +544,40 @@ class ScreenOverlay(QDialog):
         painter.drawRect(self.selection_rect)
 
     def mouseReleaseEvent(self, event):
+        super(ScreenOverlay, self).mouseReleaseEvent(event)
+        self.clip()
+
+    def clip(self):
         rect = self.selection_rect.normalized()
         scale = self.screen().devicePixelRatio()
+        screen_rect = self.screen().geometry().normalized()
+
         if rect.width() < 8 and rect.height() < 8:
-            rect = self.screen().geometry().normalized()
-            width = (rect.width() - 1)
-            height = (rect.height() - 1)
-            rect.setTopLeft(QPoint(1,1))
+            rect = screen_rect
+            rect.setTopLeft(QPoint(0,0))
         else:
-            width = rect.width() * scale
-            height = rect.height() * scale
             rect.setTopLeft(rect.topLeft() * scale)
-        divisible_width = int(width) - (int(width) % 16)
-        divisible_height = int(height) - (int(height) % 16)
-        # TODO: screenshots should not cropped. But the video needs to be.
-        rect.setWidth(divisible_width)
-        rect.setHeight(divisible_height)
+
+        # Pad the rect to a multiple of 16. (optimization for h264 & jpeg)
+        w = int(rect.width() * scale)
+        h = int(rect.height() * scale)
+        while w_mod := w % 16:
+            w += w_mod
+        while h_mod := h % 16:
+            h += h_mod
+
+        # Move the rect if the bounds are outside the screen.
+        w_diff = (rect.x() + w) - (screen_rect.x() + screen_rect.width())
+        h_diff = (rect.y() + h) - (screen_rect.y() + screen_rect.height())
+
+        rect.setWidth(w)
+        rect.setHeight(h)
+        if w_diff > 0:
+            rect.adjust(-w_diff, 0, -w_diff, 0)
+        if h_diff > 0:
+            rect.adjust(0, -h_diff, 0, -h_diff)
+
+        # Crop the image and emit the clipped signal for further operations.
         cropped = self.screens_snapshot.copy(rect)
         self.hide()
         self.clipped.emit(rect, cropped, self.screen())
@@ -549,6 +650,30 @@ class TrayOverlay(AnnotationOverlay):
         painter.drawPolygon(positions, Qt.OddEvenFill)
 
 
+class LoadBarOverlay(LoadingOverlay):
+
+    def __init__(self, *args, **kwargs):
+        super(LoadBarOverlay, self).__init__(*args, **kwargs)
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setAlignment(Qt.AlignCenter)
+        self.progress_bar.setFont(QFont('Arial', 8))
+        self.progress_bar.setMaximumHeight(12)
+        self.progress_bar.setMaximumWidth(128)
+        self.layout.addWidget(self.progress_bar)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        self.color.setAlpha(self._opaque)
+        painter.setBrush(self.color)
+        painter.setPen(Qt.NoPen)
+        # Set layout to 5% of the parent widget size.
+        rect = self.geometry()
+        w = rect.width() * 0.01
+        h = rect.height() * 0.01
+        margins = QMargins(w, h, w, h)
+        painter.drawRect(rect - margins)
+
+
 class CaptureWindow(QWidget, Ui_ScreenCapture):
 
     onConvertedGif = Signal(object)
@@ -577,21 +702,25 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         # -- Actions, Signals & Slots --
         tray_menu.addActions(self.tray_actions)
 
-        gif_action = QAction('Convert To GIF')
-        gif_action.triggered.connect(self.convertToGif)
+        gif_action = OptionBoxAction(self)
+        gif_action.setShortcut(QKeySequence('Ctrl+G'))
+        gif_action.setIcon(QIcon(':type/gif.png'))
+        gif_action.setText('Convert to GIF')
+        gif_action.main_triggered.connect(self.convertToGif)
+        gif_action.option_triggered.connect(lambda : print('option box clicked'))
 
         Types.Video.actions.extend([gif_action])
 
-        temp_action = QAction('Add Description')
-        temp_action.triggered.connect(self.addDescription)
-        Types.Video.actions.extend([temp_action])
+        #temp_action = QAction('Add Description')
+        #temp_action.triggered.connect(self.addDescription)
+        #Types.Video.actions.extend([temp_action])
 
         self.expandButton.clicked.connect(self.adjustSizes)
         self.captureButton.clicked.connect(self.delayScreenshot)
         self.recordButton.clicked.connect(self.performRecording)
         self.pinButton.toggled.connect(self.taskbar_pin)
 
-        self.item_model = BaseItemModel()
+        self.item_model = HistoryItemModel()
         self.item_model.setColumnCount(2)
 
         history_layout = self.historyGroupBox.layout()
@@ -610,7 +739,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
             tree = tab.content
             tree.addActions(self.tree_actions)
             tree.doubleClicked.connect(self.openInViewer)
-            header = BaseItemHeader()
+            header = RoleHeaderView()
             header.setModel(self.item_model)
             header.createAttributeLabels(['title', 'date', 'size'], visible=['title', 'date'])
             tree.setHeader(header)
@@ -624,26 +753,15 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
 
         try: os.mkdir(OUTPUT_PATH + '/previews')
         except: pass
-        self.intercom_client = Client('peak')
+        self.peak_client = Client('peak')
         QThread.currentThread().setObjectName('<Main> Thread')
         self.recorder = None
-    
-        '''
-        #from PySide6.QtMultimedia import QMediaCaptureSession
-        #from PySide6.QtMultimediaWidgets import QVideoWidget
-        # Setup QScreenCapture with initial source:
-        self.screenCapture = QScreenCapture(self)
-        self.screenCapture.setScreen(QGuiApplication.primaryScreen())
-        self.screenCapture.start()
-        self.mediaCaptureSession = QMediaCaptureSession(self)
-        self.mediaCaptureSession.setScreenCapture(self.screenCapture)
-        #self.mediaCaptureSession.setVideoOutput(self.videoWidget)
-        self.sink = QVideoWidget(self)
-        self.mediaCaptureSession.setVideoOutput(self.sink)
-        history_layout.addWidget(self.sink)
-        print(self.mediaCaptureSession.videoOutput())
-        print(self.mediaCaptureSession.videoSink())
-        '''
+
+    def main(self, args):
+        if args.get('screenshot'):
+            self.performScreenshot()
+        elif args.get('record'):
+            self.recordButton.click()
 
     @Slot()
     def addDescription(self):
@@ -785,16 +903,23 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         self._tray_overlay.raise_()
         return self._tray_overlay
 
+    def showEvent(self, event):
+        super(CaptureWindow, self).showEvent(event)
+        self.old_size = self.historyGroupBox.size()
+
     @Slot()
     def adjustSizes(self, val): 
         window = self.window()
-        old_size = self.size()
+        if not val:
+            self.old_size = self.historyGroupBox.size()
+        rect = self.geometry()
         self.historyGroupBox.setVisible(val)
+        if not val:
+            rect = rect - QMargins(0, self.old_size.height(), 0, 0)
+        else:
+            rect = rect + QMargins(0, self.old_size.height(), 0, 0)
         self.adjustSize()
-        new_size = self.size()
-        diff = old_size - new_size
-        diff_point = QPoint(diff.width(), diff.height())
-        window.move(window.pos() + diff_point)
+        window.setGeometry(rect)
 
     @Slot()
     def onGroupChange(self, state):
@@ -865,8 +990,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def openInViewer(self, index):
         capture_obj = index.data(Qt.UserRole)
         if isinstance(capture_obj, CaptureItem):
-            self.intercom_client.sendPayload(str(capture_obj.path))
-            if self.intercom_client.errored:
+            self.peak_client.sendPayload(json.dumps({'path': str(capture_obj.path)}))
+            if self.peak_client.errored:
                 cmd = f'start peak://{capture_obj.path}'
                 os.system(cmd)
 
@@ -896,7 +1021,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
         if not indices:
             return
         index = indices[-1]
-        obj = _indexToItem(index).data(Qt.UserRole)
+        obj = indexToItem(index).data(Qt.UserRole)
 
         pin_state = self.pinned
         self.pinned = False # prevent popup focus from hiding pin
@@ -964,7 +1089,7 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
                 selection_model.select(index, QItemSelectionModel.Deselect)
                 continue
 
-            item = _indexToItem(index)
+            item = indexToItem(index)
             item_parent = item.parent()
             if item_parent:
                 item_parent.removeRow(item.index().row())
@@ -992,19 +1117,30 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     @Slot()
     def convertToGif(self):
         selection_model = self.getActiveSelectionModel()
-
         if not selection_model.hasSelection():
             return
-
+        msg = 'Converting to GIF...'
+        bg = QColor(68, 68, 68)
+        self.convert_overlay = LoadBarOverlay(self, text=msg, color=bg)
+        self.convert_thread = Converter()
+        self.convert_thread.complete.connect(self.onConversionCompleted)
+        self.convert_thread.progress.connect(self.convert_overlay.progress_bar.setValue)
         for index in selection_model.selectedIndexes():
             obj = index.data(Qt.UserRole)
             if not isinstance(obj, CaptureItem):
                 continue
-            new_path = videoToGif(obj.path)
-            if new_path is None:
-                return
-            self.appendItem(Types.Animated, new_path)
+            self.convert_thread.queue.addToQueue(index)
+
+    @Slot(Path)
+    def onConversionCompleted(self, path):
+        self.appendItem(Types.Animated, path)
         self.group_view.updateGroups()
+        self.convert_overlay.complete()
+        thread = self.sender()
+        thread.requestInterruption()
+        thread.quit()
+        thread.wait()
+        thread.deleteLater()
 
     @Slot()
     def delayScreenshot(self):
@@ -1132,6 +1268,8 @@ class CaptureWindow(QWidget, Ui_ScreenCapture):
     def copyItemToClipboard(self):
         text_types = [Types.Animated, Types.Video]
         selection_model = self.getActiveSelectionModel()
+        if not selection_model:
+            return
         if indices := selection_model.selectedIndexes():
             obj = indices[0].data(Qt.UserRole)
             if obj.type in text_types:

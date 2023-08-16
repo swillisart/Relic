@@ -17,8 +17,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QSizePolicy,
 from relic.local import INGEST_PATH
 from relic.scheme import Table, AssetType, Classification
 from relic.gui import Grouping
-from relic.qt.widgets import DockTitle, GroupView, GroupBox
-from relic.qt.delegates import BaseItemDelegate, ItemDispalyModes
+from relic.qt.widgets import DockTitle, GroupView, GroupBox, LoadingOverlay
 from relic.qt.util import readAllContents, polymorphicItem
 from relic.qt.expandable_group import ExpandableGroup
 
@@ -163,6 +162,8 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
         self.preferences_dialog = None
         
         QShortcut(QKeySequence('ctrl+f'), self, self.toFilterBox)
+        text = 'Fetching Subcategories...'
+        self.category_loading_overlay = LoadingOverlay(self.categoryScrollArea, text=text)
 
     @Slot()
     def newAsset(self):
@@ -413,6 +414,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
 
         [getattr(self, key)(arg) for key, arg in self.startup_callbacks.items()]
         self.startup_callbacks = {}
+        self.category_loading_overlay.complete()
 
     @Slot(dict)
     def onUserCreate(self, data):
@@ -485,7 +487,7 @@ class RelicMainWindow(Ui_RelicMainWindow, QMainWindow):
     def showPreferences(self):
         if self.preferences_dialog is None:
             self.preferences_dialog = PreferencesDialog()
-        DialogOverlay(self, self.preferences_dialog, modal=True)
+        DialogOverlay(self, self.preferences_dialog, modal=True, animated=True)
 
     def connect_categories(self):
         self.category_manager.onSelection.connect(self.searchLibrary)

@@ -1,5 +1,6 @@
 /* subcategoryTreeView -------------------------------------------------------------- */
 subcategoryTreeView::item,
+subcategoryTreeView::item:hover,
 subcategoryTreeView::item:has-children,
 subcategoryTreeView::item:!has-children {
     background-color: transparent;

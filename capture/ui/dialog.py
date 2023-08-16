@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.2
+## Created by: Qt User Interface Compiler version 6.5.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -58,7 +58,6 @@ class Ui_ScreenCapture(object):
         self.verticalLayout_5 = QVBoxLayout(self.historyGroupBox)
         self.verticalLayout_5.setSpacing(2)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.verticalLayout_5.setSizeConstraint(QLayout.SetMinimumSize)
         self.verticalLayout_5.setContentsMargins(6, 6, 6, 6)
         self.line_3 = QFrame(self.historyGroupBox)
         self.line_3.setObjectName(u"line_3")

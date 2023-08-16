@@ -20,8 +20,7 @@ def readMovieFrames(file_obj):
     frames = []
     with av.open(file_obj, mode='r', format='mp4') as container:
         for frame in container.decode(video=0):
-            rgb = frame.to_rgb()
-            array = rgb.to_ndarray()
+            array = frame.to_ndarray(format='rgb24')
             h, w, c = array.shape
             img = QImage(array, w, h, QImage.Format_RGB888)
             frames.append(img)

@@ -22,7 +22,7 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics,
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 from relic.local import (INGEST_PATH, Category, ClassGroup, Extension,
                          FileType, TempAsset, getAssetSourceLocation)
-from relic.qt.delegates import Statuses
+from relic.qt.role_model.delegates import Statuses
 from relic.qt.util import polymorphicItem, _indexToItem
 from relic.scheme import Class, AssetType
 from sequence_path import Path

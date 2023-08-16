@@ -3,7 +3,9 @@ import subprocess
 from functools import partial
 from sequence_path import Path
 from collections import defaultdict
-from relic.qt.delegates import BaseDelegateMixin, BaseItemDelegate, BaseItemModel, ItemDispalyModes, PreviewImageIndicator
+from relic.qt.role_model.delegates import ItemDispalyModes, PreviewImageIndicator
+from relic.qt.role_model.views import RoleViewDelegateMixin
+from relic.qt.role_model.models import RoleModel
 
 # -- Module --
 import library.config as config
@@ -59,7 +61,7 @@ def loadHoverImage(asset):
             loadPreviewImage(x)
 
 
-class AssetItemModel(BaseItemModel):
+class AssetItemModel(RoleModel):
 
     def __init__(self, *args, **kwargs):
         super(AssetItemModel, self).__init__(*args, **kwargs)
@@ -111,7 +113,7 @@ class AssetItemModel(BaseItemModel):
         return mime_data
 
 
-class DraggableView(BaseDelegateMixin):
+class DraggableView(RoleViewDelegateMixin):
     def __init__(self, *args, **kwargs):
         super(DraggableView, self).__init__(*args, **kwargs)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)

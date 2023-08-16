@@ -17,13 +17,15 @@ from sequence_path.main import FileSize
 from relic.scheme_new import Class, AssetType, Category
 #from relic.local import Category
 
-from relic.qt.widgets import FilterBox, BaseTreeView, BaseItemHeader, GroupViewFilter, KeyValueOp
-from relic.qt.delegates import (AdvanceAxis, Indication, LabelDelegate, ItemDispalyModes,
+from relic.qt.widgets import FilterBox
+from relic.qt.role_model.views import RoleTreeView, RoleHeaderView
+from relic.qt.role_model.models import GroupFilterProxyModel, KeyValueOp
+from relic.qt.role_model.delegates import (AdvanceAxis, Indication, LabelDelegate, ItemDispalyModes,
                                 Title, TitleIndicator, TextIndicator)
 from relic.qt.role_model.editors import (BaseEditor, ComboBoxEditor, SpinEditor, CheckBoxEditor,
                                         EditorDelegate, LineEditor, EditorRole,
                                         LabelEditor, IntComboBoxEditor, DateTimeEditor, drawFramedItem)
-from relic.qt.util import _indexToItem, polymorphicItem
+from relic.qt.util import _indexToItem
 
 # -- Module --
 from library.config import RELIC_PREFS
@@ -249,6 +251,8 @@ class SubcategoryEditor(BaseEditor, RelationEditList):
 
 PERSISTENT_ATTRIBUTES = ('tags', 'alusers', 'subcategory')
 
+ATTRS_ON_NEW = ('name', ) 
+
 ATTRIBUTE_MAP = {
     # "EDITOR", "PARENT NAME", "MODIFIABLE" 
     'name': [LineEditor, TITLE, True],
@@ -323,7 +327,7 @@ class AttributeDelegate(LabelDelegate):
         super(AttributeDelegate, self).paint(painter, opt, index)
 
 
-class AttributeTree(BaseTreeView):
+class AttributeTree(RoleTreeView):
 
     def __init__(self, parent):
         super(AttributeTree, self).__init__(parent)
@@ -356,7 +360,7 @@ class AttributeTree(BaseTreeView):
         return super(AttributeTree, self).resizeEvent(event)
 
 
-class AttributeFilter(GroupViewFilter):
+class AttributeFilter(GroupFilterProxyModel):
 
     def filterData(self, data):
         # dont filter out the persistent attributes that have always 

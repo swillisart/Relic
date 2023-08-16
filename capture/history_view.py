@@ -1,14 +1,21 @@
 from datetime import datetime
 
 # -- Third-party --
-from relic.qt import *
-from relic.qt.delegates import (ImageableMixin, BaseDelegateMixin, CompactImageIndicator, Title, BaseItemDelegate, IconIndicator, TextDecorationIndicator, ProgressIndicator,
-                                TitleIndicator, TextIndicator, Statuses, Indication, ItemDispalyModes, AdvanceAxis)
-from relic.qt.widgets import BaseTreeView
-
-from extra_types.flag_enum import EnumAuto, Enumerant
 from extra_types.composable import Attributable
+from extra_types.flag_enum import EnumAuto, Enumerant
 from extra_types.properties import slot_property
+
+from relic.qt import *
+from relic.qt.role_model.delegates import (AdvanceAxis,
+                                RoleItemDelegate, CompactImageIndicator,
+                                DurationIndicator, ExtentIndicator,
+                                IconIndicator, ImageableMixin, Indication,
+                                ItemDispalyModes, ProgressIndicator,
+                                TextDecorationIndicator, TextIndicator, Title,
+                                TitleIndicator, MarginIndicator)
+from relic.qt.role_model.views import RoleTreeView, RoleViewDelegateMixin
+
+import av
 
 
 class CaptureType(Attributable, Enumerant):
@@ -26,14 +33,11 @@ class TypesIndicator(EnumAuto):
     Video = IconIndicator(':type/video.png')
     Animated = IconIndicator(':type/gif.png')
 
-#Types.Screenshot.bro = 'noway'
-#TypesIndicator.Screenshot.bro = 'nope'
 
-tl = Qt.AlignTop | Qt.AlignLeft
-tr = Qt.AlignTop | Qt.AlignRight
-bl = Qt.AlignBottom | Qt.AlignLeft
-br = Qt.AlignBottom | Qt.AlignRight
-
+TL = Qt.AlignTop | Qt.AlignLeft
+TR = Qt.AlignTop | Qt.AlignRight
+BL = Qt.AlignBottom | Qt.AlignLeft
+BR = Qt.AlignBottom | Qt.AlignRight
 
 class DateFormat(datetime):
 
@@ -42,21 +46,21 @@ class DateFormat(datetime):
 
 
 class CaptureItem(ImageableMixin):
-    __slots__ = ['path', 'status', 'type', 'progress', 'description', '_image', '_date', '_size', '_title']
+    __slots__ = ['path', 'type', 'progress', 'description', '_image', '_date', '_size', '_title', '_resolution', '_duration']
 
     INDICATIONS = [
-        Indication('progress', ProgressIndicator, bl, AdvanceAxis.Y),
-        Indication('image', CompactImageIndicator, tl, AdvanceAxis.X),
-        Indication('type', TypesIndicator, bl, AdvanceAxis.NONE),
-        Indication('status', Statuses, bl, AdvanceAxis.NONE),
-        Indication('title', TitleIndicator, tl, AdvanceAxis.NONE),
-        #Indication('resolution', TextIndicator, tr, AdvanceAxis.NONE),
-        #Indication('count', TextDecorationIndicator, br, AdvanceAxis.NONE),
+        #Indication('progress', ProgressIndicator, BL, AdvanceAxis.Y),
+        Indication('image', CompactImageIndicator, TL, AdvanceAxis.X),
+        Indication(QRect(0,0,0,0), MarginIndicator, TL, AdvanceAxis.X | AdvanceAxis.Y),
+        Indication('title', TitleIndicator, TL, AdvanceAxis.NONE),
+        #Indication('type', TypesIndicator, BL, AdvanceAxis.NONE),
+        Indication('duration', DurationIndicator, BR, AdvanceAxis.NONE),
+        Indication(QRect(0,0,0,0), MarginIndicator, Qt.AlignLeft, AdvanceAxis.X),
+        Indication('resolution', ExtentIndicator, BL, AdvanceAxis.X),
     ]
 
     def __init__(self, path):
         self.path = path
-        self.status = int(Statuses.Local)
         self.type = 1
         self.progress = 0
         self._image = None
@@ -65,6 +69,37 @@ class CaptureItem(ImageableMixin):
     @property
     def name(self):
         return self.path.name
+
+    @slot_property
+    def duration(self):
+        if self.path.ext in ['.mp4', '.gif']:
+            in_container = av.open(str(self.path))
+            stream = in_container.streams.video[0]
+            framerate = float(stream.rate)
+            duration = stream.duration * float(stream.time_base)
+            in_container.close()
+            return duration
+        else:
+            return 0
+
+    @slot_property
+    def resolution(self):
+        """Opens an image file to get its size without reading the pixels."""
+        path = self.path
+        if path.ext == '.mp4':
+            in_container = av.open(str(path))
+            in_stream = in_container.streams.video[0]
+            width = in_stream.width
+            height = in_stream.height
+            in_container.close()
+            result = '{}x{}'.format(width, height)
+            return result
+
+        # Path is an image (Screenshot).
+        reader = QImageReader(str(path))
+        size = reader.size()
+        result = '{}x{}'.format(size.width(), size.height())
+        return result
 
     @slot_property
     def title(self):
@@ -79,7 +114,7 @@ class CaptureItem(ImageableMixin):
         return self.path.size
 
 
-class HistoryTreeView(BaseDelegateMixin, BaseTreeView):
+class HistoryTreeView(RoleViewDelegateMixin, RoleTreeView):
 
     onExecuted = Signal(QModelIndex)
 
@@ -88,6 +123,7 @@ class HistoryTreeView(BaseDelegateMixin, BaseTreeView):
         self.setIndentation(3) # 3
         self.setDragEnabled(True)
         self.setAcceptDrops(False)
+        self.setDragDropOverwriteMode(False)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setDefaultDropAction(Qt.IgnoreAction)  

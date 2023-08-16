@@ -264,6 +264,9 @@ class FocusListView(QListView):
 
 
 class DialogOverlay(QDialog):
+    """A frameless dialog overlay for displaying widgets on top 
+    of another widget, dialog or main window with a semi-transparent background.
+    """
 
     def read_opaque(self):                                                                                   
         return self._opaque                                                               
@@ -275,31 +278,36 @@ class DialogOverlay(QDialog):
 
     def __init__(self, parent, widget, modal=True, animated=False):
         super(DialogOverlay, self).__init__(parent)
-        # Experimental
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_NoSystemBackground)
-        # Essentials
+        # NB: fixes mouse events propagating to other unwanted children
+        # required to ensure frameless overlays block all other mouse input.
+        self.setAttribute(Qt.WA_NoMousePropagation, True)
+        self.setMouseTracking(True)
+        # Make the widget + background transparent and frameless.
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_NoSystemBackground, True)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAutoFillBackground(True)
-        self.setMouseTracking(True)
+
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(128, 32, 128, 32)
         self.layout.setAlignment(Qt.AlignCenter)
-        self.widget = widget
-        #self.layout.addWidget(widget)
+
         self._opaque = 0
         self.color = QColor(10, 10, 10)
-        self.setModal(modal)
+        self.setWindowModality(Qt.WindowModal if modal else Qt.NonModal)
+
+        # Filter events from the parent widget to resize the overlay.
         parent.installEventFilter(self)
 
-        # Optional Animation
+        self.widget = widget # stash the widget contents
+        # Skip the fancy animation and show immediately.
         if not animated:
             self._opaque = 150
             self.layout.addWidget(widget)
             self.show()
             widget.show()
             return
-
+        
+        # Optional Animation to fade-in the window.
         self.anim = QPropertyAnimation(self, b"p_opaque")
         self.anim.setDuration(175)
         self.anim.setStartValue(0)
@@ -312,14 +320,15 @@ class DialogOverlay(QDialog):
         self.anim.start(QPropertyAnimation.DeleteWhenStopped)
         self.anim1.start(QPropertyAnimation.DeleteWhenStopped)
         
+        # delay addding the widget to the layout till after animation has finished.
         self.anim.finished.connect(partial(self.layout.addWidget, widget))
         self.anim.finished.connect(widget.show)
 
     def eventFilter(self, widget, event):
         parent = self.parent()
         if widget is parent and event.type() == QEvent.Resize:
-                self.setGeometry(parent.rect())
-                return True
+            self.setGeometry(parent.rect())
+            return True
         else:
             return False
 
@@ -328,7 +337,7 @@ class DialogOverlay(QDialog):
             self.close()
 
     def closeEvent(self, event):
-        self.parent().removeEventFilter(self)
+        self.parent().removeEventFilter(self) # uninstall resize event filter.
         super(DialogOverlay, self).closeEvent(event)
 
     def paintEvent(self, event):
@@ -337,6 +346,14 @@ class DialogOverlay(QDialog):
         painter.setBrush(self.color)
         painter.setPen(Qt.NoPen)
         painter.drawRect(self.geometry())
+
+    def setGeometry(self, rect):
+        # Set layout to 5-10% of the parent widget size.
+        w = rect.width() * 0.10
+        h = rect.height() * 0.05
+        margins = (w, h, w, h)
+        self.layout.setContentsMargins(*margins)
+        super(DialogOverlay, self).setGeometry(rect)
 
     def show(self):
         parent = self.parent()
